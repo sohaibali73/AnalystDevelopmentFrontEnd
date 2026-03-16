@@ -1,0 +1,144 @@
+/* Import custom fonts */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+/* Root font size scaling based on user preference */
+:root {
+  --font-scale: 1;
+}
+
+body {
+  font-size: calc(16px * var(--font-scale));
+  font-family: 'Quicksand', sans-serif;
+}
+
+h1 {
+  font-size: calc(2.5rem * var(--font-scale));
+  font-family: 'Rajdhani', sans-serif;
+}
+
+h2 {
+  font-size: calc(2rem * var(--font-scale));
+  font-family: 'Rajdhani', sans-serif;
+}
+
+h3 {
+  font-size: calc(1.5rem * var(--font-scale));
+  font-family: 'Rajdhani', sans-serif;
+}
+
+h4 {
+  font-size: calc(1.25rem * var(--font-scale));
+  font-family: 'Rajdhani', sans-serif;
+}
+
+p, div, span {
+  font-size: calc(1rem * var(--font-scale));
+  font-family: 'Quicksand', sans-serif;
+}
+
+/* Custom font classes for Tailwind */
+.font-quicksand {
+  font-family: 'Quicksand', sans-serif;
+}
+
+.font-rajdhani {
+  font-family: 'Rajdhani', sans-serif;
+}
+
+/* Mobile-friendly grid layouts */
+@media (max-width: 767px) {
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Better mobile spacing */
+  body {
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Generous mobile padding */
+  .page-container {
+    padding: 20px !important;
+  }
+
+  /* Mobile headings with proper spacing */
+  h1 {
+    font-size: 1.75rem !important; /* 28px */
+    line-height: 1.3 !important;
+    margin-bottom: 12px !important;
+  }
+
+  h2 {
+    font-size: 1.375rem !important; /* 22px */
+    line-height: 1.3 !important;
+    margin-bottom: 10px !important;
+  }
+
+  h3 {
+    font-size: 1.125rem !important; /* 18px */
+    line-height: 1.4 !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Mobile paragraphs */
+  p {
+    font-size: 15px !important;
+    line-height: 1.7 !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Mobile cards */
+  .card {
+    padding: 20px !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Mobile buttons */
+  button {
+    min-height: 48px !important;
+    padding: 12px 20px !important;
+    font-size: 15px !important;
+  }
+
+  /* Mobile inputs */
+  input, textarea, select {
+    min-height: 48px !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  /* Tablet spacing */
+  .page-container {
+    padding: 32px !important;
+  }
+
+  body {
+    font-size: 15px !important;
+  }
+
+  h1 {
+    font-size: 2.25rem !important; /* 36px */
+    line-height: 1.25 !important;
+  }
+
+  h2 {
+    font-size: 1.625rem !important; /* 26px */
+    line-height: 1.3 !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .page-container {
+    padding: 48px !important;
+  }
+}

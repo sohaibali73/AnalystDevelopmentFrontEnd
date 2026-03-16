@@ -1,0 +1,547 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    /* Potomac Brand Colors */
+    --potomac-yellow: #FEC00F;
+    --potomac-gray: #212121;
+    --potomac-turquoise: #00DED1;
+    --potomac-pink: #EB2F5C;
+    /* Tailwind v4 color aliases for AI Elements (Shimmer, etc.) */
+    --color-background: hsl(0 0% 100%);
+    --color-foreground: hsl(224 71.4% 4.1%);
+    --color-muted-foreground: hsl(220 8.9% 46.1%);
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 220.9 39.3% 11%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 224 71.4% 4.1%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    /* Potomac Brand Colors */
+    --potomac-yellow: #FEC00F;
+    --potomac-gray: #212121;
+    --potomac-turquoise: #00DED1;
+    --potomac-pink: #EB2F5C;
+    /* Tailwind v4 color aliases for AI Elements (Shimmer, etc.) */
+    --color-background: hsl(224 71.4% 4.1%);
+    --color-foreground: hsl(210 20% 98%);
+    --color-muted-foreground: hsl(217.9 10.6% 64.9%);
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 210 20% 98%;
+    --primary-foreground: 220.9 39.3% 11%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 216 12.2% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-quicksand), 'Quicksand', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-rajdhani), 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    color: var(--potomac-gray);
+    letter-spacing: 0.5px;
+  }
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: #f0f0f0;
+  }
+  
+  /* Enhanced button contrast */
+  button, [role="button"] {
+    font-weight: 500;
+  }
+  .dark button[variant="outline"], 
+  .dark [role="button"][variant="outline"] {
+    color: #e8e8e8;
+    border-color: #333333;
+  }
+  
+  /* Input and textarea enhancements */
+  input, textarea, select {
+    font-family: var(--font-quicksand), 'Quicksand', sans-serif;
+  }
+  
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: #262626;
+    color: #e8e8e8;
+    border-color: #333333;
+  }
+  
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #909090;
+  }
+  
+  .light input,
+  .light textarea,
+  .light select {
+    background-color: #f8f8f8;
+    color: #1a1a1a;
+    border-color: #e5e5e5;
+  }
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-md;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
+
+/* Monaco Editor Override */
+.monaco-editor {
+  font-family: 'Fira Code', 'Courier New', monospace;
+}
+
+/* ==============================
+   Markdown Renderer Styles
+   ============================== */
+
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.7;
+  word-break: break-word;
+  font-family: var(--font-quicksand), 'Quicksand', sans-serif;
+  color: inherit;
+}
+.markdown-dark .markdown-body {
+  color: #d4d4d4;
+}
+.markdown-light .markdown-body {
+  color: #1a1a1a;
+}
+
+/* Streamdown container */
+[data-component="streamdown"] {
+  color: inherit;
+  font-family: var(--font-quicksand), 'Quicksand', sans-serif;
+}
+
+/* Headings */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.markdown-body h1 { font-size: 1.6em; }
+.markdown-body h2 { font-size: 1.35em; }
+.markdown-body h3 { font-size: 1.15em; }
+.markdown-body h4 { font-size: 1.05em; }
+.markdown-dark h1,
+.markdown-dark h2,
+.markdown-dark h3,
+.markdown-dark h4,
+.markdown-dark h5,
+.markdown-dark h6 {
+  color: #f0f0f0;
+}
+.markdown-light h1,
+.markdown-light h2,
+.markdown-light h3,
+.markdown-light h4,
+.markdown-light h5,
+.markdown-light h6 {
+  color: #1a1a1a;
+}
+
+/* Paragraphs & lists */
+.markdown-body p {
+  margin: 0.6em 0;
+  color: inherit;
+  font-weight: 400;
+}
+.markdown-dark .markdown-body p {
+  color: #d4d4d4;
+}
+.markdown-light .markdown-body p {
+  color: #2a2a2a;
+}
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+.markdown-body li {
+  margin: 0.25em 0;
+  color: inherit;
+}
+.markdown-dark .markdown-body li {
+  color: #d4d4d4;
+}
+.markdown-light .markdown-body li {
+  color: #2a2a2a;
+}
+.markdown-body li > p {
+  margin: 0.2em 0;
+}
+
+/* Blockquote */
+.markdown-body blockquote {
+  margin: 0.8em 0;
+  padding: 0.4em 1em;
+  border-left: 3px solid #FEC00F;
+  border-radius: 0 8px 8px 0;
+}
+.markdown-dark blockquote {
+  background: rgba(254, 192, 15, 0.06);
+  color: #ccc;
+}
+.markdown-light blockquote {
+  background: rgba(254, 192, 15, 0.08);
+  color: #555;
+}
+
+/* Horizontal rule */
+.markdown-body hr {
+  margin: 1.2em 0;
+  border: none;
+  height: 1px;
+}
+.markdown-dark hr { background: #424242; }
+.markdown-light hr { background: #e0e0e0; }
+
+/* Links */
+.markdown-body a {
+  color: #FEC00F;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.markdown-body a:hover {
+  border-bottom-color: #FEC00F;
+}
+
+/* Strong & emphasis */
+.markdown-body strong {
+  font-weight: 700;
+}
+.markdown-dark strong { color: #fff; }
+
+/* Inline code */
+.markdown-body .inline-code {
+  padding: 0.2em 0.5em;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-size: 0.88em;
+  font-weight: 500;
+}
+.markdown-dark .inline-code {
+  background: rgba(254, 192, 15, 0.12);
+  color: #FFD700;
+  border: 1px solid rgba(254, 192, 15, 0.25);
+}
+.markdown-light .inline-code {
+  background: rgba(254, 192, 15, 0.1);
+  color: #FEC00F;
+  border: 1px solid rgba(254, 192, 15, 0.3);
+}
+
+/* Code block wrapper */
+.code-block-wrapper {
+  margin: 0.8em 0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.markdown-dark .code-block-wrapper {
+  border: 1px solid #333;
+}
+.markdown-light .code-block-wrapper {
+  border: 1px solid #ddd;
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(254, 192, 15, 0.2);
+}
+.markdown-dark .code-block-header {
+  background: #1a1a1a;
+  color: #a0a0a0;
+}
+.markdown-light .code-block-header {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.code-block-lang {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.copy-code-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.3px;
+  transition: background 0.2s;
+}
+.markdown-dark .copy-code-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #aaa;
+}
+.markdown-dark .copy-code-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.markdown-light .copy-code-btn {
+  background: rgba(0, 0, 0, 0.06);
+  color: #555;
+}
+.markdown-light .copy-code-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #000;
+}
+
+.code-block-wrapper pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.markdown-dark .code-block-wrapper pre {
+  background: #0d1117;
+}
+.markdown-light .code-block-wrapper pre {
+  background: #f8f9fa;
+}
+
+.code-block-wrapper pre code {
+  background: none !important;
+  padding: 0 !important;
+  font-size: inherit;
+}
+
+/* Tables */
+.table-wrapper {
+  overflow-x: auto;
+  margin: 0.8em 0;
+  border-radius: 8px;
+}
+.markdown-dark .table-wrapper {
+  border: 1px solid #333;
+}
+.markdown-light .table-wrapper {
+  border: 1px solid #ddd;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.markdown-body th,
+.markdown-body td {
+  padding: 10px 14px;
+  text-align: left;
+}
+.markdown-dark th {
+  background: linear-gradient(135deg, rgba(254, 192, 15, 0.08) 0%, rgba(254, 192, 15, 0.04) 100%);
+  color: #e8e8e8;
+  border-bottom: 2px solid rgba(254, 192, 15, 0.3);
+  font-weight: 600;
+}
+.markdown-dark td {
+  border-bottom: 1px solid #333;
+  color: #d4d4d4;
+}
+.markdown-light th {
+  background: linear-gradient(135deg, rgba(254, 192, 15, 0.06) 0%, rgba(254, 192, 15, 0.03) 100%);
+  color: #1a1a1a;
+  border-bottom: 2px solid rgba(254, 192, 15, 0.4);
+  font-weight: 600;
+}
+.markdown-light td {
+  border-bottom: 1px solid #e0e0e0;
+  color: #2a2a2a;
+}
+
+/* Task lists */
+.markdown-body ul.contains-task-list {
+  list-style: none;
+  padding-left: 0.5em;
+}
+.markdown-body input[type="checkbox"] {
+  margin-right: 0.5em;
+  accent-color: #FEC00F;
+}
+
+/* Strikethrough */
+.markdown-body del {
+  opacity: 0.6;
+}
+
+/* ==============================
+   highlight.js Theme (GitHub Dark Dimmed)
+   ============================== */
+
+/* Dark mode syntax highlighting */
+.markdown-dark pre code.hljs { display: block; overflow-x: auto; padding: 1em; }
+.markdown-dark code.hljs { padding: 3px 5px; }
+.markdown-dark .hljs { color: #adbac7; background: #0d1117; }
+.markdown-dark .hljs-doctag,
+.markdown-dark .hljs-keyword,
+.markdown-dark .hljs-meta .hljs-keyword,
+.markdown-dark .hljs-template-tag,
+.markdown-dark .hljs-template-variable,
+.markdown-dark .hljs-type,
+.markdown-dark .hljs-variable.language_ { color: #f47067; }
+.markdown-dark .hljs-title,
+.markdown-dark .hljs-title.class_,
+.markdown-dark .hljs-title.class_.inherited__,
+.markdown-dark .hljs-title.function_ { color: #dcbdfb; }
+.markdown-dark .hljs-attr,
+.markdown-dark .hljs-attribute,
+.markdown-dark .hljs-literal,
+.markdown-dark .hljs-meta,
+.markdown-dark .hljs-number,
+.markdown-dark .hljs-operator,
+.markdown-dark .hljs-selector-attr,
+.markdown-dark .hljs-selector-class,
+.markdown-dark .hljs-selector-id,
+.markdown-dark .hljs-variable { color: #6cb6ff; }
+.markdown-dark .hljs-meta .hljs-string,
+.markdown-dark .hljs-regexp,
+.markdown-dark .hljs-string { color: #96d0ff; }
+.markdown-dark .hljs-built_in,
+.markdown-dark .hljs-symbol { color: #f69d50; }
+.markdown-dark .hljs-code,
+.markdown-dark .hljs-comment,
+.markdown-dark .hljs-formula { color: #768390; }
+.markdown-dark .hljs-name,
+.markdown-dark .hljs-quote,
+.markdown-dark .hljs-selector-pseudo,
+.markdown-dark .hljs-selector-tag { color: #8ddb8c; }
+.markdown-dark .hljs-subst { color: #adbac7; }
+.markdown-dark .hljs-section { color: #316dca; font-weight: 700; }
+.markdown-dark .hljs-bullet { color: #eac55f; }
+.markdown-dark .hljs-emphasis { color: #adbac7; font-style: italic; }
+.markdown-dark .hljs-strong { color: #adbac7; font-weight: 700; }
+.markdown-dark .hljs-addition { color: #b4f1b4; background-color: #1b4721; }
+.markdown-dark .hljs-deletion { color: #ffd8d3; background-color: #78191b; }
+
+/* Light mode syntax highlighting */
+.markdown-light pre code.hljs { display: block; overflow-x: auto; padding: 1em; }
+.markdown-light code.hljs { padding: 3px 5px; }
+.markdown-light .hljs { color: #24292f; background: #f8f9fa; }
+.markdown-light .hljs-doctag,
+.markdown-light .hljs-keyword,
+.markdown-light .hljs-meta .hljs-keyword,
+.markdown-light .hljs-template-tag,
+.markdown-light .hljs-template-variable,
+.markdown-light .hljs-type,
+.markdown-light .hljs-variable.language_ { color: #cf222e; }
+.markdown-light .hljs-title,
+.markdown-light .hljs-title.class_,
+.markdown-light .hljs-title.class_.inherited__,
+.markdown-light .hljs-title.function_ { color: #8250df; }
+.markdown-light .hljs-attr,
+.markdown-light .hljs-attribute,
+.markdown-light .hljs-literal,
+.markdown-light .hljs-meta,
+.markdown-light .hljs-number,
+.markdown-light .hljs-operator,
+.markdown-light .hljs-selector-attr,
+.markdown-light .hljs-selector-class,
+.markdown-light .hljs-selector-id,
+.markdown-light .hljs-variable { color: #0550ae; }
+.markdown-light .hljs-meta .hljs-string,
+.markdown-light .hljs-regexp,
+.markdown-light .hljs-string { color: #0a3069; }
+.markdown-light .hljs-built_in,
+.markdown-light .hljs-symbol { color: #953800; }
+.markdown-light .hljs-code,
+.markdown-light .hljs-comment,
+.markdown-light .hljs-formula { color: #6e7781; }
+.markdown-light .hljs-name,
+.markdown-light .hljs-quote,
+.markdown-light .hljs-selector-pseudo,
+.markdown-light .hljs-selector-tag { color: #116329; }
+.markdown-light .hljs-subst { color: #24292f; }
+.markdown-light .hljs-section { color: #0550ae; font-weight: 700; }
+.markdown-light .hljs-bullet { color: #953800; }
+.markdown-light .hljs-emphasis { color: #24292f; font-style: italic; }
+.markdown-light .hljs-strong { color: #24292f; font-weight: 700; }
+.markdown-light .hljs-addition { color: #116329; background-color: #dafbe1; }
+.markdown-light .hljs-deletion { color: #82071e; background-color: #ffebe9; }
