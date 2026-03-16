@@ -9,3 +9,4 @@ export { ReactArtifact } from './ReactArtifact';
 export { HTMLArtifact } from './HTMLArtifact';
 export { SVGArtifact } from './SVGArtifact';
 export { CodeArtifact } from './CodeArtifact';
+export { DocumentArtifact } from './DocumentArtifact';

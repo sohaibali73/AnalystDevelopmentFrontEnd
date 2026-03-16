@@ -28,7 +28,8 @@ export function Weather({ city = 'New York', temperature = 72, condition = 'sunn
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">{city}</h3>
-          <p className="text-2xl font-bold">{temperature}Â°F</p>
+          {/* FIXED: Proper degree symbol encoding */}
+          <p className="text-2xl font-bold">{temperature}°F</p>
           <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">{condition}</p>
         </div>
         <div>{getWeatherIcon()}</div>

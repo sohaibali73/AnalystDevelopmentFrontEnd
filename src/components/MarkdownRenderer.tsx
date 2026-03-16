@@ -36,13 +36,9 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
-  let isDark = true;
-  try {
-    const { resolvedTheme } = useTheme();
-    isDark = resolvedTheme === 'dark';
-  } catch {
-    isDark = true;
-  }
+  // FIXED: Proper React hooks usage - call useTheme unconditionally
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <div className={`markdown-body ${isDark ? 'markdown-dark' : 'markdown-light'} ${className}`}>

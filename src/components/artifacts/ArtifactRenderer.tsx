@@ -136,6 +136,11 @@ export function ArtifactRenderer({ artifact, onClose }: ArtifactRendererProps) {
   };
 
   const getLanguageLabel = () => {
+    // FIXED: Safe property access for artifact.language
+    if (!artifact.language) {
+      return artifact.type.toUpperCase();
+    }
+    
     const labels: Record<string, string> = {
       jsx: 'React JSX',
       react: 'React',
@@ -270,7 +275,6 @@ export function ArtifactRenderer({ artifact, onClose }: ArtifactRendererProps) {
             </div>
           )}
 
-          {/* Action Buttons */}
           <button
             onClick={handleCopy}
             style={{
@@ -381,7 +385,7 @@ export function ArtifactRenderer({ artifact, onClose }: ArtifactRendererProps) {
         {viewMode === 'code' || !canRenderVisually ? (
           <CodeArtifact 
             code={artifact.code} 
-            language={artifact.language}
+            language={artifact.language || artifact.type}
             isDark={isDark}
           />
         ) : (

@@ -55,7 +55,9 @@ const syntaxHighlight = (code: string, language: string, isDark: boolean) => {
     ],
   };
 
-  const langKeywords = keywords[language.toLowerCase()] || keywords.javascript || [];
+  // FIXED: Safe property access for language parameter
+  const languageKey = language ? language.toLowerCase() : 'javascript';
+  const langKeywords = keywords[languageKey] || keywords.javascript || [];
   
   // Escape HTML
   let highlighted = code

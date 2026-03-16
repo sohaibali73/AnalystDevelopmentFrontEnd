@@ -11,14 +11,9 @@ interface CodeDisplayProps {
 }
 
 export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT', showLineNumbers = true }: CodeDisplayProps) {
-  // FIXED: Add theme support
-  let isDark = true;
-  try {
-    const { resolvedTheme } = useTheme();
-    isDark = resolvedTheme === 'dark';
-  } catch {
-    isDark = true;
-  }
+  // FIXED: Proper React hooks usage - call useTheme unconditionally
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
