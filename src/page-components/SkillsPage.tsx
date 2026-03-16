@@ -50,18 +50,27 @@ export default function SkillsPage() {
     tagBg: isDark ? '#333' : '#e8e8e8',
   };
 
-  // ── Load skills & categories ─────────────────────────────────────────────
+  // ── Load skills ──────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [skillsRes, catRes] = await Promise.all([
-          apiClient.getSkills(selectedCategory || undefined),
-          apiClient.getSkillCategories(),
-        ]);
+        const skillsRes = await apiClient.getSkills();
         if (!cancelled) {
           setSkills(skillsRes.skills);
-          setCategories(catRes.categories);
+          // Create categories from skills
+          const categoryCounts = skillsRes.skills.reduce((acc: any, skill: any) => {
+            acc[skill.category] = (acc[skill.category] || 0) + 1;
+            return acc;
+          }, {});
+          
+          const categoriesList = Object.entries(categoryCounts).map(([category, count]) => ({
+            category,
+            label: category.toUpperCase(),
+            count: count as number
+          }));
+          
+          setCategories(categoriesList);
           setLoading(false);
         }
       } catch (e: any) {
@@ -72,9 +81,9 @@ export default function SkillsPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedCategory]);
+  }, []);
 
-  // ── Execute skill (streaming) ────────────────────────────────────────────
+  // ── Execute skill (simple message) ───────────────────────────────────────
   const handleExecute = useCallback(async () => {
     if (!activeSkill || !prompt.trim() || isStreaming) return;
 
@@ -87,26 +96,10 @@ export default function SkillsPage() {
     abortRef.current = controller;
 
     try {
-      await apiClient.streamSkill(activeSkill.slug, prompt, {
-        signal: controller.signal,
-        onText: (text) => {
-          setResponse(prev => prev + text);
-          // Auto-scroll
-          if (responseRef.current) {
-            responseRef.current.scrollTop = responseRef.current.scrollHeight;
-          }
-        },
-        onError: (err) => {
-          setError(err);
-        },
-        onFinish: (data) => {
-          if (data?.executionTime) setExecutionTime(data.executionTime);
-        },
-      });
+      const result = await apiClient.sendMessage(prompt, undefined);
+      setResponse(result.response);
     } catch (e: any) {
-      if (e.name !== 'AbortError') {
-        setError(e.message);
-      }
+      setError(e.message);
     } finally {
       setIsStreaming(false);
       abortRef.current = null;
