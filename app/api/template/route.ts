@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
   (process.env.NODE_ENV === 'development' 
     ? 'http://localhost:8080' 
-    : 'https://backendplatform-production.up.railway.app/');
+    : 'https://developer-potomaac.up.railway.app//');
 
 export async function POST(req: NextRequest) {
   try {

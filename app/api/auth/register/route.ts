@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ||
-  'https://backendplatform-production.up.railway.app';
+  'https://developer-potomaac.up.railway.app/';
 
 export async function POST(req: NextRequest) {
   try {

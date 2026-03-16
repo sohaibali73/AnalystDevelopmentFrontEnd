@@ -66,14 +66,14 @@ export function getApiUrl(): string {
       'NEXT_PUBLIC_API_URL',
       process.env.NODE_ENV === 'development'
         ? 'http://localhost:8080'
-        : 'https://backendplatform-production.up.railway.app/'
+        : 'https://developer-potomaac.up.railway.app//'
     );
   } else {
     // Client-side
     url = process.env.NEXT_PUBLIC_API_URL ||
       (process.env.NODE_ENV === 'development'
         ? 'http://localhost:8080'
-        : 'https://backendplatform-production.up.railway.app');
+        : 'https://developer-potomaac.up.railway.app/');
   }
 
   // Strip trailing slash to prevent double-slash URLs

@@ -15,7 +15,7 @@
 import { NextRequest } from 'next/server';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 
-  'https://backendplatform-production.up.railway.app/').replace(/\/+$/, '');
+  'https://developer-potomaac.up.railway.app//').replace(/\/+$/, '');
 
 // UI Message Stream headers required by AI SDK v5
 const UI_MESSAGE_STREAM_HEADERS = {

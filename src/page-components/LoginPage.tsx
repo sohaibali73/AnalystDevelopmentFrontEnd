@@ -73,7 +73,119 @@ export function LoginPage() {
       flexDirection: isMobile ? 'column' : 'row',
       WebkitUserSelect: 'none',
       WebkitTouchCallout: 'none',
+      paddingTop: '36px', // offset for the fixed DEV banner
     }}>
+      {/* ── DEV ENVIRONMENT TOP BANNER ── */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        height: '36px',
+        background: 'repeating-linear-gradient(90deg, #FEC00F 0px, #FEC00F 60px, #0A0A0B 60px, #0A0A0B 120px)',
+        backgroundSize: '120px 100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        animation: 'devBannerScroll 6s linear infinite',
+        borderBottom: '2px solid rgba(254,192,15,0.6)',
+        boxShadow: '0 2px 20px rgba(254,192,15,0.25)',
+      }}>
+        {/* Frosted label sits on top of the moving stripes */}
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          backgroundColor: 'rgba(10,10,11,0.82)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          padding: '0 20px',
+          borderRadius: '4px',
+          height: '26px',
+          border: '1px solid rgba(254,192,15,0.35)',
+        }}>
+          {/* Blinking dot */}
+          <span style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            backgroundColor: '#FEC00F',
+            display: 'inline-block',
+            animation: 'devDotBlink 1.2s ease-in-out infinite',
+            flexShrink: 0,
+          }} />
+          <span style={{
+            fontFamily: "'Rajdhani', sans-serif",
+            fontSize: '12px',
+            fontWeight: 700,
+            letterSpacing: '3px',
+            color: '#FEC00F',
+          }}>
+            DEVELOPMENT ENVIRONMENT — NOT FOR PRODUCTION USE
+          </span>
+          <span style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            backgroundColor: '#FEC00F',
+            display: 'inline-block',
+            animation: 'devDotBlink 1.2s ease-in-out infinite 0.6s',
+            flexShrink: 0,
+          }} />
+        </div>
+      </div>
+
+      {/* ── DEV CORNER BADGE ── */}
+      <div style={{
+        position: 'fixed',
+        bottom: '52px', // sits just above the copyright footer
+        right: '16px',
+        zIndex: 9998,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        backgroundColor: isDark ? 'rgba(10,10,11,0.9)' : 'rgba(255,255,255,0.9)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        border: '1px solid rgba(254,192,15,0.5)',
+        borderRadius: '8px',
+        padding: '6px 12px',
+        boxShadow: '0 0 0 0 rgba(254,192,15,0.4)',
+        animation: 'devBadgePulse 2.5s ease-in-out infinite',
+      }}>
+        <span style={{
+          width: '8px',
+          height: '8px',
+          borderRadius: '50%',
+          backgroundColor: '#FEC00F',
+          display: 'inline-block',
+          animation: 'devDotBlink 1.2s ease-in-out infinite',
+          flexShrink: 0,
+        }} />
+        <span style={{
+          fontFamily: "'Rajdhani', sans-serif",
+          fontSize: '11px',
+          fontWeight: 700,
+          letterSpacing: '2px',
+          color: '#FEC00F',
+        }}>
+          DEV
+        </span>
+        <span style={{
+          fontFamily: "'Quicksand', sans-serif",
+          fontSize: '11px',
+          fontWeight: 600,
+          color: isDark ? '#757575' : '#999999',
+          letterSpacing: '0.5px',
+        }}>
+          localhost
+        </span>
+      </div>
+
       {/* Left Side - Branding */}
       <div style={{
         flex: isMobile ? undefined : 1,
@@ -489,6 +601,18 @@ export function LoginPage() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes devBannerScroll {
+          from { background-position: 0 0; }
+          to   { background-position: 120px 0; }
+        }
+        @keyframes devDotBlink {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.3; transform: scale(0.7); }
+        }
+        @keyframes devBadgePulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(254,192,15,0); }
+          50%       { box-shadow: 0 0 0 4px rgba(254,192,15,0.15); }
         }
         @keyframes taglinePulse {
           0%, 100% {
