@@ -10,11 +10,12 @@ import {
   Zap,
   ArrowRight,
   Sparkles,
-  Clock,
   MessageSquare,
   FileText,
   Plus,
   ArrowUpRight,
+  Activity,
+  BarChart2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -27,47 +28,64 @@ const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
   @keyframes dash-fadeUp {
-    from { opacity: 0; transform: translateY(18px); }
+    from { opacity: 0; transform: translateY(22px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  @keyframes dash-fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
   @keyframes dash-pulse {
-    0%, 100% { opacity: 1;   transform: scale(1);   }
-    50%       { opacity: 0.4; transform: scale(0.65); }
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.35; transform: scale(0.6); }
+  }
+  @keyframes dash-shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  @keyframes dash-scan {
+    0%   { transform: translateY(0%); opacity: 0.6; }
+    100% { transform: translateY(100vh); opacity: 0; }
+  }
+  @keyframes ticker-slide {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
   }
 
-  /* Animation utility classes */
-  .da0 { animation: dash-fadeUp .55s cubic-bezier(.22,.68,0,1.2) both; animation-delay: 0ms;   }
-  .da1 { animation: dash-fadeUp .55s cubic-bezier(.22,.68,0,1.2) both; animation-delay: 70ms;  }
-  .da2 { animation: dash-fadeUp .55s cubic-bezier(.22,.68,0,1.2) both; animation-delay: 140ms; }
-  .da3 { animation: dash-fadeUp .55s cubic-bezier(.22,.68,0,1.2) both; animation-delay: 210ms; }
-  .da4 { animation: dash-fadeUp .55s cubic-bezier(.22,.68,0,1.2) both; animation-delay: 280ms; }
-  .da5 { animation: dash-fadeUp .55s cubic-bezier(.22,.68,0,1.2) both; animation-delay: 350ms; }
-  .da6 { animation: dash-fadeUp .55s cubic-bezier(.22,.68,0,1.2) both; animation-delay: 420ms; }
+  .da0 { animation: dash-fadeUp .6s cubic-bezier(.22,.68,0,1.15) both; animation-delay: 0ms; }
+  .da1 { animation: dash-fadeUp .6s cubic-bezier(.22,.68,0,1.15) both; animation-delay: 80ms; }
+  .da2 { animation: dash-fadeUp .6s cubic-bezier(.22,.68,0,1.15) both; animation-delay: 160ms; }
+  .da3 { animation: dash-fadeUp .6s cubic-bezier(.22,.68,0,1.15) both; animation-delay: 240ms; }
+  .da4 { animation: dash-fadeUp .6s cubic-bezier(.22,.68,0,1.15) both; animation-delay: 320ms; }
+  .da5 { animation: dash-fadeUp .6s cubic-bezier(.22,.68,0,1.15) both; animation-delay: 400ms; }
 
-  /* Feature card hover glow fill */
+  /* Feature card */
   .dash-feat-card {
     position: relative;
     overflow: hidden;
-    transition: border-color .25s ease, transform .25s ease, box-shadow .25s ease, background .25s ease;
+    transition: transform .28s cubic-bezier(.22,.68,0,1.2), box-shadow .28s ease;
   }
-  .dash-feat-card::after {
+  .dash-feat-card::before {
     content: '';
     position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 70px;
-    background: linear-gradient(to top, rgba(254,192,15,0.07), transparent);
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(254,192,15,0.06) 0%, transparent 60%);
     opacity: 0;
-    transition: opacity .25s ease;
+    transition: opacity .28s ease;
     pointer-events: none;
   }
-  .dash-feat-card:hover { transform: translateY(-4px); }
-  .dash-feat-card:hover::after { opacity: 1; }
+  .dash-feat-card:hover { transform: translateY(-5px); }
+  .dash-feat-card:hover::before { opacity: 1; }
 
-  /* Recent item left-edge accent */
+  /* Card shimmer on hover */
+  .dash-feat-card .shimmer-layer {
+    position: absolute;
+    top: 0; left: -100%; width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(254,192,15,0.04), transparent);
+    pointer-events: none;
+  }
+  .dash-feat-card:hover .shimmer-layer {
+    animation: dash-shimmer .65s ease forwards;
+  }
+
+  /* Recent item */
   .dash-recent-item {
     position: relative;
     transition: background .15s ease;
@@ -75,42 +93,121 @@ const STYLES = `
   .dash-recent-item::before {
     content: '';
     position: absolute;
-    left: 0; top: 0; bottom: 0;
+    left: 0; top: 8px; bottom: 8px;
     width: 2px;
-    background: #FEC00F;
+    background: linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2));
+    border-radius: 2px;
     opacity: 0;
     transition: opacity .15s ease;
-    border-radius: 0 2px 2px 0;
   }
   .dash-recent-item:hover::before { opacity: 1; }
 
-  /* CTA button inner shimmer */
+  /* Quick action button */
+  .dash-quick-btn {
+    transition: border-color .2s ease, background .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
+  }
+  .dash-quick-btn:hover { transform: translateY(-2px); }
+
+  /* CTA Button */
   .dash-cta-btn {
     position: relative;
     overflow: hidden;
     transition: transform .2s ease, box-shadow .2s ease;
   }
-  .dash-cta-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%);
-    opacity: 0;
-    transition: opacity .2s ease;
-  }
-  .dash-cta-btn:hover { transform: translateY(-1px); }
-  .dash-cta-btn:hover::before { opacity: 1; }
+  .dash-cta-btn:hover { transform: translateY(-2px); }
   .dash-cta-btn:active { transform: translateY(0); }
 
-  /* Quick action button */
-  .dash-quick-btn {
-    transition: border-color .2s ease, background .2s ease, color .2s ease, transform .2s ease;
+  /* Stat card number glow */
+  .stat-num-glow {
+    text-shadow: 0 0 40px rgba(254,192,15,0.35);
   }
-  .dash-quick-btn:hover { transform: translateY(-1px); }
+
+  /* Ticker */
+  .ticker-inner {
+    display: flex;
+    gap: 48px;
+    animation: ticker-slide 22s linear infinite;
+    white-space: nowrap;
+  }
+  .ticker-inner:hover { animation-play-state: paused; }
+
+  /* Scrollbar */
+  * { scrollbar-width: thin; scrollbar-color: rgba(254,192,15,0.25) transparent; }
+  *::-webkit-scrollbar { width: 4px; height: 4px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: rgba(254,192,15,0.25); border-radius: 4px; }
 `;
 
 /* ─────────────────────────────────────────────
-   Component
+   Sub-components
+───────────────────────────────────────────── */
+
+/* Sparkline SVG */
+function Sparkline({ values, color }: { values: number[]; color: string }) {
+  const w = 80, h = 28;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w;
+    const y = h - ((v - min) / range) * h * 0.8 - h * 0.1;
+    return `${x},${y}`;
+  }).join(' ');
+  const areaPath = `M0,${h} L${pts.split(' ').join(' L')} L${w},${h} Z`;
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={`sg-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#sg-${color.replace('#','')})`} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* Section header with ornament */
+function SectionHead({ label, action, onAction }: { label: string; action?: string; onAction?: () => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px' }}>
+      <div style={{
+        width: '3px', height: '16px',
+        background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))',
+        borderRadius: '3px', flexShrink: 0,
+      }} />
+      <span style={{
+        fontFamily: "'DM Mono', monospace",
+        fontSize: '9px', letterSpacing: '0.18em',
+        textTransform: 'uppercase' as const,
+        color: 'var(--text-muted)',
+        whiteSpace: 'nowrap' as const,
+      }}>
+        {label}
+      </span>
+      <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+      {action && (
+        <button onClick={onAction} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontFamily: "'DM Mono', monospace",
+          fontSize: '9px', letterSpacing: '0.12em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--accent)', opacity: 0.7,
+          transition: 'opacity .15s',
+          padding: '2px 0',
+        }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+        >
+          {action}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Main Component
 ───────────────────────────────────────────── */
 export default function DashboardPage() {
   const router = useRouter();
@@ -119,10 +216,15 @@ export default function DashboardPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [recentChats, setRecentChats] = useState<any[]>([]);
   const [stats, setStats] = useState({ conversations: 0, documents: 0 });
+  const [greeting, setGreeting] = useState('');
 
   const isDark = resolvedTheme === 'dark';
 
-  /* ── Responsive listener ── */
+  useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening');
+  }, []);
+
   useEffect(() => {
     const handle = () => setIsMobile(window.innerWidth < 768);
     handle();
@@ -130,7 +232,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener('resize', handle);
   }, []);
 
-  /* ── Load data ── */
   useEffect(() => {
     (async () => {
       try {
@@ -148,486 +249,371 @@ export default function DashboardPage() {
     })();
   }, []);
 
-  /* ── Feature definitions ── */
   const features = [
     {
       icon: Code2,
       title: 'AFL Generator',
-      description: 'Generate AmiBroker Formula Language code from natural language descriptions.',
+      description: 'Generate AmiBroker Formula Language code from plain-language descriptions.',
       href: '/afl',
-      color: '#3B82F6',
-      bgColor: 'rgba(59,130,246,0.1)',
+      color: '#60A5FA',
+      bgColor: 'rgba(96,165,250,0.1)',
+      sparkData: [3, 7, 5, 11, 8, 14, 10, 16, 12, 18],
     },
     {
       icon: MessageCircle,
       title: 'AI Chat',
-      description: 'Chat with AI about trading strategies and get instant, contextual help.',
+      description: 'Discuss trading strategies and get contextual, intelligent assistance.',
       href: '/chat',
-      color: '#8B5CF6',
-      bgColor: 'rgba(139,92,246,0.1)',
+      color: '#A78BFA',
+      bgColor: 'rgba(167,139,250,0.1)',
+      sparkData: [5, 4, 8, 6, 12, 9, 14, 11, 16, 13],
     },
     {
       icon: Database,
       title: 'Knowledge Base',
-      description: 'Upload and search your trading documents and strategy archives.',
+      description: 'Upload and semantically search your trading documents and archives.',
       href: '/knowledge',
-      color: '#22C55E',
-      bgColor: 'rgba(34,197,94,0.1)',
+      color: '#34D399',
+      bgColor: 'rgba(52,211,153,0.1)',
+      sparkData: [2, 5, 3, 8, 6, 11, 7, 13, 9, 15],
     },
     {
       icon: TrendingUp,
       title: 'Backtest Analysis',
-      description: 'Analyze backtest results with AI-powered performance insights.',
+      description: 'Decode backtest reports with AI-powered performance breakdowns.',
       href: '/backtest',
-      color: '#F97316',
-      bgColor: 'rgba(249,115,22,0.1)',
+      color: '#FB923C',
+      bgColor: 'rgba(251,146,60,0.1)',
+      sparkData: [8, 6, 10, 7, 13, 9, 15, 11, 17, 14],
     },
     {
       icon: Zap,
       title: 'Reverse Engineer',
-      description: 'Convert strategy descriptions and logic directly into working AFL code.',
+      description: 'Convert strategy logic and descriptions directly into working AFL code.',
       href: '/reverse-engineer',
       color: '#FEC00F',
       bgColor: 'rgba(254,192,15,0.08)',
+      sparkData: [4, 8, 5, 10, 6, 14, 8, 16, 10, 18],
     },
   ];
 
-  const tips = [
-    { strong: 'AFL Generator', text: ' to create your first trading strategy from plain language.' },
-    { strong: 'AI Chat', text: ' to refine strategies and ask in-depth questions.' },
-    { strong: 'Knowledge Base', text: ' — upload documents for richer, context-aware responses.' },
-    { strong: 'Backtest Analysis', text: ' to extract AI insights from your results.' },
-    { strong: 'Reverse Engineer', text: ' to convert any strategy description into code.' },
+  const tickerItems = [
+    { label: 'AFL Generator', change: '+Active' },
+    { label: 'AI Chat', change: 'Online' },
+    { label: 'Knowledge Base', change: 'Indexed' },
+    { label: 'Backtest AI', change: 'Ready' },
+    { label: 'Reverse Eng.', change: 'Live' },
   ];
 
-  /* ── CSS custom properties (theme-aware) ── */
+  /* ── Theme tokens ── */
   const cssVars: React.CSSProperties = {
     ['--accent' as any]: '#FEC00F',
-    ['--accent-dim' as any]: isDark ? 'rgba(254,192,15,0.1)' : 'rgba(254,192,15,0.08)',
-    ['--accent-glow' as any]: 'rgba(254,192,15,0.28)',
-    ['--bg' as any]: isDark ? '#09090B' : '#F8F8F9',
-    ['--bg-card' as any]: isDark ? '#0F0F12' : '#FFFFFF',
-    ['--bg-card-hover' as any]: isDark ? '#141418' : '#F4F4F5',
-    ['--border' as any]: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)',
-    ['--border-hover' as any]: 'rgba(254,192,15,0.45)',
-    ['--text' as any]: isDark ? '#F4F4F5' : '#09090B',
-    ['--text-muted' as any]: isDark ? '#71717A' : '#71717A',
-    ['--text-dim' as any]: isDark ? '#3F3F46' : '#D4D4D8',
-    ['--dot-color' as any]: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.035)',
+    ['--accent-dim' as any]: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.07)',
+    ['--accent-glow' as any]: 'rgba(254,192,15,0.3)',
+    ['--bg' as any]: isDark ? '#080809' : '#F5F5F6',
+    ['--bg-card' as any]: isDark ? '#0D0D10' : '#FFFFFF',
+    ['--bg-card-hover' as any]: isDark ? '#121216' : '#F9F9FA',
+    ['--bg-raised' as any]: isDark ? '#111115' : '#FAFAFA',
+    ['--border' as any]: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    ['--border-hover' as any]: 'rgba(254,192,15,0.4)',
+    ['--text' as any]: isDark ? '#EFEFEF' : '#0A0A0B',
+    ['--text-muted' as any]: isDark ? '#606068' : '#808088',
+    ['--text-dim' as any]: isDark ? '#2E2E36' : '#D8D8DC',
+    ['--shadow-card' as any]: isDark
+      ? '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)'
+      : '0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.06)',
   };
 
-  const s = {
-    /* Root */
-    root: {
-      ...cssVars,
-      minHeight: '100vh',
-      backgroundColor: 'var(--bg)',
-      backgroundImage: 'radial-gradient(var(--dot-color) 1px, transparent 1px)',
-      backgroundSize: '24px 24px',
-      fontFamily: "'Instrument Sans', sans-serif",
-      color: 'var(--text)',
-      transition: 'background-color 0.3s ease',
-      overflowX: 'hidden' as const,
-    },
-
-    /* Top accent line */
-    topLine: {
-      height: '2px',
-      background: 'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)',
-      opacity: 0.35,
-    },
-
-    /* ── Hero ── */
-    hero: {
-      padding: isMobile ? '36px 20px 32px' : '60px 48px 52px',
-      maxWidth: '1400px',
-      margin: '0 auto',
-      display: 'grid' as const,
-      gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
-      gap: isMobile ? '32px' : '48px',
-      alignItems: 'start',
-    },
-    heroLeft: {},
-    eyebrow: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px',
-      fontFamily: "'DM Mono', monospace",
-      fontSize: '10px',
-      letterSpacing: '0.14em',
-      color: 'var(--accent)',
-      textTransform: 'uppercase' as const,
-      marginBottom: '18px',
-    },
-    eyebrowDot: {
-      width: '5px',
-      height: '5px',
-      borderRadius: '50%',
-      background: 'var(--accent)',
-      animation: 'dash-pulse 2.2s ease-in-out infinite',
-    },
-    heroTitle: {
-      fontFamily: "'Syne', sans-serif",
-      fontSize: isMobile ? '34px' : '54px',
-      fontWeight: 800,
-      letterSpacing: '-0.025em',
-      lineHeight: 1.08,
-      color: 'var(--text)',
-      marginBottom: '16px',
-    },
-    heroAccent: {
-      color: 'var(--accent)',
-    },
-    heroSub: {
-      fontSize: '14px',
-      color: 'var(--text-muted)',
-      lineHeight: 1.75,
-      maxWidth: '460px',
-      marginBottom: '32px',
-    },
-    ctaBtn: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '10px',
-      padding: isMobile ? '13px 24px' : '14px 30px',
-      background: 'var(--accent)',
-      color: '#09090B',
-      border: 'none',
-      borderRadius: '8px',
-      fontFamily: "'Syne', sans-serif",
-      fontSize: '12px',
-      fontWeight: 700,
-      letterSpacing: '0.09em',
-      textTransform: 'uppercase' as const,
-      cursor: 'pointer',
-      boxShadow: '0 4px 20px var(--accent-glow)',
-    },
-
-    /* Stats column */
-    statsCol: {
-      display: 'flex',
-      flexDirection: isMobile ? 'row' : 'column' as const,
-      gap: '12px',
-    },
-    statCard: {
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: '12px',
-      padding: isMobile ? '16px 20px' : '20px 26px',
-      minWidth: isMobile ? '0' : '170px',
-      flex: isMobile ? '1' : 'none',
-      position: 'relative' as const,
-      overflow: 'hidden',
-    },
-    statTopLine: {
-      position: 'absolute' as const,
-      top: 0, left: 0, right: 0,
-      height: '2px',
-      background: 'linear-gradient(90deg, var(--accent), transparent)',
-      opacity: 0.55,
-    },
-    statLabel: {
-      fontFamily: "'DM Mono', monospace",
-      fontSize: '9px',
-      letterSpacing: '0.13em',
-      textTransform: 'uppercase' as const,
-      color: 'var(--text-muted)',
-      marginBottom: '10px',
-    },
-    statValue: {
-      fontFamily: "'DM Mono', monospace",
-      fontSize: isMobile ? '28px' : '36px',
-      fontWeight: 400,
-      color: 'var(--text)',
-      letterSpacing: '-0.02em',
-      lineHeight: 1,
-    },
-
-    /* ── Content ── */
-    content: {
-      padding: isMobile ? '8px 20px 56px' : '8px 48px 72px',
-      maxWidth: '1400px',
-      margin: '0 auto',
-    },
-
-    /* Quick actions */
-    quickRow: {
-      display: 'flex',
-      gap: '10px',
-      marginBottom: '52px',
-      flexWrap: 'wrap' as const,
-    },
-    quickBtn: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '10px',
-      padding: '11px 20px',
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: '8px',
-      color: 'var(--text)',
-      fontFamily: "'Syne', sans-serif",
-      fontSize: '11px',
-      fontWeight: 600,
-      letterSpacing: '0.07em',
-      textTransform: 'uppercase' as const,
-      cursor: 'pointer',
-      whiteSpace: 'nowrap' as const,
-    },
-    quickIconWrap: (bg: string) => ({
-      width: '26px',
-      height: '26px',
-      borderRadius: '6px',
-      background: bg,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }),
-
-    /* Section header */
-    sectionHeader: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '14px',
-      marginBottom: '18px',
-    },
-    sectionLabel: {
-      fontFamily: "'DM Mono', monospace",
-      fontSize: '9px',
-      letterSpacing: '0.16em',
-      textTransform: 'uppercase' as const,
-      color: 'var(--text-muted)',
-      whiteSpace: 'nowrap' as const,
-    },
-    sectionLine: {
-      flex: 1,
-      height: '1px',
-      background: 'var(--border)',
-    },
-
-    /* Features */
-    featGrid: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(275px, 1fr))',
-      gap: '14px',
-      marginBottom: '52px',
-    },
-    featCard: (borderColor: string, boxShadow: string, bg: string) => ({
-      background: bg || 'var(--bg-card)',
-      border: `1px solid ${borderColor}`,
-      borderRadius: '14px',
-      padding: '26px',
-      cursor: 'pointer',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      boxShadow,
-    }),
-    featIconWrap: (bg: string) => ({
-      width: '46px',
-      height: '46px',
-      borderRadius: '11px',
-      background: bg,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: '18px',
-    }),
-    featTitle: {
-      fontFamily: "'Syne', sans-serif",
-      fontSize: '15px',
-      fontWeight: 700,
-      color: 'var(--text)',
-      marginBottom: '8px',
-      letterSpacing: '-0.01em',
-    },
-    featDesc: {
-      fontSize: '12.5px',
-      color: 'var(--text-muted)',
-      lineHeight: 1.65,
-      flex: 1,
-      marginBottom: '18px',
-    },
-    featCta: (color: string) => ({
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '5px',
-      fontFamily: "'DM Mono', monospace",
-      fontSize: '10px',
-      letterSpacing: '0.09em',
-      textTransform: 'uppercase' as const,
-      color,
-    }),
-
-    /* Recents */
-    recentsWrap: { marginBottom: '52px' },
-    recentsCard: {
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: '14px',
-      overflow: 'hidden',
-    },
-    recentItem: (isLast: boolean, bgHover: string) => ({
-      padding: '15px 24px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      cursor: 'pointer',
-      borderBottom: isLast ? 'none' : '1px solid var(--border)',
-    }),
-    recentTitle: {
-      flex: 1,
-      fontSize: '13px',
-      fontWeight: 500,
-      color: 'var(--text)',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap' as const,
-      letterSpacing: '-0.01em',
-    },
-    recentDate: {
-      fontFamily: "'DM Mono', monospace",
-      fontSize: '10px',
-      color: 'var(--text-dim)',
-      flexShrink: 0,
-    },
-
-    /* Bottom grid */
-    bottomGrid: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-      gap: '16px',
-    },
-
-    /* Tips / guide card */
-    tipsCard: {
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: '14px',
-      padding: '28px',
-      position: 'relative' as const,
-      overflow: 'hidden',
-    },
-    tipsTopLine: {
-      position: 'absolute' as const,
-      top: 0, left: 0, right: 0,
-      height: '2px',
-      background: 'linear-gradient(90deg, var(--accent) 0%, transparent 70%)',
-      opacity: 0.5,
-    },
-    tipsTitle: {
-      fontFamily: "'Syne', sans-serif",
-      fontSize: '14px',
-      fontWeight: 700,
-      color: 'var(--text)',
-      letterSpacing: '-0.01em',
-      marginBottom: '20px',
-    },
-    tipItem: (isLast: boolean) => ({
-      display: 'flex',
-      gap: '14px',
-      padding: '11px 0',
-      borderBottom: isLast ? 'none' : '1px solid var(--border)',
-      alignItems: 'flex-start',
-    }),
-    tipNumber: {
-      fontFamily: "'DM Mono', monospace",
-      fontSize: '10px',
-      color: 'var(--accent)',
-      opacity: 0.65,
-      flexShrink: 0,
-      paddingTop: '2px',
-      width: '16px',
-    },
-    tipText: {
-      fontSize: '12.5px',
-      color: 'var(--text-muted)',
-      lineHeight: 1.6,
-    },
-  } as const;
+  /* ── Styles object ── */
+  const p = isMobile ? '20px' : '52px';
 
   return (
     <>
-      {/* Inject styles */}
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
-      <div style={s.root}>
-        {/* Top accent line */}
-        <div style={s.topLine} />
+      <div style={{
+        ...cssVars,
+        minHeight: '100vh',
+        background: isDark
+          ? 'radial-gradient(ellipse 120% 60% at 60% -10%, rgba(254,192,15,0.04) 0%, transparent 60%), var(--bg)'
+          : 'radial-gradient(ellipse 120% 60% at 60% -10%, rgba(254,192,15,0.06) 0%, transparent 60%), var(--bg)',
+        fontFamily: "'Instrument Sans', sans-serif",
+        color: 'var(--text)',
+        overflowX: 'hidden' as const,
+      }}>
 
-        {/* ─── Hero ─────────────────────────────────────── */}
-        <div style={s.hero}>
-          {/* Left: greeting + CTA */}
-          <div style={s.heroLeft} className="da0">
-            <div style={s.eyebrow}>
-              <div style={s.eyebrowDot} />
-              Trading Platform
-            </div>
-            <h1 style={s.heroTitle}>
-              Welcome back,{' '}
-              <span style={s.heroAccent}>{user?.name || 'Trader'}</span>
-            </h1>
-            <p style={s.heroSub}>
-              AI-powered AFL code generation, strategy analysis, and intelligent trading tools — all in one place.
-            </p>
-            <button
-              className="dash-cta-btn"
-              style={s.ctaBtn}
-              onClick={() => router.push('/afl')}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px var(--accent-glow)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px var(--accent-glow)';
-              }}
-            >
-              <Sparkles size={16} />
-              Start Generating
-            </button>
-          </div>
+        {/* ── Top bar ── */}
+        <div style={{
+          height: '1px',
+          background: `linear-gradient(90deg, transparent 0%, #FEC00F 40%, rgba(254,192,15,0.3) 60%, transparent 100%)`,
+          opacity: 0.5,
+        }} />
 
-          {/* Right: stats */}
-          <div style={s.statsCol} className="da1">
-            <div style={s.statCard}>
-              <div style={s.statTopLine} />
-              <div style={s.statLabel}>Conversations</div>
-              <div style={s.statValue}>{String(stats.conversations).padStart(2, '0')}</div>
-            </div>
-            <div style={s.statCard}>
-              <div style={s.statTopLine} />
-              <div style={s.statLabel}>Documents</div>
-              <div style={s.statValue}>{String(stats.documents).padStart(2, '0')}</div>
-            </div>
+        {/* ── Ticker ── */}
+        <div style={{
+          borderBottom: '1px solid var(--border)',
+          overflow: 'hidden',
+          background: isDark ? 'rgba(254,192,15,0.02)' : 'rgba(254,192,15,0.015)',
+          padding: '0',
+        }}>
+          <div className="ticker-inner" style={{ padding: '7px 0' }}>
+            {[...tickerItems, ...tickerItems].map((item, i) => (
+              <span key={i} style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: '9.5px',
+                letterSpacing: '0.1em',
+                color: 'var(--text-muted)',
+                display: 'inline-flex',
+                gap: '8px',
+                alignItems: 'center',
+              }}>
+                <span style={{ color: 'var(--text)', opacity: 0.6 }}>{item.label}</span>
+                <span style={{ color: '#34D399', fontSize: '8.5px' }}>● {item.change}</span>
+              </span>
+            ))}
           </div>
         </div>
 
-        {/* ─── Main content ─────────────────────────────── */}
-        <div style={s.content}>
+        {/* ── Hero ── */}
+        <div style={{
+          padding: isMobile ? '40px 20px 36px' : '64px 52px 56px',
+          maxWidth: '1360px',
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 320px',
+          gap: isMobile ? '36px' : '40px',
+          alignItems: 'start',
+        }}>
+
+          {/* Left */}
+          <div className="da0">
+            {/* Eyebrow */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '10px',
+              background: isDark ? 'rgba(254,192,15,0.07)' : 'rgba(254,192,15,0.08)',
+              border: '1px solid rgba(254,192,15,0.2)',
+              borderRadius: '100px',
+              padding: '5px 14px 5px 10px',
+              marginBottom: '24px',
+            }}>
+              <div style={{
+                width: '5px', height: '5px', borderRadius: '50%',
+                background: '#FEC00F',
+                animation: 'dash-pulse 2.4s ease-in-out infinite',
+              }} />
+              <span style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: '9.5px', letterSpacing: '0.14em',
+                textTransform: 'uppercase' as const,
+                color: '#FEC00F',
+              }}>
+                Trading Platform · Live
+              </span>
+            </div>
+
+            {/* Title */}
+            <h1 style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: isMobile ? '36px' : '58px',
+              fontWeight: 800,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.04,
+              color: 'var(--text)',
+              marginBottom: '20px',
+            }}>
+              {greeting},{' '}
+              <span style={{
+                color: '#FEC00F',
+                position: 'relative' as const,
+              }}>
+                {user?.name || 'Trader'}
+              </span>
+              <span style={{ display: 'block', fontWeight: 400, fontSize: isMobile ? '20px' : '28px', color: 'var(--text-muted)', marginTop: '6px', letterSpacing: '-0.01em' }}>
+                Your edge starts here.
+              </span>
+            </h1>
+
+            <p style={{
+              fontSize: '14px',
+              color: 'var(--text-muted)',
+              lineHeight: 1.8,
+              maxWidth: '500px',
+              marginBottom: '36px',
+            }}>
+              AI-powered AFL generation, strategy analysis, and intelligent trading tools — purpose-built for systematic traders.
+            </p>
+
+            {/* CTA row */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' as const }}>
+              <button
+                className="dash-cta-btn"
+                onClick={() => router.push('/afl')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '10px',
+                  padding: isMobile ? '13px 24px' : '15px 32px',
+                  background: '#FEC00F',
+                  color: '#09090B',
+                  border: 'none', borderRadius: '10px',
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: '12px', fontWeight: 700,
+                  letterSpacing: '0.08em', textTransform: 'uppercase' as const,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 24px rgba(254,192,15,0.35)',
+                }}
+              >
+                <Sparkles size={15} />
+                Generate AFL
+              </button>
+              <button
+                onClick={() => router.push('/chat')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '10px',
+                  padding: isMobile ? '13px 24px' : '15px 28px',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: '12px', fontWeight: 600,
+                  letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                  cursor: 'pointer',
+                  transition: 'border-color .2s, background .2s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(254,192,15,0.35)';
+                  e.currentTarget.style.background = 'var(--bg-card-hover)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.background = 'var(--bg-card)';
+                }}
+              >
+                <MessageCircle size={15} />
+                Open Chat
+              </button>
+            </div>
+          </div>
+
+          {/* Right: stat cards */}
+          <div className="da1" style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column' as const, gap: '12px' }}>
+            {[
+              {
+                label: 'Conversations',
+                value: stats.conversations,
+                icon: MessageCircle,
+                color: '#A78BFA',
+                spark: [4, 7, 5, 9, 6, 12, 8, 14, 10, 16],
+              },
+              {
+                label: 'Documents',
+                value: stats.documents,
+                icon: Database,
+                color: '#34D399',
+                spark: [2, 5, 3, 8, 5, 10, 7, 12, 9, 13],
+              },
+            ].map(({ label, value, icon: Icon, color, spark }) => (
+              <div key={label} style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '14px',
+                padding: '20px 22px',
+                flex: isMobile ? '1' : 'none',
+                boxShadow: 'var(--shadow-card)',
+                position: 'relative' as const,
+                overflow: 'hidden',
+              }}>
+                {/* Top accent line */}
+                <div style={{
+                  position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px',
+                  background: `linear-gradient(90deg, ${color}, transparent)`,
+                  opacity: 0.6,
+                }} />
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                  marginBottom: '12px',
+                }}>
+                  <div>
+                    <div style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: '8.5px', letterSpacing: '0.14em',
+                      textTransform: 'uppercase' as const,
+                      color: 'var(--text-muted)',
+                      marginBottom: '8px',
+                    }}>
+                      {label}
+                    </div>
+                    <div className="stat-num-glow" style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: isMobile ? '32px' : '40px',
+                      fontWeight: 400,
+                      color: 'var(--text)',
+                      letterSpacing: '-0.03em',
+                      lineHeight: 1,
+                    }}>
+                      {String(value).padStart(2, '0')}
+                    </div>
+                  </div>
+                  <div style={{
+                    width: '34px', height: '34px', borderRadius: '9px',
+                    background: `${color}18`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Icon size={16} color={color} />
+                  </div>
+                </div>
+                <Sparkline values={spark} color={color} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Main Content ── */}
+        <div style={{ padding: isMobile ? '0 20px 64px' : `0 ${p} 80px`, maxWidth: '1360px', margin: '0 auto' }}>
 
           {/* Quick actions */}
-          <div style={s.quickRow} className="da2">
+          <div className="da2" style={{ display: 'flex', gap: '10px', marginBottom: '52px', flexWrap: 'wrap' as const }}>
             {[
-              { label: 'New Chat',     icon: Plus,  href: '/chat',  bg: 'rgba(139,92,246,0.12)', color: '#8B5CF6' },
-              { label: 'Generate AFL', icon: Code2, href: '/afl',   bg: 'rgba(59,130,246,0.12)',  color: '#3B82F6' },
-              { label: 'Upload Doc',   icon: FileText, href: '/knowledge', bg: 'rgba(34,197,94,0.1)', color: '#22C55E' },
+              { label: 'New Chat',     icon: Plus,     href: '/chat',      bg: 'rgba(167,139,250,0.1)', color: '#A78BFA' },
+              { label: 'Generate AFL', icon: Code2,    href: '/afl',       bg: 'rgba(96,165,250,0.1)',  color: '#60A5FA' },
+              { label: 'Upload Doc',   icon: FileText, href: '/knowledge', bg: 'rgba(52,211,153,0.1)',  color: '#34D399' },
+              { label: 'Backtest',     icon: BarChart2, href: '/backtest', bg: 'rgba(251,146,60,0.1)',  color: '#FB923C' },
             ].map(({ label, icon: Icon, href, bg, color }) => (
               <div
                 key={href}
                 className="dash-quick-btn"
-                style={s.quickBtn}
                 onClick={() => router.push(href)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 18px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '9px',
+                  color: 'var(--text)',
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: '11px', fontWeight: 600,
+                  letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-card)',
+                }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'var(--border-hover)';
+                  e.currentTarget.style.borderColor = 'rgba(254,192,15,0.3)';
                   e.currentTarget.style.background = 'var(--accent-dim)';
-                  e.currentTarget.style.color = 'var(--accent)';
+                  e.currentTarget.style.color = '#FEC00F';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(254,192,15,0.1)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.borderColor = 'var(--border)';
                   e.currentTarget.style.background = 'var(--bg-card)';
                   e.currentTarget.style.color = 'var(--text)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-card)';
                 }}
               >
-                <div style={s.quickIconWrap(bg)}>
-                  <Icon size={14} color={color} />
+                <div style={{
+                  width: '26px', height: '26px', borderRadius: '7px',
+                  background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Icon size={13} color={color} />
                 </div>
                 {label}
               </div>
@@ -636,33 +622,64 @@ export default function DashboardPage() {
 
           {/* ── Recent Conversations ── */}
           {recentChats.length > 0 && (
-            <div style={s.recentsWrap} className="da3">
-              <div style={s.sectionHeader}>
-                <span style={s.sectionLabel}>Recent Conversations</span>
-                <div style={s.sectionLine} />
-              </div>
-              <div style={s.recentsCard}>
+            <div className="da3" style={{ marginBottom: '52px' }}>
+              <SectionHead
+                label="Recent Conversations"
+                action="View All →"
+                onAction={() => router.push('/chat')}
+              />
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '14px',
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-card)',
+              }}>
                 {recentChats.map((chat, idx) => (
                   <div
                     key={chat.id}
                     className="dash-recent-item"
-                    style={s.recentItem(idx === recentChats.length - 1, isDark ? '#141418' : '#F4F4F5')}
                     onClick={() => router.push('/chat')}
+                    style={{
+                      padding: '14px 22px',
+                      display: 'flex', alignItems: 'center', gap: '16px',
+                      cursor: 'pointer',
+                      borderBottom: idx < recentChats.length - 1 ? '1px solid var(--border)' : 'none',
+                      paddingLeft: '24px',
+                    }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.background = isDark ? '#141418' : '#F4F4F5';
+                      e.currentTarget.style.background = isDark ? '#121216' : '#F8F8F9';
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    <MessageSquare size={15} color="#FEC00F" style={{ flexShrink: 0, opacity: 0.8 }} />
-                    <span style={s.recentTitle}>{chat.title || 'Untitled Chat'}</span>
-                    <span style={s.recentDate}>
+                    <div style={{
+                      width: '30px', height: '30px', borderRadius: '8px',
+                      background: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.07)',
+                      border: '1px solid rgba(254,192,15,0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <MessageSquare size={13} color="#FEC00F" />
+                    </div>
+                    <span style={{
+                      flex: 1, fontSize: '13px', fontWeight: 500,
+                      color: 'var(--text)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+                      letterSpacing: '-0.01em',
+                    }}>
+                      {chat.title || 'Untitled Chat'}
+                    </span>
+                    <span style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: '9.5px', color: 'var(--text-muted)', flexShrink: 0,
+                    }}>
                       {chat.updated_at
                         ? new Date(chat.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
                         : ''}
                     </span>
-                    <ArrowRight size={13} color="var(--text-dim)" />
+                    <ArrowRight size={13} color="var(--text-dim)" style={{ flexShrink: 0 }} />
                   </div>
                 ))}
               </div>
@@ -670,40 +687,81 @@ export default function DashboardPage() {
           )}
 
           {/* ── Feature Cards ── */}
-          <div className="da4">
-            <div style={s.sectionHeader}>
-              <span style={s.sectionLabel}>Tools</span>
-              <div style={s.sectionLine} />
-            </div>
-            <div style={s.featGrid}>
+          <div className="da4" style={{ marginBottom: '52px' }}>
+            <SectionHead label="Platform Tools" />
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(270px, 1fr))',
+              gap: '14px',
+            }}>
               {features.map(feat => {
                 const Icon = feat.icon;
                 return (
                   <div
                     key={feat.href}
                     className="dash-feat-card"
-                    style={s.featCard('var(--border)', 'none', 'var(--bg-card)')}
                     onClick={() => router.push(feat.href)}
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '16px',
+                      padding: '26px',
+                      cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column' as const,
+                      boxShadow: 'var(--shadow-card)',
+                    }}
                     onMouseEnter={e => {
                       e.currentTarget.style.borderColor = 'var(--border-hover)';
-                      e.currentTarget.style.background = 'var(--bg-card-hover)';
                       e.currentTarget.style.boxShadow = isDark
-                        ? '0 16px 40px rgba(0,0,0,0.45), inset 0 0 0 1px var(--border-hover)'
-                        : '0 8px 24px rgba(0,0,0,0.08), inset 0 0 0 1px var(--border-hover)';
+                        ? '0 20px 48px rgba(0,0,0,0.5), 0 0 0 1px var(--border-hover)'
+                        : '0 12px 32px rgba(0,0,0,0.1), 0 0 0 1px var(--border-hover)';
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.borderColor = 'var(--border)';
-                      e.currentTarget.style.background = 'var(--bg-card)';
-                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.boxShadow = 'var(--shadow-card)';
                     }}
                   >
-                    <div style={s.featIconWrap(feat.bgColor)}>
-                      <Icon size={22} color={feat.color} />
+                    {/* Shimmer layer */}
+                    <div className="shimmer-layer" />
+
+                    {/* Icon + sparkline row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                      <div style={{
+                        width: '46px', height: '46px', borderRadius: '12px',
+                        background: feat.bgColor,
+                        border: `1px solid ${feat.color}22`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <Icon size={21} color={feat.color} />
+                      </div>
+                      <Sparkline values={feat.sparkData} color={feat.color} />
                     </div>
-                    <h3 style={s.featTitle}>{feat.title}</h3>
-                    <p style={s.featDesc}>{feat.description}</p>
-                    <div style={s.featCta(feat.color)}>
-                      Open <ArrowUpRight size={12} />
+
+                    <h3 style={{
+                      fontFamily: "'Syne', sans-serif",
+                      fontSize: '15px', fontWeight: 700,
+                      color: 'var(--text)',
+                      letterSpacing: '-0.015em',
+                      marginBottom: '8px',
+                    }}>
+                      {feat.title}
+                    </h3>
+                    <p style={{
+                      fontSize: '12.5px',
+                      color: 'var(--text-muted)',
+                      lineHeight: 1.7, flex: 1, marginBottom: '20px',
+                    }}>
+                      {feat.description}
+                    </p>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: '9.5px', letterSpacing: '0.1em',
+                      textTransform: 'uppercase' as const,
+                      color: feat.color,
+                      opacity: 0.85,
+                    }}>
+                      Open tool <ArrowUpRight size={11} />
                     </div>
                   </div>
                 );
@@ -711,58 +769,169 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* ── Bottom: Platform Guide ── */}
-          <div style={s.bottomGrid} className="da5">
-            <div style={s.tipsCard}>
-              <div style={s.tipsTopLine} />
-              <div style={s.tipsTitle}>Platform Guide</div>
-              {tips.map((tip, idx) => (
-                <div key={idx} style={s.tipItem(idx === tips.length - 1)}>
-                  <span style={s.tipNumber}>0{idx + 1}</span>
-                  <span style={s.tipText}>
-                    Use <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{tip.strong}</strong>
+          {/* ── Bottom grid ── */}
+          <div className="da5" style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: '16px',
+          }}>
+
+            {/* Platform Guide */}
+            <div style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '16px',
+              padding: '28px',
+              position: 'relative' as const,
+              overflow: 'hidden',
+              boxShadow: 'var(--shadow-card)',
+            }}>
+              <div style={{
+                position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px',
+                background: 'linear-gradient(90deg, #FEC00F 0%, rgba(254,192,15,0.1) 80%, transparent 100%)',
+              }} />
+              {/* Subtle bg decoration */}
+              <div style={{
+                position: 'absolute' as const, bottom: '-30px', right: '-30px',
+                width: '120px', height: '120px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(254,192,15,0.04) 0%, transparent 70%)',
+                pointerEvents: 'none' as const,
+              }} />
+
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '22px',
+              }}>
+                <Activity size={14} color="#FEC00F" />
+                <span style={{
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: '13px', fontWeight: 700,
+                  color: 'var(--text)', letterSpacing: '-0.01em',
+                }}>
+                  Platform Guide
+                </span>
+              </div>
+
+              {[
+                { strong: 'AFL Generator', text: ' — describe any strategy in plain language.' },
+                { strong: 'AI Chat', text: ' — refine logic and ask trading questions.' },
+                { strong: 'Knowledge Base', text: ' — upload docs for context-aware responses.' },
+                { strong: 'Backtest Analysis', text: ' — extract insights from your results.' },
+                { strong: 'Reverse Engineer', text: ' — convert ideas directly to AFL code.' },
+              ].map((tip, idx, arr) => (
+                <div key={idx} style={{
+                  display: 'flex', gap: '14px',
+                  padding: '11px 0',
+                  borderBottom: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
+                  alignItems: 'flex-start',
+                }}>
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: '9px', color: '#FEC00F',
+                    opacity: 0.55, flexShrink: 0, paddingTop: '2px', width: '16px',
+                  }}>
+                    {String(idx + 1).padStart(2, '0')}
+                  </span>
+                  <span style={{ fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                    <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{tip.strong}</strong>
                     {tip.text}
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* Activity summary card */}
-            <div style={{ ...s.tipsCard }}>
-              <div style={s.tipsTopLine} />
-              <div style={s.tipsTitle}>Activity</div>
+            {/* Activity */}
+            <div style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '16px',
+              padding: '28px',
+              position: 'relative' as const,
+              overflow: 'hidden',
+              boxShadow: 'var(--shadow-card)',
+            }}>
+              <div style={{
+                position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px',
+                background: 'linear-gradient(90deg, #34D399 0%, rgba(52,211,153,0.1) 80%, transparent 100%)',
+              }} />
+              <div style={{
+                position: 'absolute' as const, bottom: '-30px', right: '-30px',
+                width: '120px', height: '120px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(52,211,153,0.04) 0%, transparent 70%)',
+                pointerEvents: 'none' as const,
+              }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '22px' }}>
+                <BarChart2 size={14} color="#34D399" />
+                <span style={{
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: '13px', fontWeight: 700,
+                  color: 'var(--text)', letterSpacing: '-0.01em',
+                }}>
+                  Activity
+                </span>
+              </div>
+
               {[
-                { label: 'Total Conversations', value: stats.conversations },
-                { label: 'Documents Indexed',   value: stats.documents },
-                { label: 'Platform Status',      value: 'Online' },
-              ].map(({ label, value }, idx) => (
-                <div
-                  key={label}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '13px 0',
-                    borderBottom: idx < 2 ? '1px solid var(--border)' : 'none',
-                  }}
-                >
-                  <span style={{
-                    fontFamily: "'Instrument Sans', sans-serif",
-                    fontSize: '12.5px',
-                    color: 'var(--text-muted)',
-                  }}>
-                    {label}
-                  </span>
+                { label: 'Total Conversations', value: stats.conversations, valueColor: 'var(--text)' },
+                { label: 'Documents Indexed',   value: stats.documents,    valueColor: 'var(--text)' },
+                { label: 'Platform Status',      value: 'Online',          valueColor: '#34D399' },
+                { label: 'AI Engine',            value: 'Active',          valueColor: '#FEC00F' },
+              ].map(({ label, value, valueColor }, idx, arr) => (
+                <div key={label} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '13px 0',
+                  borderBottom: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
+                }}>
+                  <span style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>{label}</span>
                   <span style={{
                     fontFamily: "'DM Mono', monospace",
-                    fontSize: '13px',
-                    color: label === 'Platform Status' ? '#22C55E' : 'var(--text)',
+                    fontSize: '12.5px',
+                    color: valueColor,
                     fontWeight: 400,
                   }}>
-                    {value}
+                    {typeof value === 'number' ? String(value).padStart(2, '0') : value}
                   </span>
                 </div>
               ))}
+
+              {/* Divider */}
+              <div style={{ margin: '20px 0 18px', borderTop: '1px solid var(--border)' }} />
+
+              {/* Quick nav */}
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+                {[
+                  { label: 'Go to AFL Generator', href: '/afl', color: '#60A5FA' },
+                  { label: 'Open Knowledge Base', href: '/knowledge', color: '#34D399' },
+                ].map(({ label, href, color }) => (
+                  <button key={href} onClick={() => router.push(href)} style={{
+                    width: '100%',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    background: 'var(--bg-raised)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    fontSize: '12px',
+                    fontFamily: "'Instrument Sans', sans-serif",
+                    transition: 'border-color .15s, color .15s',
+                  }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = `${color}44`;
+                      e.currentTarget.style.color = color;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                    }}
+                  >
+                    {label}
+                    <ArrowRight size={12} />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
