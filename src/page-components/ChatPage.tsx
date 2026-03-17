@@ -823,18 +823,6 @@ export function ChatPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const T = {
-    text:    isDark ? '#EFEFEF'                    : '#0A0A0B',
-    muted:   isDark ? '#606068'                    : '#808088',
-    border:  isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
-    card:    isDark ? '#0D0D10'                    : '#FFFFFF',
-    userBg:  isDark ? 'rgba(254,192,15,0.07)'      : 'rgba(254,192,15,0.09)',
-    userBdr: isDark ? 'rgba(254,192,15,0.18)'      : 'rgba(254,192,15,0.25)',
-    aiBg:    isDark ? 'rgba(255,255,255,0.03)'     : 'rgba(0,0,0,0.02)',
-    aiBdr:   isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
-    dim:     isDark ? 'rgba(255,255,255,0.18)'     : 'rgba(0,0,0,0.25)',
-  };
-
   const cssVars = {
     '--chat-bg':  isDark ? '#080809' : '#F5F5F6',
     '--chat-dot': isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)',

@@ -73,17 +73,20 @@ export function KnowledgeBasePage() {
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [showFeedback, setShowFeedback] = useState(false);
 
-  // ─── Theme colors ──────────────────────────────────────────
+  // ─── Theme tokens (matches dashboard/chat) ─────────────────
   const colors = useMemo(
     () => ({
-      background: isDark ? '#121212' : '#F5F5F5',
-      cardBg: isDark ? '#1E1E1E' : '#FFFFFF',
-      inputBg: isDark ? '#2A2A2A' : '#F8F8F8',
-      border: isDark ? '#2E2E2E' : '#E5E5E5',
-      text: isDark ? '#FFFFFF' : '#212121',
-      textMuted: isDark ? '#9E9E9E' : '#757575',
-      hoverBg: isDark ? '#262626' : '#F5F5F5',
-      accent: '#FEC00F',
+      background: isDark ? '#080809' : '#F5F5F6',
+      cardBg:     isDark ? '#0D0D10' : '#FFFFFF',
+      inputBg:    isDark ? '#111115' : '#F8F8F9',
+      border:     isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+      text:       isDark ? '#EFEFEF' : '#0A0A0B',
+      textMuted:  isDark ? '#606068' : '#808088',
+      hoverBg:    isDark ? '#121216' : '#F4F4F5',
+      accent:     '#FEC00F',
+      shadow:     isDark
+        ? '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)'
+        : '0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.06)',
     }),
     [isDark]
   );
@@ -225,222 +228,198 @@ export function KnowledgeBasePage() {
   };
 
   // ─── Render ────────────────────────────────────────────────
+  const dot = isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)';
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: colors.background,
-        fontFamily: "'Quicksand', sans-serif",
-        transition: 'background-color 0.3s ease',
-      }}
-    >
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: colors.background,
+      backgroundImage: [
+        `radial-gradient(ellipse 120% 50% at 60% -8%, rgba(254,192,15,0.045) 0%, transparent 55%)`,
+        `radial-gradient(${dot} 1px, transparent 1px)`,
+      ].join(', '),
+      backgroundSize: 'auto, 24px 24px',
+      fontFamily: "'Instrument Sans', 'Quicksand', sans-serif",
+      color: colors.text,
+      transition: 'background-color 0.3s ease',
+    }}>
+
+      {/* ── Top accent line ── */}
+      <div style={{
+        height: '1px',
+        background: 'linear-gradient(90deg, transparent 0%, #FEC00F 45%, rgba(254,192,15,0.25) 65%, transparent 100%)',
+        opacity: 0.45,
+      }} />
+
       {/* ═══ HEADER ═══ */}
-      <div
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #1E1E1E 0%, #2A2A2A 100%)'
-            : 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
-          borderBottom: `1px solid ${colors.border}`,
-          padding: isMobile ? '20px 16px' : '32px 32px 0',
-          transition: 'background 0.3s ease',
-        }}
-      >
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          {/* Title Row */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: isMobile ? 'flex-start' : 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexDirection: isMobile ? 'column' : 'row',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-              }}
-            >
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  backgroundColor: `${colors.accent}14`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <Database size={24} color={colors.accent} />
+      <div style={{
+        borderBottom: `1px solid ${colors.border}`,
+        padding: isMobile ? '24px 20px 0' : '40px 52px 0',
+        background: 'transparent',
+      }}>
+        <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
+
+          {/* Title row */}
+          <div style={{
+            display: 'flex',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            flexDirection: isMobile ? 'column' : 'row' as const,
+            marginBottom: '24px',
+          }}>
+            {/* Left: eyebrow + title */}
+            <div>
+              {/* Eyebrow pill */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: isDark ? 'rgba(254,192,15,0.07)' : 'rgba(254,192,15,0.08)',
+                border: '1px solid rgba(254,192,15,0.2)',
+                borderRadius: '100px',
+                padding: '4px 14px 4px 10px',
+                marginBottom: '14px',
+              }}>
+                <div style={{
+                  width: 5, height: 5, borderRadius: '50%',
+                  background: '#FEC00F',
+                  animation: 'kb-pulse 2.4s ease-in-out infinite',
+                }} />
+                <span style={{
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: '9px', letterSpacing: '0.16em',
+                  textTransform: 'uppercase' as const, color: '#FEC00F',
+                }}>
+                  Knowledge Base · {stats ? `${stats.total_documents} docs` : 'Loading'}
+                </span>
               </div>
-              <div>
-                <h1
-                  style={{
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontSize: isMobile ? '24px' : '32px',
-                    fontWeight: 700,
-                    color: colors.text,
-                    letterSpacing: '1.5px',
-                    lineHeight: 1.1,
-                    margin: 0,
-                  }}
-                >
-                  KNOWLEDGE BASE
-                </h1>
-                <p
-                  style={{
-                    color: colors.textMuted,
-                    fontSize: isMobile ? '12px' : '14px',
-                    lineHeight: 1.5,
-                    margin: '3px 0 0 0',
-                  }}
-                >
-                  Upload, search, and manage your trading knowledge
-                </p>
-              </div>
+
+              <h1 style={{
+                fontFamily: "'Syne', var(--font-rajdhani), sans-serif",
+                fontSize: isMobile ? '28px' : '42px',
+                fontWeight: 800,
+                letterSpacing: '-0.025em',
+                lineHeight: 1.08,
+                color: colors.text,
+                margin: 0,
+              }}>
+                Knowledge{' '}
+                <span style={{ color: '#FEC00F' }}>Base</span>
+              </h1>
+              <p style={{
+                fontSize: '13px', color: colors.textMuted,
+                lineHeight: 1.7, margin: '6px 0 0',
+              }}>
+                Upload, search, and manage your trading knowledge
+              </p>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '8px' }}>
+            {/* Right: action buttons */}
+            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
               <button
                 onClick={loadData}
-                title="Refresh data"
+                title="Refresh"
                 style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
+                  width: 38, height: 38,
+                  borderRadius: '9px',
                   border: `1px solid ${colors.border}`,
-                  backgroundColor: 'transparent',
+                  background: colors.cardBg,
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: colors.textMuted,
-                  transition: 'all 0.2s',
+                  boxShadow: colors.shadow,
+                  transition: 'border-color .2s, color .2s',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(254,192,15,0.35)'; e.currentTarget.style.color = '#FEC00F'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.color = colors.textMuted; }}
               >
-                <RefreshCw size={15} />
+                <RefreshCw size={14} />
               </button>
               <button
                 onClick={() => setShowFeedback(true)}
                 style={{
-                  height: '38px',
-                  padding: '0 14px',
-                  borderRadius: '10px',
+                  height: 38, padding: '0 16px',
+                  borderRadius: '9px',
                   border: `1px solid ${colors.border}`,
-                  backgroundColor: 'transparent',
+                  background: colors.cardBg,
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
+                  display: 'flex', alignItems: 'center', gap: '7px',
                   color: colors.textMuted,
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  letterSpacing: '0.5px',
-                  transition: 'all 0.2s',
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: '11px', fontWeight: 600,
+                  letterSpacing: '0.07em', textTransform: 'uppercase' as const,
+                  boxShadow: colors.shadow,
+                  transition: 'border-color .2s, color .2s',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(254,192,15,0.35)'; e.currentTarget.style.color = '#FEC00F'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.color = colors.textMuted; }}
               >
-                <MessageSquarePlus size={14} />
-                {!isMobile && 'FEEDBACK'}
+                <MessageSquarePlus size={13} />
+                {!isMobile && 'Feedback'}
               </button>
             </div>
           </div>
 
-          {/* ═══ STATS ROW ═══ */}
+          {/* ═══ STAT PILLS ═══ */}
           {stats && !loading && (
-            <div
-              style={{
-                display: 'flex',
-                gap: isMobile ? '8px' : '16px',
-                marginTop: '20px',
-                flexWrap: 'wrap',
-              }}
-            >
-              {[
-                {
-                  label: 'Documents',
-                  value: stats.total_documents,
-                  icon: FileText,
-                  iconColor: colors.accent,
-                },
-                {
-                  label: 'Total Size',
-                  value: formatFileSize(stats.total_size),
-                  icon: HardDrive,
-                  iconColor: '#3b82f6',
-                },
-                {
-                  label: 'Categories',
-                  value: Object.keys(stats.categories).length,
-                  icon: FolderOpen,
-                  iconColor: '#22c55e',
-                },
-                {
-                  label: 'Bookmarks',
-                  value: bookmarkedIds.size,
-                  icon: BookOpen,
-                  iconColor: '#818cf8',
-                },
-              ].map((stat) => {
-                const Icon = stat.icon;
-                return (
-                  <div
-                    key={stat.label}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 14px',
-                      backgroundColor: isDark
-                        ? 'rgba(255,255,255,0.04)'
-                        : 'rgba(0,0,0,0.02)',
-                      borderRadius: '8px',
-                      border: `1px solid ${colors.border}`,
-                    }}
-                  >
-                    <Icon size={16} color={stat.iconColor} />
-                    <div>
-                      <p
-                        style={{
-                          fontFamily: "'Rajdhani', sans-serif",
-                          fontSize: '18px',
-                          fontWeight: 700,
-                          color: colors.text,
-                          margin: 0,
-                          lineHeight: 1,
-                        }}
-                      >
-                        {stat.value}
-                      </p>
-                      <p
-                        style={{
-                          color: colors.textMuted,
-                          fontSize: '10px',
-                          margin: 0,
-                        }}
-                      >
-                        {stat.label}
-                      </p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' as const, marginBottom: '4px' }}>
+              {([
+                { label: 'Documents',  value: stats.total_documents,               icon: FileText,   color: '#FEC00F' },
+                { label: 'Total Size', value: formatFileSize(stats.total_size),     icon: HardDrive,  color: '#60A5FA' },
+                { label: 'Categories', value: Object.keys(stats.categories).length, icon: FolderOpen, color: '#34D399' },
+                { label: 'Bookmarks',  value: bookmarkedIds.size,                   icon: BookOpen,   color: '#A78BFA' },
+              ] as const).map(({ label, value, icon: Icon, color }) => (
+                <div key={label} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 16px',
+                  background: colors.cardBg,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '10px',
+                  boxShadow: colors.shadow,
+                  position: 'relative' as const,
+                  overflow: 'hidden',
+                }}>
+                  {/* micro top line */}
+                  <div style={{
+                    position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px',
+                    background: `linear-gradient(90deg, ${color}, transparent)`,
+                    opacity: 0.55,
+                  }} />
+                  <div style={{
+                    width: 30, height: 30, borderRadius: '8px',
+                    background: `${color}18`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <Icon size={14} color={color} />
+                  </div>
+                  <div>
+                    <div style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: isMobile ? '20px' : '24px',
+                      fontWeight: 400,
+                      color: colors.text,
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1,
+                    }}>
+                      {typeof value === 'number' ? String(value).padStart(2, '0') : value}
+                    </div>
+                    <div style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: '8.5px', letterSpacing: '0.12em',
+                      textTransform: 'uppercase' as const,
+                      color: colors.textMuted,
+                      marginTop: '2px',
+                    }}>
+                      {label}
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
 
           {/* ═══ TAB BAR ═══ */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '2px',
-              marginTop: '20px',
-            }}
-          >
+          <div style={{ display: 'flex', gap: '2px', marginTop: '20px' }}>
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -449,25 +428,22 @@ export function KnowledgeBasePage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: isMobile ? '10px 14px' : '12px 20px',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: isMobile ? '10px 14px' : '11px 22px',
+                    background: 'transparent',
                     border: 'none',
-                    borderBottom: `2px solid ${
-                      isActive ? colors.accent : 'transparent'
-                    }`,
-                    backgroundColor: 'transparent',
-                    color: isActive ? colors.accent : colors.textMuted,
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    letterSpacing: '1px',
+                    borderBottom: `2px solid ${isActive ? '#FEC00F' : 'transparent'}`,
+                    color: isActive ? '#FEC00F' : colors.textMuted,
+                    fontFamily: "'Syne', sans-serif",
+                    fontSize: '11px', fontWeight: 700,
+                    letterSpacing: '0.1em', textTransform: 'uppercase' as const,
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: 'color .2s, border-color .2s',
                   }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = colors.text; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = colors.textMuted; }}
                 >
-                  <Icon size={15} />
+                  <Icon size={13} />
                   {tab.label}
                 </button>
               );
@@ -477,288 +453,110 @@ export function KnowledgeBasePage() {
       </div>
 
       {/* ═══ CONTENT ═══ */}
-      <div
-        style={{
-          padding: isMobile ? '20px 16px' : '24px 32px',
-          maxWidth: '1400px',
-          margin: '0 auto',
-        }}
-      >
+      <div style={{
+        padding: isMobile ? '20px 20px' : '28px 52px 64px',
+        maxWidth: '1360px',
+        margin: '0 auto',
+      }}>
+
         {/* Error Banner */}
         {error && (
-          <div
-            style={{
-              backgroundColor: 'rgba(220, 38, 38, 0.08)',
-              border: '1px solid rgba(220, 38, 38, 0.3)',
-              borderRadius: '12px',
-              padding: '12px 18px',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
-            >
-              <AlertCircle size={16} color="#DC2626" />
-              <p style={{ color: '#DC2626', fontSize: '13px', margin: 0 }}>
-                {error}
-              </p>
+          <div style={{
+            background: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: '12px',
+            padding: '11px 18px',
+            marginBottom: '20px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <AlertCircle size={15} color="#EF4444" />
+              <p style={{ color: isDark ? '#FCA5A5' : '#DC2626', fontSize: '12.5px', margin: 0 }}>{error}</p>
             </div>
             <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-              <button
-                onClick={() => {
-                  setError('');
-                  loadData();
-                }}
-                style={{
-                  background: 'none',
-                  border: '1px solid rgba(220, 38, 38, 0.4)',
-                  cursor: 'pointer',
-                  color: '#DC2626',
-                  padding: '4px 12px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  fontFamily: "'Rajdhani', sans-serif",
-                }}
-              >
-                Retry
-              </button>
-              <button
-                onClick={() => setError('')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#DC2626',
-                  padding: '4px',
-                }}
-              >
-                <X size={14} />
-              </button>
+              <button onClick={() => { setError(''); loadData(); }} style={{
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                cursor: 'pointer', color: isDark ? '#FCA5A5' : '#DC2626',
+                padding: '4px 12px', borderRadius: '6px', fontSize: '11px',
+                fontFamily: "'DM Mono', monospace", letterSpacing: '0.06em',
+              }}>Retry</button>
+              <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textMuted, padding: '2px 4px', fontSize: '16px' }}>×</button>
             </div>
           </div>
         )}
 
-        {/* Loading State */}
+        {/* Loading */}
         {loading ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '80px',
-              gap: '14px',
-            }}
-          >
-            <Loader2
-              size={32}
-              color={colors.accent}
-              style={{ animation: 'spin 1s linear infinite' }}
-            />
-            <p style={{ color: colors.textMuted, fontSize: '14px' }}>
-              Loading knowledge base...
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 0', gap: '16px' }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '14px',
+              background: 'rgba(254,192,15,0.08)',
+              border: '1px solid rgba(254,192,15,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Loader2 size={22} color="#FEC00F" style={{ animation: 'spin 1s linear infinite' }} />
+            </div>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: colors.textMuted }}>
+              Loading knowledge base…
             </p>
           </div>
         ) : (
           <>
             {/* ═══ DISCOVER TAB ═══ */}
             {activeTab === 'discover' && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile
-                    ? '1fr'
-                    : isTablet
-                    ? '1fr'
-                    : '1fr 300px',
-                  gap: '20px',
-                }}
-              >
-                {/* Main Column */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '20px',
-                  }}
-                >
-                  {/* Search Panel */}
-                  <KBSearchPanel
-                    onSearch={handleSearch}
-                    categories={categories}
-                    isDark={isDark}
-                    colors={colors}
-                    isMobile={isMobile}
-                  />
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : '1fr 300px',
+                gap: '20px',
+              }}>
+                {/* Main column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <KBSearchPanel onSearch={handleSearch} categories={categories} isDark={isDark} colors={colors} isMobile={isMobile} />
 
-                  {/* Recent Documents */}
+                  {/* Recently Added */}
                   {recentDocuments.length > 0 && (
-                    <div
-                      style={{
-                        backgroundColor: colors.cardBg,
-                        border: `1px solid ${colors.border}`,
-                        borderRadius: '16px',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          padding: isMobile ? '14px 16px' : '16px 20px',
-                          borderBottom: `1px solid ${colors.border}`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          <Clock size={14} color={colors.accent} />
-                          <h3
-                            style={{
-                              fontFamily: "'Rajdhani', sans-serif",
-                              fontSize: '13px',
-                              fontWeight: 700,
-                              color: colors.text,
-                              letterSpacing: '1px',
-                              margin: 0,
-                            }}
-                          >
-                            RECENTLY ADDED
-                          </h3>
+                    <div style={{
+                      background: colors.cardBg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      boxShadow: colors.shadow,
+                      position: 'relative' as const,
+                    }}>
+                      {/* Top accent */}
+                      <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #FEC00F 0%, rgba(254,192,15,0.1) 60%, transparent 100%)' }} />
+                      <div style={{ padding: isMobile ? '14px 16px' : '16px 22px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        {/* Section header style */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: 3, height: 14, borderRadius: 3, background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))' }} />
+                          <Clock size={13} color="#FEC00F" />
+                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: colors.textMuted }}>Recently Added</span>
                         </div>
-                        <button
-                          onClick={() => setActiveTab('documents')}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: colors.accent,
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            fontFamily: "'Rajdhani', sans-serif",
-                            letterSpacing: '0.5px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          VIEW ALL
-                        </button>
+                        <button onClick={() => setActiveTab('documents')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#FEC00F', opacity: 0.7, transition: 'opacity .15s' }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                          onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}
+                        >View All →</button>
                       </div>
                       {recentDocuments.map((doc, idx) => {
                         const cc = catColors[doc.category] || catColors.general;
                         return (
-                          <div
-                            key={doc.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '12px',
-                              padding: isMobile ? '10px 16px' : '10px 20px',
-                              borderBottom:
-                                idx < recentDocuments.length - 1
-                                  ? `1px solid ${colors.border}`
-                                  : 'none',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.15s',
-                            }}
+                          <div key={doc.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: isMobile ? '10px 16px' : '11px 22px', borderBottom: idx < recentDocuments.length - 1 ? `1px solid ${colors.border}` : 'none', cursor: 'pointer', transition: 'background .15s', position: 'relative' as const }}
                             onClick={() => handleViewDocument(doc)}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                colors.hoverBg)
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                'transparent')
-                            }
+                            onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                           >
-                            <div
-                              style={{
-                                width: '34px',
-                                height: '34px',
-                                borderRadius: '8px',
-                                backgroundColor: isDark ? '#2A2A2A' : '#F0F0F0',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <FileText size={16} color={colors.accent} />
+                            <div style={{ width: 32, height: 32, borderRadius: '9px', background: `rgba(254,192,15,0.08)`, border: '1px solid rgba(254,192,15,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <FileText size={14} color="#FEC00F" />
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p
-                                style={{
-                                  color: colors.text,
-                                  fontSize: '13px',
-                                  fontWeight: 600,
-                                  margin: 0,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {doc.filename}
-                              </p>
-                              <span
-                                style={{
-                                  color: colors.textMuted,
-                                  fontSize: '11px',
-                                }}
-                              >
-                                {new Date(doc.created_at).toLocaleDateString()}
-                              </span>
+                              <p style={{ color: colors.text, fontSize: '13px', fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, letterSpacing: '-0.01em' }}>{doc.filename}</p>
+                              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9.5px', color: colors.textMuted }}>{new Date(doc.created_at).toLocaleDateString()}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                              <span
-                                style={{
-                                  fontSize: '9px',
-                                  padding: '2px 7px',
-                                  borderRadius: '4px',
-                                  backgroundColor: cc.bg,
-                                  color: cc.text,
-                                  fontWeight: 700,
-                                  fontFamily: "'Rajdhani', sans-serif",
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.3px',
-                                }}
-                              >
-                                {doc.category}
-                              </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleBookmark(doc.id);
-                                }}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  color: bookmarkedIds.has(doc.id)
-                                    ? colors.accent
-                                    : colors.textMuted,
-                                  padding: '2px',
-                                  display: 'flex',
-                                  opacity: bookmarkedIds.has(doc.id) ? 1 : 0.4,
-                                  transition: 'all 0.2s',
-                                }}
-                              >
-                                {bookmarkedIds.has(doc.id) ? (
-                                  <BookmarkCheck size={13} />
-                                ) : (
-                                  <Bookmark size={13} />
-                                )}
+                              <span style={{ fontSize: '9px', padding: '2px 8px', borderRadius: '5px', background: cc.bg, color: cc.text, fontFamily: "'DM Mono', monospace", letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>{doc.category}</span>
+                              <button onClick={e => { e.stopPropagation(); handleBookmark(doc.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: bookmarkedIds.has(doc.id) ? '#FEC00F' : colors.textMuted, padding: 2, display: 'flex', opacity: bookmarkedIds.has(doc.id) ? 1 : 0.45, transition: 'all .2s' }}>
+                                {bookmarkedIds.has(doc.id) ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
                               </button>
                             </div>
                           </div>
@@ -767,108 +565,26 @@ export function KnowledgeBasePage() {
                     </div>
                   )}
 
-                  {/* Bookmarked Documents */}
+                  {/* Bookmarked */}
                   {bookmarkedDocuments.length > 0 && (
-                    <div
-                      style={{
-                        backgroundColor: colors.cardBg,
-                        border: `1px solid ${colors.border}`,
-                        borderRadius: '16px',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          padding: isMobile ? '14px 16px' : '16px 20px',
-                          borderBottom: `1px solid ${colors.border}`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                        }}
-                      >
-                        <BookOpen size={14} color="#818cf8" />
-                        <h3
-                          style={{
-                            fontFamily: "'Rajdhani', sans-serif",
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: colors.text,
-                            letterSpacing: '1px',
-                            margin: 0,
-                          }}
-                        >
-                          BOOKMARKED
-                        </h3>
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            padding: '2px 7px',
-                            borderRadius: '4px',
-                            backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                            color: '#818cf8',
-                            fontWeight: 700,
-                            fontFamily: "'Rajdhani', sans-serif",
-                          }}
-                        >
-                          {bookmarkedDocuments.length}
-                        </span>
+                    <div style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: '16px', overflow: 'hidden', boxShadow: colors.shadow, position: 'relative' as const }}>
+                      <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #A78BFA 0%, rgba(167,139,250,0.1) 60%, transparent 100%)' }} />
+                      <div style={{ padding: isMobile ? '14px 16px' : '16px 22px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: 3, height: 14, borderRadius: 3, background: 'linear-gradient(to bottom, #A78BFA, rgba(167,139,250,0.2))' }} />
+                        <BookOpen size={13} color="#A78BFA" />
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: colors.textMuted }}>Bookmarked</span>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', padding: '2px 8px', borderRadius: '5px', background: 'rgba(167,139,250,0.12)', color: '#A78BFA' }}>{bookmarkedDocuments.length}</span>
                       </div>
                       {bookmarkedDocuments.map((doc, idx) => (
-                        <div
-                          key={doc.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: isMobile ? '10px 16px' : '10px 20px',
-                            borderBottom:
-                              idx < bookmarkedDocuments.length - 1
-                                ? `1px solid ${colors.border}`
-                                : 'none',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.15s',
-                          }}
+                        <div key={doc.id}
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: isMobile ? '10px 16px' : '11px 22px', borderBottom: idx < bookmarkedDocuments.length - 1 ? `1px solid ${colors.border}` : 'none', cursor: 'pointer', transition: 'background .15s' }}
                           onClick={() => handleViewDocument(doc)}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              colors.hoverBg)
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              'transparent')
-                          }
+                          onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
-                          <FileText size={14} color="#818cf8" />
-                          <span
-                            style={{
-                              color: colors.text,
-                              fontSize: '13px',
-                              fontWeight: 600,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              flex: 1,
-                            }}
-                          >
-                            {doc.filename}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleBookmark(doc.id);
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: colors.accent,
-                              padding: '2px',
-                              display: 'flex',
-                              flexShrink: 0,
-                            }}
-                          >
-                            <BookmarkCheck size={13} />
-                          </button>
+                          <FileText size={13} color="#A78BFA" style={{ flexShrink: 0 }} />
+                          <span style={{ color: colors.text, fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1, letterSpacing: '-0.01em' }}>{doc.filename}</span>
+                          <button onClick={e => { e.stopPropagation(); handleBookmark(doc.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FEC00F', padding: 2, display: 'flex', flexShrink: 0 }}><BookmarkCheck size={13} /></button>
                         </div>
                       ))}
                     </div>
@@ -876,118 +592,32 @@ export function KnowledgeBasePage() {
                 </div>
 
                 {/* Sidebar */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '16px',
-                  }}
-                >
-                  <KBTagCloud
-                    stats={stats}
-                    categories={categories}
-                    activeCategory={activeCategory}
-                    onCategoryChange={(cat) => {
-                      setActiveCategory(cat);
-                      setActiveTab('documents');
-                    }}
-                    isDark={isDark}
-                    colors={colors}
-                    isMobile={isMobile}
-                    totalBookmarks={bookmarkedIds.size}
-                  />
-
-                  {/* Quick Upload */}
-                  <KBUploadPanel
-                    onUpload={handleUploadFile}
-                    onUploadComplete={handleUploadComplete}
-                    isDark={isDark}
-                    colors={colors}
-                    isMobile={isMobile}
-                  />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <KBTagCloud stats={stats} categories={categories} activeCategory={activeCategory} onCategoryChange={cat => { setActiveCategory(cat); setActiveTab('documents'); }} isDark={isDark} colors={colors} isMobile={isMobile} totalBookmarks={bookmarkedIds.size} />
+                  <KBUploadPanel onUpload={handleUploadFile} onUploadComplete={handleUploadComplete} isDark={isDark} colors={colors} isMobile={isMobile} />
                 </div>
               </div>
             )}
 
             {/* ═══ DOCUMENTS TAB ═══ */}
             {activeTab === 'documents' && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile
-                    ? '1fr'
-                    : isTablet
-                    ? '1fr'
-                    : '1fr 260px',
-                  gap: '20px',
-                }}
-              >
-                <KBDocumentGrid
-                  documents={documents}
-                  activeCategory={activeCategory}
-                  onViewDocument={handleViewDocument}
-                  onDeleteDocument={handleDelete}
-                  onBookmark={handleBookmark}
-                  bookmarkedIds={bookmarkedIds}
-                  isDark={isDark}
-                  colors={colors}
-                  isMobile={isMobile}
-                  isTablet={isTablet}
-                />
-
-                {/* Sidebar */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : '1fr 260px', gap: '20px' }}>
+                <KBDocumentGrid documents={documents} activeCategory={activeCategory} onViewDocument={handleViewDocument} onDeleteDocument={handleDelete} onBookmark={handleBookmark} bookmarkedIds={bookmarkedIds} isDark={isDark} colors={colors} isMobile={isMobile} isTablet={isTablet} />
                 {!isMobile && (
-                  <KBTagCloud
-                    stats={stats}
-                    categories={categories}
-                    activeCategory={activeCategory}
-                    onCategoryChange={setActiveCategory}
-                    isDark={isDark}
-                    colors={colors}
-                    isMobile={isMobile}
-                    totalBookmarks={bookmarkedIds.size}
-                  />
+                  <KBTagCloud stats={stats} categories={categories} activeCategory={activeCategory} onCategoryChange={setActiveCategory} isDark={isDark} colors={colors} isMobile={isMobile} totalBookmarks={bookmarkedIds.size} />
                 )}
-
-                {/* Mobile Category Filter */}
                 {isMobile && categories.length > 1 && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '6px',
-                      flexWrap: 'wrap',
-                      padding: '0 0 16px 0',
-                      order: -1,
-                    }}
-                  >
-                    {categories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setActiveCategory(cat)}
-                        style={{
-                          padding: '5px 12px',
-                          borderRadius: '6px',
-                          border: `1px solid ${
-                            activeCategory === cat
-                              ? colors.accent
-                              : colors.border
-                          }`,
-                          backgroundColor:
-                            activeCategory === cat
-                              ? `${colors.accent}14`
-                              : 'transparent',
-                          color:
-                            activeCategory === cat
-                              ? colors.accent
-                              : colors.textMuted,
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          fontFamily: "'Rajdhani', sans-serif",
-                          letterSpacing: '0.5px',
-                          cursor: 'pointer',
-                          textTransform: 'uppercase',
-                        }}
-                      >
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const, padding: '0 0 16px 0', order: -1 }}>
+                    {categories.map(cat => (
+                      <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+                        padding: '5px 14px', borderRadius: '100px',
+                        border: `1px solid ${activeCategory === cat ? '#FEC00F' : colors.border}`,
+                        background: activeCategory === cat ? 'rgba(254,192,15,0.1)' : 'transparent',
+                        color: activeCategory === cat ? '#FEC00F' : colors.textMuted,
+                        fontFamily: "'DM Mono', monospace", fontSize: '9.5px', letterSpacing: '0.1em',
+                        textTransform: 'uppercase' as const, cursor: 'pointer',
+                        transition: 'all .2s',
+                      }}>
                         {cat === 'all' ? 'All' : cat}
                       </button>
                     ))}
@@ -998,106 +628,31 @@ export function KnowledgeBasePage() {
 
             {/* ═══ UPLOAD TAB ═══ */}
             {activeTab === 'upload' && (
-              <div
-                style={{
-                  maxWidth: '640px',
-                  margin: '0 auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '20px',
-                }}
-              >
-                <KBUploadPanel
-                  onUpload={handleUploadFile}
-                  onUploadComplete={handleUploadComplete}
-                  isDark={isDark}
-                  colors={colors}
-                  isMobile={isMobile}
-                />
+              <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <KBUploadPanel onUpload={handleUploadFile} onUploadComplete={handleUploadComplete} isDark={isDark} colors={colors} isMobile={isMobile} />
 
-                {/* Upload Tips */}
-                <div
-                  style={{
-                    backgroundColor: colors.cardBg,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: isMobile ? '14px 16px' : '16px 20px',
-                      borderBottom: `1px solid ${colors.border}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <TrendingUp size={14} color={colors.accent} />
-                    <h3
-                      style={{
-                        fontFamily: "'Rajdhani', sans-serif",
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: colors.text,
-                        letterSpacing: '1px',
-                        margin: 0,
-                      }}
-                    >
-                      UPLOAD TIPS
-                    </h3>
+                {/* Upload Tips card */}
+                <div style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: '16px', overflow: 'hidden', boxShadow: colors.shadow, position: 'relative' as const }}>
+                  <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #FEC00F 0%, rgba(254,192,15,0.1) 60%, transparent 100%)' }} />
+                  <div style={{ padding: isMobile ? '14px 16px' : '16px 22px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: 3, height: 14, borderRadius: 3, background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))' }} />
+                    <TrendingUp size={13} color="#FEC00F" />
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: colors.textMuted }}>Upload Tips</span>
                   </div>
-                  <div style={{ padding: isMobile ? '16px' : '20px' }}>
+                  <div style={{ padding: isMobile ? '16px' : '20px 22px' }}>
                     {[
-                      {
-                        title: 'Expanded Format Support',
-                        desc: 'Upload PDF, TXT, DOC, DOCX, CSV, MD, JSON, XML, HTML, XLSX, and RTF files to accommodate diverse content types.',
-                      },
-                      {
-                        title: 'Auto-Categorization',
-                        desc: 'Documents are automatically categorized based on content analysis. Filter by category later for quick retrieval.',
-                      },
-                      {
-                        title: 'Instant Search',
-                        desc: 'Uploaded documents become searchable immediately through the advanced search with filters, tags, and file type options.',
-                      },
-                      {
-                        title: 'Batch Upload',
-                        desc: 'Select multiple files at once or drag them into the upload area for efficient batch processing.',
-                      },
-                      {
-                        title: 'Bookmarking',
-                        desc: 'Bookmark important documents for quick access from the Discover tab. Bookmarks persist across sessions.',
-                      },
-                    ].map((tip, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          padding: '10px 0',
-                          borderBottom:
-                            i < 4 ? `1px solid ${colors.border}` : 'none',
-                        }}
-                      >
-                        <p
-                          style={{
-                            color: colors.text,
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            margin: '0 0 3px 0',
-                          }}
-                        >
-                          {tip.title}
-                        </p>
-                        <p
-                          style={{
-                            color: colors.textMuted,
-                            fontSize: '12px',
-                            lineHeight: 1.6,
-                            margin: 0,
-                          }}
-                        >
-                          {tip.desc}
-                        </p>
+                      { title: 'Expanded Format Support', desc: 'Upload PDF, TXT, DOC, DOCX, CSV, MD, JSON, XML, HTML, XLSX, and RTF files to accommodate diverse content types.' },
+                      { title: 'Auto-Categorization',     desc: 'Documents are automatically categorized based on content analysis. Filter by category later for quick retrieval.' },
+                      { title: 'Instant Search',          desc: 'Uploaded documents become searchable immediately through advanced search with filters, tags, and file type options.' },
+                      { title: 'Batch Upload',            desc: 'Select multiple files at once or drag them into the upload area for efficient batch processing.' },
+                      { title: 'Bookmarking',             desc: 'Bookmark important documents for quick access from the Discover tab. Bookmarks persist across sessions.' },
+                    ].map((tip, i, arr) => (
+                      <div key={i} style={{ padding: '11px 0', borderBottom: i < arr.length - 1 ? `1px solid ${colors.border}` : 'none', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: '#FEC00F', opacity: 0.55, flexShrink: 0, paddingTop: '2px', width: '16px' }}>{String(i + 1).padStart(2, '0')}</span>
+                        <div>
+                          <p style={{ color: colors.text, fontSize: '13px', fontWeight: 600, margin: '0 0 3px', letterSpacing: '-0.01em' }}>{tip.title}</p>
+                          <p style={{ color: colors.textMuted, fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{tip.desc}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1114,10 +669,7 @@ export function KnowledgeBasePage() {
           doc={viewerDoc}
           content={viewerContent}
           loading={viewerLoading}
-          onClose={() => {
-            setViewerDoc(null);
-            setViewerContent(null);
-          }}
+          onClose={() => { setViewerDoc(null); setViewerContent(null); }}
           isDark={isDark}
           colors={colors}
           isBookmarked={bookmarkedIds.has(viewerDoc.id)}
@@ -1128,12 +680,15 @@ export function KnowledgeBasePage() {
       <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
 
       <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes kb-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.3; transform: scale(0.55); }
         }
       `}</style>
     </div>
   );
+
 }
 
 export default KnowledgeBasePage;
