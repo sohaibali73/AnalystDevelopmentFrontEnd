@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Plus, MessageSquare, ArrowUpFromLine, Trash2, ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Pencil, X, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Download, Code2, PanelRightClose, PanelRightOpen, Settings2, Zap, Layers, Sparkles } from 'lucide-react';
+import { Plus, MessageSquare, ArrowUpFromLine, Trash2, ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Pencil, X, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Download, Code2, PanelRightClose, PanelRightOpen, Settings2, Zap, Layers, Sparkles, Check } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -17,7 +17,7 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import Editor from '@monaco-editor/react';
 import FeedbackModal from '@/components/FeedbackModal';
 
-// AI Elements - Composable Components
+// AI Elements
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from '@/components/ai-elements/reasoning';
 import { Shimmer } from '@/components/ai-elements/shimmer';
@@ -72,12 +72,10 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
   );
 }
 
-// Extract AFL code from message text (finds ```afl or ``` code blocks)
+// Extract AFL code from message text
 function extractAFLCode(text: string): string | null {
-  // Try afl-specific blocks first
   const aflMatch = text.match(/```(?:afl|amibroker)\s*\n([\s\S]*?)```/i);
   if (aflMatch) return aflMatch[1].trim();
-  // Try any code block
   const codeMatch = text.match(/```\w*\s*\n([\s\S]*?)```/);
   if (codeMatch) return codeMatch[1].trim();
   return null;
@@ -89,7 +87,7 @@ export function AFLGeneratorPage() {
   const { isMobile } = useResponsive();
   const isDark = resolvedTheme === 'dark';
 
-  // --- State ---
+  // State
   const [conversations, setConversations] = useState<ConversationType[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationType | null>(null);
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -131,9 +129,6 @@ export function AFLGeneratorPage() {
   // Feedback
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
-  // Connection status
-  const { status: connStatus, check: recheckConnection } = useConnectionStatus({ interval: 60000 });
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef<string | null>(null);
   const skipNextLoadRef = useRef(false);
@@ -144,22 +139,26 @@ export function AFLGeneratorPage() {
     try { return localStorage.getItem('auth_token') || ''; } catch { return ''; }
   };
 
-  // --- Colors (matching ChatPage) ---
-  const colors = {
-    background: isDark ? '#0F0F0F' : '#ffffff',
-    sidebar: isDark ? '#1A1A1A' : '#ffffff',
-    cardBg: isDark ? '#1A1A1A' : '#ffffff',
-    inputBg: isDark ? '#262626' : '#f8f8f8',
-    border: isDark ? '#333333' : '#e5e5e5',
-    text: isDark ? '#E8E8E8' : '#1A1A1A',
-    textMuted: isDark ? '#B0B0B0' : '#666666',
+  // Colors - Enhanced palette
+  const colors = useMemo(() => ({
+    background: isDark ? '#0A0A0A' : '#FAFAFA',
+    sidebar: isDark ? '#111111' : '#FFFFFF',
+    cardBg: isDark ? '#161616' : '#FFFFFF',
+    inputBg: isDark ? '#1A1A1A' : '#F5F5F5',
+    border: isDark ? '#2A2A2A' : '#E5E5E5',
+    borderLight: isDark ? '#1F1F1F' : '#F0F0F0',
+    text: isDark ? '#FFFFFF' : '#0A0A0A',
+    textMuted: isDark ? '#A0A0A0' : '#737373',
+    textSubtle: isDark ? '#666666' : '#A3A3A3',
     primaryYellow: '#FEC00F',
-    darkGray: '#212121',
-    accentYellow: '#FFD700',
-    codePanelBg: isDark ? '#141414' : '#fafafa',
-  };
+    primaryYellowHover: '#FFD700',
+    darkGray: '#1A1A1A',
+    codePanelBg: isDark ? '#0D0D0D' : '#FAFAFA',
+    hoverBg: isDark ? '#1A1A1A' : '#F5F5F5',
+    activeBg: isDark ? 'rgba(254, 192, 15, 0.08)' : 'rgba(254, 192, 15, 0.06)',
+  }), [isDark]);
 
-  // --- AI SDK useChat (same pattern as ChatPage) ---
+  // AI SDK useChat
   const { messages: streamMessages, sendMessage, status, stop, error: chatError, setMessages, regenerate } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/chat',
@@ -188,12 +187,11 @@ export function AFLGeneratorPage() {
 
   const isStreaming = status === 'streaming' || status === 'submitted';
 
-  // --- Auto-extract AFL code from the latest assistant message ---
+  // Auto-extract AFL code from the latest assistant message
   const lastExtractedCodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (streamMessages.length === 0) return;
-    // Find the last assistant message
     for (let i = streamMessages.length - 1; i >= 0; i--) {
       const msg = streamMessages[i];
       if (msg.role !== 'assistant') continue;
@@ -204,7 +202,6 @@ export function AFLGeneratorPage() {
       let extractedDescription: string | undefined;
       let extractedStrategyType: string | undefined;
 
-      // Check tool outputs for AFL code first (more structured)
       for (const part of parts) {
         if (part.type === 'tool-generate_afl_code' && part.state === 'output-available') {
           const aflCode = (part as any).output?.code || (part as any).output?.afl_code;
@@ -217,18 +214,15 @@ export function AFLGeneratorPage() {
         }
       }
 
-      // Fall back to text extraction
       if (!extractedCode) {
         extractedCode = extractAFLCode(fullText);
       }
 
       if (extractedCode) {
-        // Skip if this is the same code we already processed
         if (lastExtractedCodeRef.current === extractedCode) break;
         lastExtractedCodeRef.current = extractedCode;
 
         if (compositeMode) {
-          // In composite mode, add as a new strategy tab
           setStrategies(prev => {
             const alreadyExists = prev.some(s => s.code === extractedCode);
             if (alreadyExists) return prev;
@@ -240,7 +234,6 @@ export function AFLGeneratorPage() {
               strategyType: extractedStrategyType,
               createdAt: new Date(),
             };
-            // Auto-switch to the new strategy tab
             setTimeout(() => setActiveTab(newStrategy.id), 0);
             return [...prev, newStrategy];
           });
@@ -251,14 +244,14 @@ export function AFLGeneratorPage() {
       }
       break;
     }
-  }, [streamMessages, isMobile, compositeMode]);
+  }, [streamMessages, isMobile, compositeMode, codePanelOpen]);
 
-  // --- Sync conversationIdRef ---
+  // Sync conversationIdRef
   useEffect(() => {
     conversationIdRef.current = selectedConversation?.id || null;
   }, [selectedConversation]);
 
-  // --- Load conversations ---
+  // Load conversations
   useEffect(() => { loadConversations(); }, []);
   useEffect(() => {
     if (selectedConversation) {
@@ -284,7 +277,6 @@ export function AFLGeneratorPage() {
   const loadConversations = async () => {
     try {
       const allData = await apiClient.getConversations();
-      // Filter to AFL conversations only
       const data = allData.filter((c: any) => c.conversation_type === 'afl');
       setConversations(data);
       if (data.length > 0 && !selectedConversation) setSelectedConversation(data[0]);
@@ -302,7 +294,6 @@ export function AFLGeneratorPage() {
         parts: m.metadata?.parts || [{ type: 'text', text: m.content || '' }],
         createdAt: m.created_at ? new Date(m.created_at) : new Date(),
       })));
-      // Extract any existing AFL code from loaded messages
       for (let i = data.length - 1; i >= 0; i--) {
         if (data[i].role === 'assistant') {
           const code = extractAFLCode(data[i].content || '');
@@ -319,12 +310,12 @@ export function AFLGeneratorPage() {
       setConversations(prev => [newConv, ...prev]);
       setSelectedConversation(newConv);
       conversationIdRef.current = newConv.id;
-  setMessages([]);
-  setGeneratedCode('');
-  setStrategies([]);
-  setActiveTab('composite');
-  setPageError('');
-  } catch (err) { setPageError(err instanceof Error ? err.message : 'Failed'); }
+      setMessages([]);
+      setGeneratedCode('');
+      setStrategies([]);
+      setActiveTab('composite');
+      setPageError('');
+    } catch (err) { setPageError(err instanceof Error ? err.message : 'Failed'); }
   };
 
   const handleDeleteConversation = async (id: string) => {
@@ -341,11 +332,11 @@ export function AFLGeneratorPage() {
     if (!codeToCopy) return;
     navigator.clipboard.writeText(codeToCopy);
     setCopied(true);
-    toast.success('Code copied!');
+    toast.success('Code copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // --- Composite code generation (auto-template) ---
+  // Composite code generation
   const compositeCode = useMemo(() => {
     if (strategies.length === 0) {
       return '// ===== COMPOSITE MODEL =====\n// No strategies yet. Generate individual strategies to build the composite.\n// Each strategy you generate will appear as a separate tab.\n// The composite code will auto-update as you add strategies.\n';
@@ -400,14 +391,12 @@ export function AFLGeneratorPage() {
     return lines.join('\n');
   }, [strategies]);
 
-  // --- Get the active code (respects composite mode) ---
   const getActiveCode = useCallback(() => {
     if (!compositeMode) return generatedCode;
     if (activeTab === 'composite') return compositeCode;
     return strategies.find(s => s.id === activeTab)?.code || '';
   }, [compositeMode, generatedCode, activeTab, compositeCode, strategies]);
 
-  // --- Remove a strategy tab ---
   const handleRemoveStrategy = useCallback((id: string) => {
     setStrategies(prev => prev.filter(s => s.id !== id));
     if (activeTab === id) setActiveTab('composite');
@@ -432,18 +421,16 @@ export function AFLGeneratorPage() {
     navigator.clipboard.writeText(text).then(() => toast.success('Copied!')).catch(() => toast.error('Copy failed'));
   }, []);
 
-  // All messages from useChat
   const allMessages = useMemo(() => streamMessages, [streamMessages]);
   const lastIdx = allMessages.length - 1;
   const userName = user?.name || 'You';
 
-  // Stable refs for values used in renderMessage to avoid re-renders
   const lastIdxRef = useRef(lastIdx);
   lastIdxRef.current = lastIdx;
   const isStreamingRef = useRef(isStreaming);
   isStreamingRef.current = isStreaming;
 
-  // --- Render a single message using AI Elements ---
+  // Render a single message
   const renderMessage = useCallback((message: any, idx: number) => {
     const parts = message.parts || [];
     const isLast = idx === lastIdxRef.current;
@@ -454,17 +441,28 @@ export function AFLGeneratorPage() {
 
     return (
       <AIMessage key={message.id} from={message.role}>
-        <div className={`flex items-center gap-2 text-xs ${message.role === 'user' ? 'justify-end' : ''}`}>
+        <div className={`flex items-center gap-2 text-xs mb-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
           {message.role === 'user' ? (
             <>
-              <span className="font-medium text-muted-foreground">{userName}</span>
-              {message.createdAt && <span className="text-muted-foreground/60">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+              <span className="font-medium" style={{ color: colors.textMuted }}>{userName}</span>
+              {message.createdAt && <span style={{ color: colors.textSubtle }}>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
             </>
           ) : (
             <>
-              <img src={logo} alt="Yang AI" className="w-5 h-5 rounded flex-shrink-0" />
-              <span className="font-semibold text-foreground">Yang</span>
-              {message.createdAt && <span className="text-muted-foreground/60">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+              <div style={{ 
+                width: '20px', 
+                height: '20px', 
+                borderRadius: '6px', 
+                overflow: 'hidden',
+                backgroundColor: colors.primaryYellow + '15',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <img src={logo} alt="Yang AI" style={{ width: '16px', height: '16px' }} />
+              </div>
+              <span className="font-semibold" style={{ color: colors.text }}>Yang</span>
+              {message.createdAt && <span style={{ color: colors.textSubtle }}>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
               {msgIsStreaming && <Shimmer duration={1.5}>Streaming...</Shimmer>}
             </>
           )}
@@ -513,7 +511,6 @@ export function AFLGeneratorPage() {
                   </Reasoning>
                 );
 
-              // AFL Tool cards
               case 'tool-generate_afl_code':
                 switch (part.state) {
                   case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="generate_afl_code" input={part.input} />;
@@ -565,7 +562,6 @@ export function AFLGeneratorPage() {
                 }
 
               default:
-                // Fallback for unknown tool types
                 if (part.type?.startsWith('tool-')) {
                   const toolName = part.type.replace('tool-', '');
                   switch (part.state) {
@@ -619,40 +615,169 @@ export function AFLGeneratorPage() {
     );
   }, [lastIdxRef, isStreamingRef, userName, logo, isDark, colors, handleCopyMessage, setShowFeedbackModal, status, stripReactCodeBlocks]);
 
-  // --- RENDER ---
+  // RENDER
   return (
     <div style={{ height: '100%', backgroundColor: colors.background, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-      {/* ===== SIDEBAR ===== */}
-      <div style={{ width: sidebarCollapsed ? '0px' : '280px', backgroundColor: colors.sidebar, borderRight: sidebarCollapsed ? 'none' : `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', transition: 'width 0.3s ease', flexShrink: 0 }}>
+      {/* SIDEBAR */}
+      <div style={{ 
+        width: sidebarCollapsed ? '0px' : '280px', 
+        backgroundColor: colors.sidebar, 
+        borderRight: sidebarCollapsed ? 'none' : `1px solid ${colors.border}`, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%', 
+        overflow: 'hidden', 
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+        flexShrink: 0,
+        boxShadow: sidebarCollapsed ? 'none' : isDark ? '2px 0 12px rgba(0,0,0,0.3)' : '2px 0 12px rgba(0,0,0,0.04)'
+      }}>
         {/* Sidebar Header */}
-        <div style={{ padding: '24px 20px', borderBottom: `2px solid ${colors.primaryYellow}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src={logo} alt="Logo" style={{ width: '32px', height: '32px' }} />
-            <h2 style={{ fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", fontSize: '14px', fontWeight: 700, color: colors.text, margin: 0, letterSpacing: '0.5px', textTransform: 'uppercase' }}>AFL GENERATOR</h2>
+        <div style={{ 
+          padding: '20px', 
+          borderBottom: `1px solid ${colors.border}`, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          background: isDark 
+            ? 'linear-gradient(135deg, rgba(254, 192, 15, 0.03) 0%, rgba(254, 192, 15, 0.01) 100%)'
+            : 'linear-gradient(135deg, rgba(254, 192, 15, 0.04) 0%, rgba(254, 192, 15, 0.01) 100%)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: `linear-gradient(135deg, ${colors.primaryYellow} 0%, ${colors.primaryYellowHover} 100%)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(254, 192, 15, 0.2)'
+            }}>
+              <Code2 size={18} color="#1A1A1A" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 style={{ 
+                fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
+                fontSize: '13px', 
+                fontWeight: 700, 
+                color: colors.text, 
+                margin: 0, 
+                letterSpacing: '1px', 
+                textTransform: 'uppercase' 
+              }}>AFL Generator</h2>
+              <p style={{
+                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                fontSize: '10px',
+                color: colors.textMuted,
+                margin: 0,
+                letterSpacing: '0.3px'
+              }}>AmiBroker Strategies</p>
+            </div>
           </div>
-          <button onClick={() => setSidebarCollapsed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+          <button 
+            onClick={() => setSidebarCollapsed(true)} 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              padding: '6px',
+              borderRadius: '6px',
+              transition: 'background-color 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = colors.hoverBg}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
             <ChevronLeft size={16} color={colors.textMuted} />
           </button>
         </div>
 
         {/* New Chat + Search */}
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <button onClick={handleNewConversation} style={{ width: '100%', padding: '12px', backgroundColor: colors.primaryYellow, border: 'none', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 700, color: colors.darkGray, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", fontSize: '14px', transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(254, 192, 15, 0.2)' }} onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(254, 192, 15, 0.3)'; }} onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(254, 192, 15, 0.2)'; }}>
-            <Plus size={18} /> New AFL Chat
+          <button 
+            onClick={handleNewConversation} 
+            style={{ 
+              width: '100%', 
+              padding: '12px', 
+              background: `linear-gradient(135deg, ${colors.primaryYellow} 0%, ${colors.primaryYellowHover} 100%)`, 
+              border: 'none', 
+              borderRadius: '10px', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px', 
+              fontWeight: 700, 
+              color: colors.darkGray, 
+              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+              fontSize: '13px', 
+              transition: 'all 0.2s ease', 
+              boxShadow: '0 2px 8px rgba(254, 192, 15, 0.25)',
+              letterSpacing: '0.3px'
+            }} 
+            onMouseOver={(e) => { 
+              e.currentTarget.style.transform = 'translateY(-1px)'; 
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(254, 192, 15, 0.35)'; 
+            }} 
+            onMouseOut={(e) => { 
+              e.currentTarget.style.transform = 'translateY(0)'; 
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(254, 192, 15, 0.25)'; 
+            }}
+          >
+            <Plus size={18} strokeWidth={2.5} /> New Strategy
           </button>
           <div style={{ position: 'relative' }}>
-            <Search size={14} color={colors.textMuted} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+            <Search size={14} color={colors.textMuted} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search AFL chats..."
-              style={{ width: '100%', padding: '8px 10px 8px 32px', backgroundColor: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box', fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", transition: 'border-color 0.2s ease' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryYellow; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
+              placeholder="Search strategies..."
+              style={{ 
+                width: '100%', 
+                padding: '10px 12px 10px 36px', 
+                backgroundColor: colors.inputBg, 
+                border: `1px solid ${colors.border}`, 
+                borderRadius: '8px', 
+                color: colors.text, 
+                fontSize: '12px', 
+                outline: 'none', 
+                boxSizing: 'border-box', 
+                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                transition: 'all 0.2s ease' 
+              }}
+              onFocus={(e) => { 
+                e.currentTarget.style.borderColor = colors.primaryYellow; 
+                e.currentTarget.style.backgroundColor = isDark ? '#1F1F1F' : '#FFFFFF';
+              }}
+              onBlur={(e) => { 
+                e.currentTarget.style.borderColor = colors.border; 
+                e.currentTarget.style.backgroundColor = colors.inputBg;
+              }}
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+              <button 
+                onClick={() => setSearchQuery('')} 
+                style={{ 
+                  position: 'absolute', 
+                  right: '10px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)', 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  padding: '4px',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = colors.hoverBg}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
                 <X size={12} color={colors.textMuted} />
               </button>
             )}
@@ -665,8 +790,30 @@ export function AFLGeneratorPage() {
             <div className="space-y-3 px-2 py-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center gap-2 px-3 py-2">
-                  <div className="w-4 h-4 rounded bg-muted animate-pulse" />
-                  <Shimmer duration={2 + i * 0.3} className="text-xs">Loading...</Shimmer>
+                  <div style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    borderRadius: '8px', 
+                    backgroundColor: colors.inputBg,
+                    animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      height: '14px', 
+                      backgroundColor: colors.inputBg, 
+                      borderRadius: '4px',
+                      width: '80%',
+                      marginBottom: '6px',
+                      animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }} />
+                    <div style={{ 
+                      height: '10px', 
+                      backgroundColor: colors.inputBg, 
+                      borderRadius: '3px',
+                      width: '50%',
+                      animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -675,14 +822,82 @@ export function AFLGeneratorPage() {
               ? conversations.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
               : conversations;
             if (filtered.length === 0 && searchQuery.trim()) {
-              return <div style={{ textAlign: 'center', padding: '20px', color: colors.textMuted, fontSize: '12px' }}>{'No chats matching "'}{searchQuery}{'"'}</div>;
+              return (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '40px 20px', 
+                  color: colors.textMuted, 
+                  fontSize: '12px',
+                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif"
+                }}>
+                  No strategies matching "{searchQuery}"
+                </div>
+              );
             }
             if (filtered.length === 0) {
-              return <div style={{ textAlign: 'center', padding: '20px', color: colors.textMuted, fontSize: '12px' }}>No AFL conversations yet. Start a new chat!</div>;
+              return (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '40px 20px', 
+                  color: colors.textMuted, 
+                  fontSize: '12px',
+                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                  lineHeight: 1.6
+                }}>
+                  No strategies yet.<br/>Click "New Strategy" to begin
+                </div>
+              );
             }
             return filtered.map(conv => (
-              <div key={conv.id} onClick={() => { if (renamingId !== conv.id) setSelectedConversation(conv); }} style={{ padding: '10px 12px', marginBottom: '4px', backgroundColor: selectedConversation?.id === conv.id ? 'rgba(254, 192, 15, 0.15)' : 'transparent', border: selectedConversation?.id === conv.id ? `2px solid ${colors.primaryYellow}` : '1px solid transparent', borderRadius: '10px', cursor: 'pointer', color: colors.text, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", transition: 'all 0.2s ease' }} onMouseOver={(e) => selectedConversation?.id !== conv.id && (e.currentTarget.style.backgroundColor = isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.08)')} onMouseOut={(e) => selectedConversation?.id !== conv.id && (e.currentTarget.style.backgroundColor = 'transparent')}>
-                <Code2 size={14} style={{ flexShrink: 0, color: selectedConversation?.id === conv.id ? colors.primaryYellow : colors.textMuted }} />
+              <div 
+                key={conv.id} 
+                onClick={() => { if (renamingId !== conv.id) setSelectedConversation(conv); }} 
+                style={{ 
+                  padding: '12px', 
+                  marginBottom: '6px', 
+                  backgroundColor: selectedConversation?.id === conv.id ? colors.activeBg : 'transparent', 
+                  border: selectedConversation?.id === conv.id ? `1px solid ${colors.primaryYellow}` : '1px solid transparent', 
+                  borderRadius: '10px', 
+                  cursor: 'pointer', 
+                  color: colors.text, 
+                  fontSize: '13px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px', 
+                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                  transition: 'all 0.2s ease',
+                  position: 'relative'
+                }} 
+                onMouseOver={(e) => {
+                  if (selectedConversation?.id !== conv.id) {
+                    e.currentTarget.style.backgroundColor = colors.hoverBg;
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (selectedConversation?.id !== conv.id) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: selectedConversation?.id === conv.id 
+                    ? colors.primaryYellow + '20'
+                    : colors.inputBg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease'
+                }}>
+                  <Code2 
+                    size={16} 
+                    color={selectedConversation?.id === conv.id ? colors.primaryYellow : colors.textMuted}
+                    strokeWidth={2}
+                  />
+                </div>
                 {renamingId === conv.id ? (
                   <input
                     autoFocus
@@ -706,20 +921,83 @@ export function AFLGeneratorPage() {
                       apiClient.renameConversation(conv.id, newTitle).catch(() => {});
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ flex: 1, background: colors.inputBg, border: `2px solid ${colors.primaryYellow}`, borderRadius: '4px', color: colors.text, fontSize: '13px', padding: '4px 8px', outline: 'none', minWidth: 0, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}
+                    style={{ 
+                      flex: 1, 
+                      background: colors.inputBg, 
+                      border: `2px solid ${colors.primaryYellow}`, 
+                      borderRadius: '6px', 
+                      color: colors.text, 
+                      fontSize: '13px', 
+                      padding: '6px 8px', 
+                      outline: 'none', 
+                      minWidth: 0, 
+                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" 
+                    }}
                   />
                 ) : (
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontWeight: selectedConversation?.id === conv.id ? 600 : 400 }}>{conv.title}</span>
-                )}
-                {renamingId !== conv.id && (
-                  <div style={{ display: 'flex', gap: '2px', opacity: 0.5 }}>
-                    <button onClick={(e) => { e.stopPropagation(); setRenamingId(conv.id); setRenameValue(conv.title || ''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }} title="Rename">
-                      <Pencil size={12} color={colors.textMuted} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }} title="Delete">
-                      <Trash2 size={12} color={colors.textMuted} />
-                    </button>
-                  </div>
+                  <>
+                    <span style={{ 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap', 
+                      flex: 1, 
+                      fontWeight: selectedConversation?.id === conv.id ? 600 : 400,
+                      color: selectedConversation?.id === conv.id ? colors.text : colors.textMuted
+                    }}>
+                      {conv.title}
+                    </span>
+                    <div className="conversation-actions" style={{ 
+                      display: 'flex', 
+                      gap: '4px', 
+                      opacity: 0,
+                      transition: 'opacity 0.2s ease'
+                    }}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setRenamingId(conv.id); setRenameValue(conv.title || ''); }} 
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          cursor: 'pointer', 
+                          padding: '4px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'background-color 0.2s'
+                        }} 
+                        title="Rename"
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = colors.hoverBg}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Pencil size={12} color={colors.textMuted} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); }} 
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          cursor: 'pointer', 
+                          padding: '4px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'background-color 0.2s'
+                        }} 
+                        title="Delete"
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.1)';
+                          e.currentTarget.querySelector('svg')?.setAttribute('stroke', '#DC2626');
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.querySelector('svg')?.setAttribute('stroke', colors.textMuted);
+                        }}
+                      >
+                        <Trash2 size={12} color={colors.textMuted} />
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             ));
@@ -727,39 +1005,93 @@ export function AFLGeneratorPage() {
         </div>
       </div>
 
-      {/* ===== MAIN CHAT AREA ===== */}
+      {/* MAIN CHAT AREA */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', height: '100%' }}>
         {/* Collapsed sidebar toggle */}
         {sidebarCollapsed && (
-          <button onClick={() => setSidebarCollapsed(false)} style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 100, background: 'rgba(254, 192, 15, 0.3)', border: '1px solid rgba(254, 192, 15, 0.5)', borderRadius: '8px', padding: '8px', cursor: 'pointer' }}>
-            <ChevronRight size={18} color="#FEC00F" />
+          <button 
+            onClick={() => setSidebarCollapsed(false)} 
+            style={{ 
+              position: 'absolute', 
+              top: '20px', 
+              left: '20px', 
+              zIndex: 100, 
+              background: colors.cardBg, 
+              border: `1px solid ${colors.border}`, 
+              borderRadius: '10px', 
+              padding: '10px', 
+              cursor: 'pointer',
+              boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.08)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = colors.primaryYellow;
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <ChevronRight size={18} color={colors.primaryYellow} strokeWidth={2.5} />
           </button>
         )}
 
-        {/* Top toolbar: strategy type + code panel toggle */}
-        <div style={{ padding: '10px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.background, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '12px', color: colors.textMuted, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}>Strategy:</span>
+        {/* Top toolbar */}
+        <div style={{ 
+          padding: '12px 20px', 
+          borderBottom: `1px solid ${colors.border}`, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          backgroundColor: colors.background, 
+          flexShrink: 0 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ 
+              fontSize: '11px', 
+              color: colors.textMuted, 
+              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+              fontWeight: 600,
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase'
+            }}>Strategy Type</span>
             {(['standalone', 'entry', 'exit'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setStrategyType(type)}
                 style={{
-                  padding: '4px 12px',
+                  padding: '6px 14px',
                   fontSize: '11px',
-                  fontWeight: 700,
-                  borderRadius: '6px',
+                  fontWeight: 600,
+                  borderRadius: '8px',
                   border: strategyType === type
                     ? `1.5px solid ${colors.primaryYellow}`
                     : `1px solid ${colors.border}`,
                   backgroundColor: strategyType === type
-                    ? (isDark ? 'rgba(254, 192, 15, 0.15)' : 'rgba(254, 192, 15, 0.1)')
+                    ? colors.activeBg
                     : 'transparent',
                   color: strategyType === type ? colors.primaryYellow : colors.textMuted,
                   cursor: 'pointer',
                   fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
                   textTransform: 'capitalize',
-                  transition: 'all 0.15s ease',
+                  transition: 'all 0.2s ease',
+                  letterSpacing: '0.3px'
+                }}
+                onMouseOver={(e) => {
+                  if (strategyType !== type) {
+                    e.currentTarget.style.backgroundColor = colors.hoverBg;
+                    e.currentTarget.style.borderColor = colors.primaryYellow + '80';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (strategyType !== type) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = colors.border;
+                  }
                 }}
               >
                 {type}
@@ -768,67 +1100,145 @@ export function AFLGeneratorPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* Composite Model Toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              backgroundColor: compositeMode ? colors.activeBg : 'transparent',
+              border: `1px solid ${compositeMode ? colors.primaryYellow : colors.border}`,
+              transition: 'all 0.2s ease'
+            }}>
               <Switch
                 checked={compositeMode}
                 onCheckedChange={(checked) => {
                   setCompositeMode(checked);
                   if (checked && !codePanelOpen && !isMobile) setCodePanelOpen(true);
                 }}
-                className="data-[state=checked]:bg-[#FEC00F] h-4 w-8"
+                className="data-[state=checked]:bg-[#FEC00F]"
+                style={{ 
+                  width: '32px', 
+                  height: '18px',
+                  '--switch-thumb-size': '14px'
+                } as any}
               />
+              <Layers size={14} color={compositeMode ? colors.primaryYellow : colors.textMuted} strokeWidth={2} />
               <span style={{
                 fontSize: '11px',
                 color: compositeMode ? colors.primaryYellow : colors.textMuted,
-                fontWeight: compositeMode ? 600 : 400,
+                fontWeight: compositeMode ? 600 : 500,
                 fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
+                letterSpacing: '0.3px'
               }}>
-                Composite
+                Composite Mode
               </span>
             </div>
 
-            <div style={{ width: '1px', height: '18px', backgroundColor: colors.border }} />
+            <div style={{ width: '1px', height: '20px', backgroundColor: colors.border }} />
 
             <button
               onClick={() => setCodePanelOpen(!codePanelOpen)}
-              style={{ background: 'none', border: `1px solid ${colors.border}`, borderRadius: '6px', padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: colors.textMuted, fontSize: '11px', fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", transition: 'all 0.2s ease' }}
+              style={{ 
+                background: codePanelOpen ? colors.activeBg : 'transparent', 
+                border: `1px solid ${codePanelOpen ? colors.primaryYellow : colors.border}`, 
+                borderRadius: '8px', 
+                padding: '6px 12px', 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                color: codePanelOpen ? colors.primaryYellow : colors.textMuted, 
+                fontSize: '11px', 
+                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                transition: 'all 0.2s ease',
+                fontWeight: 600,
+                letterSpacing: '0.3px'
+              }}
               title={codePanelOpen ? 'Hide code panel' : 'Show code panel'}
+              onMouseOver={(e) => {
+                if (!codePanelOpen) {
+                  e.currentTarget.style.backgroundColor = colors.hoverBg;
+                  e.currentTarget.style.borderColor = colors.primaryYellow + '80';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!codePanelOpen) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.borderColor = colors.border;
+                }
+              }}
             >
-              {codePanelOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
-              <span>Code</span>
+              {codePanelOpen ? <PanelRightClose size={14} strokeWidth={2} /> : <PanelRightOpen size={14} strokeWidth={2} />}
+              <span>Code Panel</span>
             </button>
           </div>
         </div>
 
         {/* Messages area */}
         <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div data-scroll-container style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', backgroundColor: colors.background, color: colors.text } as React.CSSProperties}>
+          <div data-scroll-container style={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            overflowX: 'hidden', 
+            WebkitOverflowScrolling: 'touch', 
+            overscrollBehavior: 'contain', 
+            backgroundColor: colors.background, 
+            color: colors.text 
+          } as React.CSSProperties}>
             <div className="max-w-[900px] mx-auto px-6 py-8" style={{ color: colors.text }}>
               {allMessages.length === 0 ? (
                 <ConversationEmptyState
-                  icon={<img src={logo} alt="Logo" className="w-20 opacity-30" />}
-                  title="AFL Code Generator"
-                  description="Generate, debug, and optimize AmiBroker Formula Language strategies"
-                >
-                  <div className="flex flex-col items-center gap-4" style={{ padding: '20px' }}>
-                    <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Code2 size={32} color={colors.primaryYellow} />
+                  icon={
+                    <div style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '20px',
+                      background: `linear-gradient(135deg, ${colors.primaryYellow}20 0%, ${colors.primaryYellow}10 100%)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '8px'
+                    }}>
+                      <Code2 size={40} color={colors.primaryYellow} strokeWidth={2} />
                     </div>
-                    <div className="space-y-1 text-center">
-                      <h3 style={{ fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", fontSize: '20px', fontWeight: 700, color: colors.primaryYellow, margin: '8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AFL CODE GENERATOR</h3>
-                      <p style={{ fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", fontSize: '14px', color: colors.textMuted, margin: '4px 0', maxWidth: '420px' }}>
-                        Describe your trading strategy and I will generate optimized AmiBroker AFL code with proper risk management and backtesting settings.
+                  }
+                  title="AFL Code Generator"
+                  description="Generate, debug, and optimize AmiBroker Formula Language strategies with AI assistance"
+                >
+                  <div className="flex flex-col items-center gap-6" style={{ padding: '20px', maxWidth: '600px' }}>
+                    <div className="space-y-2 text-center">
+                      <h3 style={{ 
+                        fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
+                        fontSize: '24px', 
+                        fontWeight: 700, 
+                        color: colors.text, 
+                        margin: '8px 0', 
+                        letterSpacing: '0.5px' 
+                      }}>
+                        Build Professional Trading Strategies
+                      </h3>
+                      <p style={{ 
+                        fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                        fontSize: '14px', 
+                        color: colors.textMuted, 
+                        margin: '4px 0', 
+                        lineHeight: 1.6
+                      }}>
+                        Describe your trading strategy in plain English and receive optimized AFL code with proper risk management, backtesting settings, and validation.
                       </p>
                     </div>
                     <Suggestions className="justify-center mt-4">
-                      <Suggestion suggestion="Generate a moving average crossover AFL with stop loss" onClick={(s: string) => setInput(s)} />
-                      <Suggestion suggestion="Create an RSI-based mean reversion strategy" onClick={(s: string) => setInput(s)} />
-                      <Suggestion suggestion="Build a Bollinger Band breakout system with position sizing" onClick={(s: string) => setInput(s)} />
+                      <Suggestion suggestion="Generate a moving average crossover strategy with stop loss" onClick={(s: string) => setInput(s)} />
+                      <Suggestion suggestion="Create an RSI-based mean reversion system" onClick={(s: string) => setInput(s)} />
+                      <Suggestion suggestion="Build a Bollinger Band breakout with position sizing" onClick={(s: string) => setInput(s)} />
                       <Suggestion suggestion="Debug my AFL code for syntax errors" onClick={(s: string) => setInput(s)} />
                     </Suggestions>
-                    <p className="text-xs text-muted-foreground mt-2">Click a suggestion or describe your strategy below</p>
+                    <p className="text-xs mt-2" style={{ color: colors.textSubtle }}>
+                      Click a suggestion or describe your strategy below
+                    </p>
                   </div>
                 </ConversationEmptyState>
               ) : (
@@ -837,12 +1247,22 @@ export function AFLGeneratorPage() {
                     {allMessages.map((msg, idx) => renderMessage(msg, idx))}
                   </div>
 
-                  {/* Submitted state - waiting */}
                   {status === 'submitted' && allMessages.length > 0 && allMessages[allMessages.length - 1]?.role === 'user' && (
                     <AIMessage from="assistant">
-                      <div className="flex items-center gap-2 text-xs">
-                        <img src={logo} alt="Yang AI" className="w-5 h-5 rounded flex-shrink-0" />
-                        <span className="font-semibold text-foreground">Yang</span>
+                      <div className="flex items-center gap-2 text-xs mb-2">
+                        <div style={{ 
+                          width: '20px', 
+                          height: '20px', 
+                          borderRadius: '6px', 
+                          overflow: 'hidden',
+                          backgroundColor: colors.primaryYellow + '15',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <img src={logo} alt="Yang AI" style={{ width: '16px', height: '16px' }} />
+                        </div>
+                        <span className="font-semibold" style={{ color: colors.text }}>Yang</span>
                       </div>
                       <MessageContent>
                         <Shimmer duration={1.5}>Generating AFL code...</Shimmer>
@@ -858,20 +1278,73 @@ export function AFLGeneratorPage() {
 
         {/* Error banner */}
         {(pageError || chatError) && (
-          <div className="px-6 py-3 bg-destructive/10 border-t border-destructive text-destructive text-sm flex justify-between items-center">
+          <div style={{
+            padding: '12px 20px',
+            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+            borderTop: '1px solid rgba(220, 38, 38, 0.3)',
+            color: '#DC2626',
+            fontSize: '13px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif"
+          }}>
             <span>{pageError || chatError?.message || 'An error occurred'}</span>
             <div className="flex gap-2">
-              <button onClick={() => regenerate()} className="border border-destructive rounded-md text-destructive cursor-pointer px-3 py-1 text-xs flex items-center gap-1 bg-transparent">
+              <button 
+                onClick={() => regenerate()} 
+                style={{
+                  border: '1px solid #DC2626',
+                  borderRadius: '6px',
+                  color: '#DC2626',
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  backgroundColor: 'transparent',
+                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
                 <RefreshCw size={12} /> Retry
               </button>
-              <button onClick={() => setPageError('')} className="bg-transparent border-none text-destructive cursor-pointer text-lg">x</button>
+              <button 
+                onClick={() => setPageError('')} 
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#DC2626',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  padding: '0 8px',
+                  fontWeight: 700
+                }}
+              >
+                ×
+              </button>
             </div>
           </div>
         )}
 
         {/* PromptInput */}
-        <div className="px-6 py-5" style={{ flexShrink: 0, borderTop: `2px solid ${colors.primaryYellow}`, backgroundColor: isDark ? 'rgba(254, 192, 15, 0.03)' : 'rgba(254, 192, 15, 0.05)', transition: 'all 0.2s ease' }}>
-          <div className="max-w-[900px] mx-auto">
+        <div style={{ 
+          flexShrink: 0, 
+          borderTop: `1px solid ${colors.border}`, 
+          background: isDark 
+            ? 'linear-gradient(to top, rgba(254, 192, 15, 0.02) 0%, transparent 100%)'
+            : 'linear-gradient(to top, rgba(254, 192, 15, 0.03) 0%, transparent 100%)',
+          transition: 'all 0.2s ease' 
+        }}>
+          <div className="max-w-[900px] mx-auto px-6 py-5">
             <TooltipProvider>
               <PromptInput
                 accept=".pdf,.csv,.json,.txt,.afl,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
@@ -893,7 +1366,6 @@ export function AFLGeneratorPage() {
                   if (!convId) {
                     try {
                       skipNextLoadRef.current = true;
-                      // Use first 50 chars of prompt as conversation title
                       const convTitle = text.trim().replace(/\[AFL Generator Context:.*?\]\s*/s, '').slice(0, 50).trim() || 'New Strategy';
                       const conv = await apiClient.createConversation(convTitle, 'afl');
                       setConversations(prev => [conv, ...prev]);
@@ -903,7 +1375,6 @@ export function AFLGeneratorPage() {
                     } catch { setPageError('Failed to create conversation'); return; }
                   }
 
-                  // Upload files if any
                   let messageText = text;
                   if (files.length > 0) {
                     const token = getAuthToken();
@@ -954,7 +1425,6 @@ export function AFLGeneratorPage() {
                     }
                   }
 
-                  // Prepend AFL context to the message
                   const contextPrefix = `[AFL Generator Context: strategy_type=${strategyType}, initial_equity=${backtestSettings.initial_equity}, max_positions=${backtestSettings.max_positions}, commission=${backtestSettings.commission}]\n\n`;
                   sendMessage({ text: contextPrefix + messageText }, { body: { conversationId: convId } });
                 }}
@@ -982,73 +1452,235 @@ export function AFLGeneratorPage() {
         </div>
       </div>
 
-      {/* ===== CODE PANEL (Right Side) ===== */}
+      {/* CODE PANEL */}
       {codePanelOpen && (() => {
         const activeCode = getActiveCode();
         const hasCode = compositeMode ? (strategies.length > 0 || activeTab === 'composite') : !!generatedCode;
         const isCompositeTab = compositeMode && activeTab === 'composite';
 
         return (
-        <div style={{ width: isMobile ? '100%' : '460px', backgroundColor: colors.codePanelBg, borderLeft: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', height: '100%', flexShrink: 0, transition: 'width 0.3s ease', position: isMobile ? 'absolute' : 'relative', right: 0, top: 0, zIndex: isMobile ? 200 : 1 }}>
+        <div style={{ 
+          width: isMobile ? '100%' : '480px', 
+          backgroundColor: colors.codePanelBg, 
+          borderLeft: `1px solid ${colors.border}`, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          height: '100%', 
+          flexShrink: 0, 
+          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+          position: isMobile ? 'absolute' : 'relative', 
+          right: 0, 
+          top: 0, 
+          zIndex: isMobile ? 200 : 1,
+          boxShadow: isDark ? '-2px 0 12px rgba(0,0,0,0.3)' : '-2px 0 12px rgba(0,0,0,0.04)'
+        }}>
           {/* Panel Header */}
-          <div style={{ padding: '12px 16px', borderBottom: compositeMode ? `1px solid ${colors.border}` : `2px solid ${colors.primaryYellow}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.08)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {compositeMode ? <Layers size={16} color={colors.primaryYellow} /> : <Code2 size={16} color={colors.primaryYellow} />}
-              <h3 style={{ fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", fontSize: '13px', fontWeight: 700, color: colors.text, margin: 0, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                {compositeMode ? 'COMPOSITE' : 'AFL CODE'}
-              </h3>
-              {compositeMode ? (
-                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', backgroundColor: isDark ? 'rgba(254, 192, 15, 0.15)' : 'rgba(254, 192, 15, 0.1)', color: colors.primaryYellow, fontWeight: 600, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}>
-                  {strategies.length} {strategies.length === 1 ? 'strategy' : 'strategies'}
-                </span>
-              ) : (
-                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', backgroundColor: isDark ? 'rgba(254, 192, 15, 0.15)' : 'rgba(254, 192, 15, 0.1)', color: colors.primaryYellow, fontWeight: 600, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", textTransform: 'uppercase' }}>{strategyType}</span>
-              )}
+          <div style={{ 
+            padding: '16px 20px', 
+            borderBottom: `1px solid ${colors.border}`, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            background: isDark 
+              ? 'linear-gradient(135deg, rgba(254, 192, 15, 0.03) 0%, rgba(254, 192, 15, 0.01) 100%)'
+              : 'linear-gradient(135deg, rgba(254, 192, 15, 0.04) 0%, rgba(254, 192, 15, 0.01) 100%)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: colors.primaryYellow + '20',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {compositeMode ? (
+                  <Layers size={16} color={colors.primaryYellow} strokeWidth={2.5} />
+                ) : (
+                  <Code2 size={16} color={colors.primaryYellow} strokeWidth={2.5} />
+                )}
+              </div>
+              <div>
+                <h3 style={{ 
+                  fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
+                  fontSize: '13px', 
+                  fontWeight: 700, 
+                  color: colors.text, 
+                  margin: 0, 
+                  letterSpacing: '0.5px', 
+                  textTransform: 'uppercase' 
+                }}>
+                  {compositeMode ? 'Composite' : 'AFL Code'}
+                </h3>
+                {compositeMode ? (
+                  <span style={{ 
+                    fontSize: '10px', 
+                    color: colors.textMuted, 
+                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" 
+                  }}>
+                    {strategies.length} {strategies.length === 1 ? 'strategy' : 'strategies'}
+                  </span>
+                ) : (
+                  <span style={{ 
+                    fontSize: '10px', 
+                    color: colors.textMuted, 
+                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                    textTransform: 'capitalize'
+                  }}>
+                    {strategyType} Strategy
+                  </span>
+                )}
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button onClick={() => setShowSettings(!showSettings)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', transition: 'background-color 0.2s' }} title="Backtest settings">
-                <Settings2 size={14} color={showSettings ? colors.primaryYellow : colors.textMuted} />
+              <button 
+                onClick={() => setShowSettings(!showSettings)} 
+                style={{ 
+                  background: showSettings ? colors.activeBg : 'transparent',
+                  border: `1px solid ${showSettings ? colors.primaryYellow : 'transparent'}`, 
+                  cursor: 'pointer', 
+                  padding: '8px', 
+                  borderRadius: '8px', 
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} 
+                title="Backtest settings"
+                onMouseOver={(e) => {
+                  if (!showSettings) e.currentTarget.style.backgroundColor = colors.hoverBg;
+                }}
+                onMouseOut={(e) => {
+                  if (!showSettings) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <Settings2 size={14} color={showSettings ? colors.primaryYellow : colors.textMuted} strokeWidth={2} />
               </button>
-              <button onClick={handleCopyCode} disabled={!activeCode} style={{ background: 'none', border: 'none', cursor: activeCode ? 'pointer' : 'default', padding: '6px', borderRadius: '6px', opacity: activeCode ? 1 : 0.3 }} title="Copy code">
-                <CopyIcon size={14} color={colors.textMuted} />
+              <button 
+                onClick={handleCopyCode} 
+                disabled={!activeCode} 
+                style={{ 
+                  background: copied ? colors.activeBg : 'transparent',
+                  border: `1px solid ${copied ? colors.primaryYellow : 'transparent'}`,
+                  cursor: activeCode ? 'pointer' : 'default', 
+                  padding: '8px', 
+                  borderRadius: '8px', 
+                  opacity: activeCode ? 1 : 0.3,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} 
+                title="Copy code"
+                onMouseOver={(e) => {
+                  if (activeCode && !copied) e.currentTarget.style.backgroundColor = colors.hoverBg;
+                }}
+                onMouseOut={(e) => {
+                  if (!copied) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {copied ? (
+                  <Check size={14} color={colors.primaryYellow} strokeWidth={2} />
+                ) : (
+                  <CopyIcon size={14} color={colors.textMuted} strokeWidth={2} />
+                )}
               </button>
-              <button onClick={handleDownloadCode} disabled={!activeCode} style={{ background: 'none', border: 'none', cursor: activeCode ? 'pointer' : 'default', padding: '6px', borderRadius: '6px', opacity: activeCode ? 1 : 0.3 }} title="Download .afl">
-                <Download size={14} color={colors.textMuted} />
+              <button 
+                onClick={handleDownloadCode} 
+                disabled={!activeCode} 
+                style={{ 
+                  background: 'transparent',
+                  border: '1px solid transparent',
+                  cursor: activeCode ? 'pointer' : 'default', 
+                  padding: '8px', 
+                  borderRadius: '8px', 
+                  opacity: activeCode ? 1 : 0.3,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} 
+                title="Download .afl"
+                onMouseOver={(e) => {
+                  if (activeCode) e.currentTarget.style.backgroundColor = colors.hoverBg;
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <Download size={14} color={colors.textMuted} strokeWidth={2} />
               </button>
-              <button onClick={() => setCodePanelOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px' }} title="Close panel">
-                <X size={14} color={colors.textMuted} />
+              <div style={{ width: '1px', height: '16px', backgroundColor: colors.border, margin: '0 4px' }} />
+              <button 
+                onClick={() => setCodePanelOpen(false)} 
+                style={{ 
+                  background: 'transparent',
+                  border: '1px solid transparent',
+                  cursor: 'pointer', 
+                  padding: '8px', 
+                  borderRadius: '8px',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} 
+                title="Close panel"
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.1)';
+                  e.currentTarget.querySelector('svg')?.setAttribute('stroke', '#DC2626');
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.querySelector('svg')?.setAttribute('stroke', colors.textMuted);
+                }}
+              >
+                <X size={14} color={colors.textMuted} strokeWidth={2} />
               </button>
             </div>
           </div>
 
-          {/* === Composite Tab Bar === */}
+          {/* Composite Tab Bar */}
           {compositeMode && (
-            <div style={{ borderBottom: `2px solid ${colors.primaryYellow}`, backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.02)' }}>
+            <div style={{ 
+              borderBottom: `1px solid ${colors.border}`, 
+              backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' 
+            }}>
               <ScrollArea className="w-full">
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', padding: '8px 12px 0', minWidth: 'max-content' }}>
-                  {/* Composite tab (always first, not closable) */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', padding: '12px 16px 0', minWidth: 'max-content' }}>
+                  {/* Composite tab */}
                   <button
                     onClick={() => setActiveTab('composite')}
                     style={{
-                      padding: '7px 14px',
+                      padding: '8px 16px',
                       fontSize: '11px',
                       fontWeight: activeTab === 'composite' ? 700 : 500,
                       borderRadius: '8px 8px 0 0',
                       border: activeTab === 'composite' ? `1px solid ${colors.primaryYellow}` : `1px solid transparent`,
                       borderBottom: 'none',
-                      backgroundColor: activeTab === 'composite' ? (isDark ? 'rgba(254, 192, 15, 0.12)' : 'rgba(254, 192, 15, 0.1)') : 'transparent',
+                      backgroundColor: activeTab === 'composite' ? colors.activeBg : 'transparent',
                       color: activeTab === 'composite' ? colors.primaryYellow : colors.textMuted,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '5px',
+                      gap: '6px',
                       fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
-                      transition: 'all 0.15s ease',
+                      transition: 'all 0.2s ease',
                       whiteSpace: 'nowrap',
-                      position: 'relative',
+                      letterSpacing: '0.3px'
+                    }}
+                    onMouseOver={(e) => {
+                      if (activeTab !== 'composite') {
+                        e.currentTarget.style.backgroundColor = colors.hoverBg;
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (activeTab !== 'composite') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
                     }}
                   >
-                    <Layers size={11} />
+                    <Layers size={12} strokeWidth={2} />
                     Composite
                     {strategies.length > 0 && (
                       <span style={{
@@ -1057,9 +1689,9 @@ export function AFLGeneratorPage() {
                         backgroundColor: colors.primaryYellow,
                         color: colors.darkGray,
                         borderRadius: '6px',
-                        padding: '1px 5px',
+                        padding: '2px 6px',
                         lineHeight: '14px',
-                        minWidth: '14px',
+                        minWidth: '18px',
                         textAlign: 'center',
                       }}>
                         {strategies.length}
@@ -1073,30 +1705,43 @@ export function AFLGeneratorPage() {
                       key={strategy.id}
                       onClick={() => setActiveTab(strategy.id)}
                       style={{
-                        padding: '7px 10px',
+                        padding: '8px 12px',
                         fontSize: '11px',
-                        fontWeight: activeTab === strategy.id ? 700 : 500,
+                        fontWeight: activeTab === strategy.id ? 600 : 500,
                         borderRadius: '8px 8px 0 0',
                         border: activeTab === strategy.id ? `1px solid ${colors.border}` : `1px solid transparent`,
                         borderBottom: 'none',
-                        backgroundColor: activeTab === strategy.id ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)') : 'transparent',
+                        backgroundColor: activeTab === strategy.id ? (isDark ? '#1A1A1A' : '#FFFFFF') : 'transparent',
                         color: activeTab === strategy.id ? colors.text : colors.textMuted,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '5px',
+                        gap: '6px',
                         fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
-                        transition: 'all 0.15s ease',
+                        transition: 'all 0.2s ease',
                         whiteSpace: 'nowrap',
-                        position: 'relative',
+                        letterSpacing: '0.3px'
+                      }}
+                      onMouseOver={(e) => {
+                        if (activeTab !== strategy.id) {
+                          e.currentTarget.style.backgroundColor = colors.hoverBg;
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (activeTab !== strategy.id) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
                       }}
                     >
-                      <Code2 size={10} />
-                      <span style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{strategy.name}</span>
+                      <Code2 size={11} strokeWidth={2} />
+                      <span style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {strategy.name}
+                      </span>
                       {strategy.strategyType && (
-                        <span style={{ fontSize: '8px', opacity: 0.5, textTransform: 'uppercase' }}>{strategy.strategyType.slice(0, 4)}</span>
+                        <span style={{ fontSize: '9px', opacity: 0.6, textTransform: 'uppercase' }}>
+                          {strategy.strategyType.slice(0, 4)}
+                        </span>
                       )}
-                      {/* Close button */}
                       <span
                         role="button"
                         tabIndex={0}
@@ -1105,21 +1750,30 @@ export function AFLGeneratorPage() {
                           handleRemoveStrategy(strategy.id);
                         }}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleRemoveStrategy(strategy.id); }
+                          if (e.key === 'Enter' || e.key === ' ') { 
+                            e.stopPropagation(); 
+                            handleRemoveStrategy(strategy.id); 
+                          }
                         }}
                         style={{
                           opacity: 0.4,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          padding: '2px',
-                          borderRadius: '3px',
-                          transition: 'all 0.15s ease',
+                          padding: '3px',
+                          borderRadius: '4px',
+                          transition: 'all 0.2s ease',
                         }}
-                        onMouseOver={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.backgroundColor = 'rgba(255,0,0,0.15)'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        onMouseOver={(e) => { 
+                          e.currentTarget.style.opacity = '1'; 
+                          e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.15)'; 
+                        }}
+                        onMouseOut={(e) => { 
+                          e.currentTarget.style.opacity = '0.4'; 
+                          e.currentTarget.style.backgroundColor = 'transparent'; 
+                        }}
                       >
-                        <X size={10} />
+                        <X size={11} strokeWidth={2} />
                       </span>
                     </button>
                   ))}
@@ -1129,10 +1783,14 @@ export function AFLGeneratorPage() {
             </div>
           )}
 
-          {/* Backtest Settings (collapsible) */}
+          {/* Backtest Settings */}
           {showSettings && (
-            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ 
+              padding: '16px 20px', 
+              borderBottom: `1px solid ${colors.border}`, 
+              backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.02)' 
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {[
                   { label: 'Initial Equity', key: 'initial_equity', type: 'number' },
                   { label: 'Max Positions', key: 'max_positions', type: 'number' },
@@ -1141,12 +1799,46 @@ export function AFLGeneratorPage() {
                   { label: 'Margin %', key: 'margin_requirement', type: 'number' },
                 ].map(({ label, key, type }) => (
                   <div key={key}>
-                    <label style={{ fontSize: '10px', color: colors.textMuted, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</label>
+                    <label style={{ 
+                      fontSize: '10px', 
+                      color: colors.textMuted, 
+                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                      fontWeight: 600, 
+                      textTransform: 'uppercase', 
+                      letterSpacing: '0.5px',
+                      display: 'block',
+                      marginBottom: '4px'
+                    }}>
+                      {label}
+                    </label>
                     <input
                       type={type}
                       value={(backtestSettings as any)[key]}
-                      onChange={(e) => setBacktestSettings(prev => ({ ...prev, [key]: type === 'number' ? Number(e.target.value) : e.target.value }))}
-                      style={{ width: '100%', padding: '6px 8px', backgroundColor: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: '6px', color: colors.text, fontSize: '12px', outline: 'none', fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", boxSizing: 'border-box', marginTop: '2px' }}
+                      onChange={(e) => setBacktestSettings(prev => ({ 
+                        ...prev, 
+                        [key]: type === 'number' ? Number(e.target.value) : e.target.value 
+                      }))}
+                      style={{ 
+                        width: '100%', 
+                        padding: '8px 10px', 
+                        backgroundColor: colors.inputBg, 
+                        border: `1px solid ${colors.border}`, 
+                        borderRadius: '8px', 
+                        color: colors.text, 
+                        fontSize: '12px', 
+                        outline: 'none', 
+                        fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                        boxSizing: 'border-box',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = colors.primaryYellow;
+                        e.currentTarget.style.backgroundColor = isDark ? '#1F1F1F' : '#FFFFFF';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = colors.border;
+                        e.currentTarget.style.backgroundColor = colors.inputBg;
+                      }}
                     />
                   </div>
                 ))}
@@ -1155,20 +1847,27 @@ export function AFLGeneratorPage() {
           )}
 
           {/* Monaco Editor */}
-          <div style={{ flex: 1, minHeight: 0 }}>
+          <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
             {(compositeMode || generatedCode) ? (
               <>
-                {/* Read-only indicator for composite tab */}
                 {isCompositeTab && strategies.length > 0 && (
                   <div style={{
-                    padding: '6px 16px',
-                    backgroundColor: isDark ? 'rgba(254, 192, 15, 0.06)' : 'rgba(254, 192, 15, 0.05)',
-                    borderBottom: `1px solid ${colors.border}`,
+                    padding: '8px 20px',
+                    backgroundColor: isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.04)',
+                    borderBottom: `1px solid ${colors.borderLight}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                   }}>
-                    <span style={{ fontSize: '10px', color: colors.textMuted, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}>
+                    <span style={{ 
+                      fontSize: '10px', 
+                      color: colors.textMuted, 
+                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <Sparkles size={12} color={colors.primaryYellow} strokeWidth={2} />
                       Auto-generated template (read-only)
                     </span>
                   </div>
@@ -1180,7 +1879,6 @@ export function AFLGeneratorPage() {
                   value={compositeMode ? activeCode : generatedCode}
                   onChange={(value) => {
                     if (compositeMode) {
-                      // Composite tab is read-only; individual strategy tabs are editable
                       if (activeTab !== 'composite') {
                         setStrategies(prev => prev.map(s => s.id === activeTab ? { ...s, code: value || '' } : s));
                       }
@@ -1195,24 +1893,67 @@ export function AFLGeneratorPage() {
                     lineNumbers: 'on',
                     scrollBeyondLastLine: false,
                     wordWrap: 'on',
-                    padding: { top: 16, bottom: 16 },
+                    padding: { top: 20, bottom: 20 },
                     renderLineHighlight: 'line',
                     smoothScrolling: true,
                     cursorBlinking: 'smooth',
-                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                    fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
                     fontLigatures: true,
                     readOnly: isCompositeTab,
+                    lineHeight: 22,
+                    letterSpacing: 0.3,
                   }}
                 />
               </>
             ) : (
-              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '40px' }}>
-                {compositeMode ? <Layers size={40} color={colors.border} /> : <Code2 size={40} color={colors.border} />}
-                <p style={{ fontSize: '13px', color: colors.textMuted, textAlign: 'center', fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", lineHeight: 1.5 }}>
-                  {compositeMode
-                    ? 'Generate individual strategies in the chat. Each will appear as a tab, and the composite code will combine them automatically.'
-                    : 'Generated AFL code will appear here. Describe your strategy in the chat to get started.'}
-                </p>
+              <div style={{ 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '16px', 
+                padding: '60px 40px' 
+              }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '16px',
+                  background: `linear-gradient(135deg, ${colors.primaryYellow}15 0%, ${colors.primaryYellow}08 100%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {compositeMode ? (
+                    <Layers size={32} color={colors.textSubtle} strokeWidth={1.5} />
+                  ) : (
+                    <Code2 size={32} color={colors.textSubtle} strokeWidth={1.5} />
+                  )}
+                </div>
+                <div className="text-center" style={{ maxWidth: '300px' }}>
+                  <h4 style={{
+                    fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    color: colors.text,
+                    marginBottom: '8px',
+                    letterSpacing: '0.3px'
+                  }}>
+                    {compositeMode ? 'No Strategies Yet' : 'Code Will Appear Here'}
+                  </h4>
+                  <p style={{ 
+                    fontSize: '13px', 
+                    color: colors.textMuted, 
+                    textAlign: 'center', 
+                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                    lineHeight: 1.6,
+                    margin: 0
+                  }}>
+                    {compositeMode
+                      ? 'Generate individual strategies in the chat. Each will appear as a tab, and the composite code will combine them automatically.'
+                      : 'Describe your trading strategy in the chat to generate optimized AFL code with backtesting settings.'}
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -1220,12 +1961,12 @@ export function AFLGeneratorPage() {
           {/* Composite AI Merge Footer */}
           {compositeMode && isCompositeTab && strategies.length >= 2 && (
             <div style={{
-              padding: '10px 16px',
+              padding: '12px 20px',
               borderTop: `1px solid ${colors.border}`,
-              backgroundColor: isDark ? 'rgba(254, 192, 15, 0.03)' : 'rgba(254, 192, 15, 0.04)',
+              backgroundColor: isDark ? 'rgba(254, 192, 15, 0.02)' : 'rgba(254, 192, 15, 0.03)',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '10px',
             }}>
               <button
                 onClick={() => {
@@ -1233,12 +1974,12 @@ export function AFLGeneratorPage() {
                   setInput(`Intelligently merge these ${strategies.length} individual AFL strategies into a single composite strategy. Use a proper voting/scoring system to combine their Buy/Sell/Short/Cover signals with appropriate weighting:\n\n${allCodes}`);
                 }}
                 style={{
-                  padding: '6px 14px',
+                  padding: '8px 16px',
                   fontSize: '11px',
                   fontWeight: 600,
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: `1px solid ${colors.primaryYellow}`,
-                  backgroundColor: isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.08)',
+                  background: `linear-gradient(135deg, ${colors.primaryYellow}15 0%, ${colors.primaryYellow}08 100%)`,
                   color: colors.primaryYellow,
                   cursor: 'pointer',
                   display: 'flex',
@@ -1246,15 +1987,26 @@ export function AFLGeneratorPage() {
                   gap: '6px',
                   fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
                   transition: 'all 0.2s ease',
+                  letterSpacing: '0.3px'
                 }}
-                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = isDark ? 'rgba(254, 192, 15, 0.2)' : 'rgba(254, 192, 15, 0.15)'; }}
-                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.08)'; }}
+                onMouseOver={(e) => { 
+                  e.currentTarget.style.background = `linear-gradient(135deg, ${colors.primaryYellow}25 0%, ${colors.primaryYellow}15 100%)`;
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => { 
+                  e.currentTarget.style.background = `linear-gradient(135deg, ${colors.primaryYellow}15 0%, ${colors.primaryYellow}08 100%)`;
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
               >
-                <Sparkles size={12} />
+                <Sparkles size={13} strokeWidth={2} />
                 AI Merge Strategies
               </button>
-              <span style={{ fontSize: '10px', color: colors.textMuted, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}>
-                or use auto-generated template above
+              <span style={{ 
+                fontSize: '10px', 
+                color: colors.textSubtle, 
+                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" 
+              }}>
+                or use auto-template above
               </span>
             </div>
           )}
@@ -1263,10 +2015,16 @@ export function AFLGeneratorPage() {
           {(() => {
             const codeForActions = compositeMode ? activeCode : generatedCode;
             if (!codeForActions) return null;
-            // Don't show optimize/debug/explain for the composite auto-template, only for individual strategies or non-composite mode
             if (compositeMode && isCompositeTab) return null;
             return (
-              <div style={{ padding: '12px 16px', borderTop: `1px solid ${colors.border}`, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <div style={{ 
+                padding: '12px 20px', 
+                borderTop: `1px solid ${colors.border}`, 
+                display: 'flex', 
+                gap: '8px', 
+                flexWrap: 'wrap',
+                backgroundColor: isDark ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.015)'
+              }}>
                 {[
                   { label: 'Optimize', prompt: `Optimize this AFL code for better performance:\n\`\`\`afl\n${codeForActions}\n\`\`\`` },
                   { label: 'Debug', prompt: `Debug this AFL code and find potential issues:\n\`\`\`afl\n${codeForActions}\n\`\`\`` },
@@ -1283,19 +2041,28 @@ export function AFLGeneratorPage() {
                       setInput(prompt);
                     }}
                     style={{
-                      padding: '5px 12px',
+                      padding: '6px 14px',
                       fontSize: '11px',
                       fontWeight: 600,
-                      borderRadius: '6px',
+                      borderRadius: '8px',
                       border: `1px solid ${colors.border}`,
                       backgroundColor: 'transparent',
                       color: colors.textMuted,
                       cursor: 'pointer',
                       fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
                       transition: 'all 0.2s ease',
+                      letterSpacing: '0.3px'
                     }}
-                    onMouseOver={(e) => { e.currentTarget.style.borderColor = colors.primaryYellow; e.currentTarget.style.color = colors.primaryYellow; }}
-                    onMouseOut={(e) => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.color = colors.textMuted; }}
+                    onMouseOver={(e) => { 
+                      e.currentTarget.style.borderColor = colors.primaryYellow; 
+                      e.currentTarget.style.color = colors.primaryYellow;
+                      e.currentTarget.style.backgroundColor = colors.activeBg;
+                    }}
+                    onMouseOut={(e) => { 
+                      e.currentTarget.style.borderColor = colors.border; 
+                      e.currentTarget.style.color = colors.textMuted;
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     {label}
                   </button>
@@ -1316,6 +2083,41 @@ export function AFLGeneratorPage() {
           conversationId={selectedConversation?.id}
         />
       )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        /* Show conversation actions on hover */
+        div:hover > .conversation-actions {
+          opacity: 1 !important;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: ${colors.background};
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: ${colors.border};
+          border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${colors.primaryYellow}40;
+        }
+      `}</style>
     </div>
   );
 }

@@ -106,3 +106,6 @@ export { FlightSearchCard } from './FlightSearchCard';
 
 // Legacy React component wrapper
 export { default as ReactComponent } from './ReactComponent';
+
+// Persistent generation card for document/presentation generation
+export { default as PersistentGenerationCard } from './PersistentGenerationCard';
