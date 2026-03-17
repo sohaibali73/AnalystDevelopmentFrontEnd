@@ -104,15 +104,36 @@ const logo = '/potomac-icon.png';
 
 const CHAT_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap');
-  @keyframes chat-fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
+
+  @keyframes chat-fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+  @keyframes chat-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.3; transform: scale(0.55); }
+  }
+
+  /* Message entrance */
+  .chat-msg-enter { animation: chat-fadeUp .25s cubic-bezier(.22,.68,0,1.2) both; }
+
+  /* Hover-reveal action bar on message rows */
+  .chat-msg-row:hover .msg-actions { opacity: 1 !important; }
+
+  /* Slim scrollbar */
   [data-scroll-container]::-webkit-scrollbar { width: 4px; }
   [data-scroll-container]::-webkit-scrollbar-track { background: transparent; }
-  [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(254,192,15,0.2); border-radius: 4px; }
+  [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(254,192,15,0.18); border-radius: 4px; }
   [data-scroll-container]::-webkit-scrollbar-thumb:hover { background: rgba(254,192,15,0.35); }
-  .chat-msg-enter { animation: chat-fadeIn .3s cubic-bezier(.22,.68,0,1.2) both; }
+
+  /* Dot-grid background — applied on root, works with the radial gradient */
+  .chat-root {
+    background-color: var(--chat-bg);
+    background-image:
+      radial-gradient(ellipse 130% 55% at 65% -8%, rgba(254,192,15,0.045) 0%, transparent 55%),
+      radial-gradient(var(--chat-dot) 1px, transparent 1px);
+    background-size: auto, 24px 24px;
+  }
 `;
 
 // ─── Utility: Fetch with timeout ─────────────────────────────────────────────
@@ -553,324 +574,285 @@ export function ChatPage() {
     return convId;
   };
 
-  // ── renderMessage ─────────────────────────────────────────────────────────
-  // The key improvement: tool parts now delegate to the registry (tool-registry.tsx)
-  // instead of a 500-line switch statement.
+  // ── Shared token shortcuts ─────────────────────────────────────────────────
+  const T = {
+    text:    isDark ? '#EFEFEF'                    : '#0A0A0B',
+    muted:   isDark ? '#606068'                    : '#808088',
+    border:  isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
+    card:    isDark ? '#0D0D10'                    : '#FFFFFF',
+    userBg:  isDark ? 'rgba(254,192,15,0.07)'      : 'rgba(254,192,15,0.09)',
+    userBdr: isDark ? 'rgba(254,192,15,0.18)'      : 'rgba(254,192,15,0.25)',
+    aiBg:    isDark ? 'rgba(255,255,255,0.03)'     : 'rgba(0,0,0,0.02)',
+    aiBdr:   isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
+    dim:     isDark ? 'rgba(255,255,255,0.18)'     : 'rgba(0,0,0,0.25)',
+  };
+
+  // ── renderMessage ──────────────────────────────────────────────────────────
   const renderMessage = (message: any, idx: number) => {
+    const isUser = message.role === 'user';
     const parts = message.parts || [];
     const isLast = idx === lastIdx;
-    const msgIsStreaming = isStreaming && isLast && message.role === 'assistant';
+    const msgIsStreaming = isStreaming && isLast && !isUser;
     const fullText = parts.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('');
     const toolParts = parts.filter((p: any) => isToolPart(p.type));
     const hasMultipleTools = toolParts.length >= 2;
     const sourceParts = parts.filter((p: any) => p.type === 'source-url');
-    const hasSources = sourceParts.length > 0;
+    const timeStr = message.createdAt
+      ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
 
+    // ── Content renderer (same logic, just extracted) ──────────────────────
+    const renderParts = () => parts.map((part: any, pIdx: number) => {
+      if (isToolPart(part.type)) return renderToolPart(part, pIdx, message.id, conversationIdRef.current);
+
+      switch (part.type) {
+        case 'text': {
+          if (!part.text) return null;
+          if (!isUser) {
+            const stripped = !msgIsStreaming ? stripReactCodeBlocks(part.text) : part.text;
+            return (
+              <React.Fragment key={pIdx}>
+                {stripped.trim() && <MessageResponse>{stripped}</MessageResponse>}
+                {!msgIsStreaming && <InlineReactPreview text={part.text} isDark={isDark} />}
+              </React.Fragment>
+            );
+          }
+          const rawText = stripSystemInstructions(part.text);
+          if (!rawText) return null;
+          const fileRefs: string[] = [];
+          let m;
+          const pat = /\[(?:uploaded\s+)?file:\s*([^\]]+)\]/gi;
+          while ((m = pat.exec(rawText)) !== null) fileRefs.push(m[1].trim());
+          const cleanText = rawText
+            .replace(/\[(?:uploaded\s+)?file:\s*[^\]]+\]/gi, '')
+            .replace(/Please analyse the uploaded file\(s\):[^\n]*/gi, '')
+            .replace(/\n{3,}/g, '\n\n').trim();
+          return (
+            <React.Fragment key={pIdx}>
+              {fileRefs.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: cleanText ? '8px' : 0 }}>
+                  {fileRefs.map((filename, fIdx) => {
+                    const ext = getFileExtension(filename);
+                    const cc = getFileChipColor(ext);
+                    const IC = ['doc','docx','pdf','rtf'].includes(ext) ? FileTextIcon : ['xls','xlsx','csv'].includes(ext) ? FileSpreadsheetIcon : ['json','xml','html','md'].includes(ext) ? FileCodeIcon : FileIconLucide;
+                    return (
+                      <button key={fIdx} onClick={() => { const c = fileBlobCacheRef.current.get(filename); setPreviewChatFile(c || { filename }); }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '7px 12px', borderRadius: '9px', border: `1px solid ${cc}35`, background: `${cc}12`, cursor: 'pointer' }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 6, background: `${cc}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><IC size={14} color={cc} /></div>
+                        <div style={{ textAlign: 'left' as const, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, maxWidth: 160 }}>{filename}</p>
+                          <p style={{ margin: 0, fontSize: 10, color: T.muted }}>{ext.toUpperCase()} · preview</p>
+                        </div>
+                        <Eye size={12} color={cc} style={{ opacity: 0.6 }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {cleanText && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: T.text, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>{cleanText}</p>}
+            </React.Fragment>
+          );
+        }
+        case 'reasoning':
+          return <Reasoning key={pIdx} isStreaming={msgIsStreaming} defaultOpen={msgIsStreaming}><ReasoningTrigger /><ReasoningContent>{part.text || ''}</ReasoningContent></Reasoning>;
+        case 'source-url': return null;
+        case 'step-start':
+          return pIdx > 0 ? (
+            <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '12px 0' }}>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.12em', color: T.muted, textTransform: 'uppercase' as const }}>Step {pIdx}</span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+            </div>
+          ) : null;
+        case 'file': {
+          if (part.mediaType?.startsWith('image/') && part.base64) return (
+            <div key={pIdx} style={{ cursor: 'pointer', display: 'inline-block', marginTop: 6 }} onClick={() => setPreviewChatFile({ url: `data:${part.mediaType};base64,${part.base64}`, filename: part.filename || 'image.png', mediaType: part.mediaType })}>
+              <AIImage base64={part.base64} uint8Array={undefined as any} mediaType={part.mediaType} alt="Image" className="max-w-full rounded-lg" />
+            </div>
+          );
+          if (part.url || part.filename || part.fileId) {
+            const fe = getFileExtension(part.filename || ''); const cc = getFileChipColor(fe);
+            return (
+              <button key={pIdx} onClick={() => setPreviewChatFile({ url: part.url, fileId: part.fileId, filename: part.filename || 'file', mediaType: part.mediaType, size: part.size })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '7px 12px', borderRadius: '9px', border: `1px solid ${cc}30`, background: `${cc}10`, cursor: 'pointer', marginTop: 6 }}>
+                <FileTextIcon size={14} color={cc} />
+                <div><p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: T.text }}>{part.filename || 'Attachment'}</p>{part.size && <p style={{ margin: 0, fontSize: 10, color: T.muted }}>{formatChatFileSize(part.size)} · {fe.toUpperCase()}</p>}</div>
+                <Eye size={12} color={cc} style={{ opacity: 0.6 }} />
+              </button>
+            );
+          }
+          return null;
+        }
+        case 'data-file-download':
+          return part.data ? <DocumentDownloadCard key={pIdx} output={{ document_id: part.data.file_id || part.data.document_id, filename: part.data.filename, download_url: part.data.download_url, doc_type: part.data.file_type || part.data.doc_type, file_size_kb: part.data.size_kb || part.data.file_size_kb, tool: part.data.tool_name || part.data.tool, title: part.data.filename || part.data.title || 'Generated File', success: true }} /> : null;
+        default:
+          if (part.type?.startsWith('data-') && part.data?.content && part.data?.artifactType) {
+            const { artifactType: artType, content: artCode, language, title } = part.data;
+            const artLang = language || artType;
+            if (['html','svg','react','jsx','tsx'].includes(artType) && artCode) {
+              const blobUrl = (() => { try { const h = artType === 'svg' ? `<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh">${artCode}</body></html>` : artCode; return URL.createObjectURL(new Blob([h], { type: 'text/html' })); } catch { return ''; } })();
+              return (
+                <div key={pIdx} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <WebPreview defaultUrl={blobUrl} className="h-[400px]"><WebPreviewNavigation><span className="text-xs text-muted-foreground px-2 truncate flex-1">{title || `${artType.toUpperCase()} Preview`}</span></WebPreviewNavigation><WebPreviewBody /><WebPreviewConsole /></WebPreview>
+                  <CodeBlock code={artCode} language={artLang as any} showLineNumbers><CodeBlockHeader><CodeBlockTitle>{title || artType}</CodeBlockTitle><CodeBlockActions><CodeBlockCopyButton /></CodeBlockActions></CodeBlockHeader></CodeBlock>
+                </div>
+              );
+            }
+            return <Artifact key={pIdx}><ArtifactHeader><ArtifactTitle>{title || artType}</ArtifactTitle></ArtifactHeader><ArtifactContent><ArtifactRenderer artifact={{ id: part.data.id || `data-${pIdx}`, type: artType, language: artLang, code: artCode, complete: true }} /></ArtifactContent></Artifact>;
+          }
+          return null;
+      }
+    });
+
+    // ── USER message ───────────────────────────────────────────────────────
+    if (isUser) {
+      return (
+        <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '4px 0' }}>
+          <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+            {/* Meta */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {timeStr && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: T.dim, letterSpacing: '0.06em' }}>{timeStr}</span>}
+              <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: T.muted, letterSpacing: '0.02em' }}>{userName}</span>
+            </div>
+            {/* Bubble */}
+            <div style={{
+              background: T.userBg,
+              border: `1px solid ${T.userBdr}`,
+              borderRadius: '16px 4px 16px 16px',
+              padding: '12px 16px',
+              fontSize: 14, lineHeight: 1.7,
+              color: T.text,
+            }}>
+              {renderParts()}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── ASSISTANT message ──────────────────────────────────────────────────
     return (
-      <AIMessage key={message.id} from={message.role}>
-        {/* Sender label */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start' }}>
-          {message.role === 'user' ? (
-            <>
-              {message.createdAt && (
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9.5px', color: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.3)', letterSpacing: '0.05em' }}>
-                  {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
-              <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)', letterSpacing: '0.02em' }}>
-                {userName}
-              </span>
-            </>
-          ) : (
-            <>
-              <div style={{
-                width: 28, height: 28, borderRadius: '8px',
-                background: 'rgba(254,192,15,0.1)',
-                border: '1px solid rgba(254,192,15,0.22)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <img src={logo} alt="Yang" style={{ width: 16, height: 16, borderRadius: '4px' }} />
-              </div>
-              <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 700, color: isDark ? '#EFEFEF' : '#0A0A0B', letterSpacing: '-0.01em' }}>
-                Yang
-              </span>
-              {message.createdAt && (
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9.5px', color: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.3)', letterSpacing: '0.05em' }}>
-                  {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
-              {msgIsStreaming && <Shimmer duration={1.5}>Streaming...</Shimmer>}
-            </>
-          )}
+      <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', gap: '12px', padding: '4px 0' }}>
+        {/* Avatar */}
+        <div style={{ flexShrink: 0, paddingTop: 2 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: '10px',
+            background: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.1)',
+            border: '1px solid rgba(254,192,15,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <img src={logo} alt="Yang" style={{ width: 18, height: 18, borderRadius: '5px' }} />
+          </div>
         </div>
 
-        <MessageContent>
+        {/* Content column */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {/* Meta */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 700, color: T.text, letterSpacing: '-0.01em' }}>Yang</span>
+            {timeStr && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: T.dim, letterSpacing: '0.06em' }}>{timeStr}</span>}
+            {msgIsStreaming && <Shimmer duration={1.5}>Streaming…</Shimmer>}
+          </div>
+
           {/* Sources */}
-          {hasSources && message.role === 'assistant' && !msgIsStreaming && (
-            <Sources>
-              <SourcesTrigger count={sourceParts.length} />
-              <SourcesContent>
-                {sourceParts.map((sp: any, sIdx: number) => (
-                  <Source key={sIdx} href={sp.url} title={sp.title || new URL(sp.url).hostname} />
-                ))}
-              </SourcesContent>
-            </Sources>
+          {sourceParts.length > 0 && !msgIsStreaming && (
+            <Sources><SourcesTrigger count={sourceParts.length} /><SourcesContent>{sourceParts.map((sp: any, i: number) => <Source key={i} href={sp.url} title={sp.title || new URL(sp.url).hostname} />)}</SourcesContent></Sources>
           )}
 
-          {/* ChainOfThought for multi-tool sequences */}
-          {hasMultipleTools && message.role === 'assistant' && !msgIsStreaming && (
+          {/* Multi-tool chain */}
+          {hasMultipleTools && !msgIsStreaming && (
             <ChainOfThought defaultOpen={false}>
               <ChainOfThoughtHeader>Used {toolParts.length} tools</ChainOfThoughtHeader>
               <ChainOfThoughtContent>
                 {toolParts.map((tp: any, tIdx: number) => {
                   const tName = tp.type === 'dynamic-tool' ? (tp.toolName || 'unknown') : (tp.type?.replace('tool-', '') || 'unknown');
-                  const tStatus = tp.state === 'output-available' ? 'complete' : tp.state === 'output-error' ? 'complete' : 'active';
-                  return (
-                    <ChainOfThoughtStep
-                      key={tIdx}
-                      label={tName.replace(/_/g, ' ')}
-                      status={tStatus}
-                      description={tp.state === 'output-available' ? 'Completed' : tp.state === 'output-error' ? 'Error' : 'Running...'}
-                    />
-                  );
+                  const tStatus = tp.state === 'output-available' || tp.state === 'output-error' ? 'complete' : 'active';
+                  return <ChainOfThoughtStep key={tIdx} label={tName.replace(/_/g, ' ')} status={tStatus} description={tp.state === 'output-available' ? 'Completed' : tp.state === 'output-error' ? 'Error' : 'Running…'} />;
                 })}
               </ChainOfThoughtContent>
             </ChainOfThought>
           )}
 
-          {/* Parts */}
-          {parts.map((part: any, pIdx: number) => {
-            // ── Tool parts → registry (replaces the entire 500-line switch) ──
-            if (isToolPart(part.type)) {
-              return renderToolPart(part, pIdx, message.id, conversationIdRef.current);
-            }
-
-            switch (part.type) {
-              case 'text': {
-                if (!part.text) return null;
-                if (message.role === 'assistant') {
-                  const strippedText = !msgIsStreaming ? stripReactCodeBlocks(part.text) : part.text;
-                  return (
-                    <React.Fragment key={pIdx}>
-                      {strippedText.trim() && <MessageResponse>{strippedText}</MessageResponse>}
-                      {!msgIsStreaming && <InlineReactPreview text={part.text} isDark={isDark} />}
-                    </React.Fragment>
-                  );
-                }
-                // User message — strip system instructions + render file chips
-                const rawText = stripSystemInstructions(part.text);
-                if (!rawText) return null;
-                const fileRefPattern = /\[(?:uploaded\s+)?file:\s*([^\]]+)\]/gi;
-                const fileRefs: string[] = [];
-                let match;
-                while ((match = fileRefPattern.exec(rawText)) !== null) fileRefs.push(match[1].trim());
-                const cleanText = rawText
-                  .replace(/\[(?:uploaded\s+)?file:\s*[^\]]+\]/gi, '')
-                  .replace(/Please analyse the uploaded file\(s\):[^\n]*/gi, '')
-                  .replace(/\n{3,}/g, '\n\n').trim();
-
-                return (
-                  <React.Fragment key={pIdx}>
-                    {fileRefs.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: cleanText ? '8px' : 0 }}>
-                        {fileRefs.map((filename, fIdx) => {
-                          const ext = getFileExtension(filename);
-                          const chipColor = getFileChipColor(ext);
-                          const IconComp = ['doc','docx','pdf','rtf'].includes(ext) ? FileTextIcon
-                            : ['xls','xlsx','csv'].includes(ext) ? FileSpreadsheetIcon
-                            : ['json','xml','html','md'].includes(ext) ? FileCodeIcon
-                            : FileIconLucide;
-                          return (
-                            <button
-                              key={fIdx}
-                              onClick={() => { const cached = fileBlobCacheRef.current.get(filename); setPreviewChatFile(cached || { filename }); }}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px', border: `1px solid ${chipColor}40`, backgroundColor: `${chipColor}18`, cursor: 'pointer', maxWidth: '280px' }}
-                            >
-                              <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: `${chipColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <IconComp size={16} color={chipColor} />
-                              </div>
-                              <div style={{ textAlign: 'left', minWidth: 0 }}>
-                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: isDark ? '#E8E8E8' : '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{filename}</p>
-                                <p style={{ margin: 0, fontSize: 11, color: isDark ? '#9E9E9E' : '#666' }}>{ext.toUpperCase()} · Click to preview</p>
-                              </div>
-                              <Eye size={13} color={chipColor} style={{ flexShrink: 0, opacity: 0.7 }} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {cleanText && (
-                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ color: isDark ? '#E8E8E8' : '#1A1A1A', margin: 0 }}>
-                        {cleanText}
-                      </p>
-                    )}
-                  </React.Fragment>
-                );
-              }
-
-              case 'reasoning':
-                return (
-                  <Reasoning key={pIdx} isStreaming={msgIsStreaming} defaultOpen={msgIsStreaming}>
-                    <ReasoningTrigger />
-                    <ReasoningContent>{part.text || ''}</ReasoningContent>
-                  </Reasoning>
-                );
-
-              case 'source-url':
-                return null; // handled by Sources component above
-
-              case 'step-start':
-                return pIdx > 0 ? (
-                  <div key={pIdx} className="my-3 flex items-center gap-2 text-muted-foreground">
-                    <div className="h-px flex-1 bg-border" />
-                    <span className="text-xs">Step {pIdx}</span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-                ) : null;
-
-              case 'file': {
-                if (part.mediaType?.startsWith('image/') && part.base64) {
-                  return (
-                    <div key={pIdx} style={{ cursor: 'pointer', display: 'inline-block' }}
-                      onClick={() => setPreviewChatFile({ url: `data:${part.mediaType};base64,${part.base64}`, filename: part.filename || 'image.png', mediaType: part.mediaType })}>
-                      <AIImage base64={part.base64} uint8Array={undefined as any} mediaType={part.mediaType} alt="Image" className="max-w-full rounded-lg mt-2" />
-                    </div>
-                  );
-                }
-                if (part.url || part.filename || part.fileId) {
-                  const fileExt = getFileExtension(part.filename || '');
-                  const chipColor = getFileChipColor(fileExt);
-                  return (
-                    <button key={pIdx}
-                      onClick={() => setPreviewChatFile({ url: part.url, fileId: part.fileId, filename: part.filename || 'file', mediaType: part.mediaType, size: part.size })}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px', border: `1px solid ${chipColor}30`, backgroundColor: `${chipColor}10`, cursor: 'pointer', marginTop: '6px' }}>
-                      <FileTextIcon size={16} color={chipColor} />
-                      <div>
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: isDark ? '#E8E8E8' : '#1A1A1A' }}>{part.filename || 'Attachment'}</p>
-                        {part.size && <p style={{ margin: 0, fontSize: 11, color: isDark ? '#9E9E9E' : '#666' }}>{formatChatFileSize(part.size)} · {fileExt.toUpperCase()}</p>}
-                      </div>
-                      <Eye size={14} color={chipColor} style={{ opacity: 0.7 }} />
-                    </button>
-                  );
-                }
-                return null;
-              }
-
-              case 'data-file-download':
-                if (part.data) {
-                  return (
-                    <DocumentDownloadCard key={pIdx} output={{
-                      document_id: part.data.file_id || part.data.document_id,
-                      filename: part.data.filename,
-                      download_url: part.data.download_url,
-                      doc_type: part.data.file_type || part.data.doc_type,
-                      file_size_kb: part.data.size_kb || part.data.file_size_kb,
-                      tool: part.data.tool_name || part.data.tool,
-                      title: part.data.filename || part.data.title || 'Generated File',
-                      success: true,
-                    }} />
-                  );
-                }
-                return null;
-
-              default:
-                // data-* artifact parts from backend
-                if (part.type?.startsWith('data-') && part.data?.content && part.data?.artifactType) {
-                  const { artifactType: artType, content: artCode, language, title } = part.data;
-                  const artLang = language || artType;
-                  const isRenderable = ['html','svg','react','jsx','tsx'].includes(artType);
-                  if (isRenderable && artCode) {
-                    const blobUrl = (() => {
-                      try {
-                        const html = artType === 'svg'
-                          ? `<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh">${artCode}</body></html>`
-                          : artCode;
-                        return URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-                      } catch { return ''; }
-                    })();
-                    return (
-                      <div key={pIdx} className="space-y-2">
-                        <WebPreview defaultUrl={blobUrl} className="h-[400px]">
-                          <WebPreviewNavigation>
-                            <span className="text-xs text-muted-foreground px-2 truncate flex-1">{title || `${artType.toUpperCase()} Preview`}</span>
-                          </WebPreviewNavigation>
-                          <WebPreviewBody />
-                          <WebPreviewConsole />
-                        </WebPreview>
-                        <CodeBlock code={artCode} language={artLang as any} showLineNumbers>
-                          <CodeBlockHeader>
-                            <CodeBlockTitle>{title || artType}</CodeBlockTitle>
-                            <CodeBlockActions><CodeBlockCopyButton /></CodeBlockActions>
-                          </CodeBlockHeader>
-                        </CodeBlock>
-                      </div>
-                    );
-                  }
-                  return (
-                    <Artifact key={pIdx}>
-                      <ArtifactHeader><ArtifactTitle>{title || artType}</ArtifactTitle></ArtifactHeader>
-                      <ArtifactContent>
-                        <ArtifactRenderer artifact={{ id: part.data.id || `data-${pIdx}`, type: artType, language: artLang, code: artCode, complete: true }} />
-                      </ArtifactContent>
-                    </Artifact>
-                  );
-                }
-                return null;
-            }
-          })}
-
-          {/* Shimmer for submitted state */}
-          {status === 'submitted' && isLast && message.role === 'assistant' && parts.every((p: any) => !p.text) && (
-            <Shimmer duration={1.5}>Yang is Thinking...</Shimmer>
-          )}
-        </MessageContent>
-
-        {/* DocumentGenerator for long-form content */}
-        {message.role === 'assistant' && !msgIsStreaming && fullText &&
-          /\b(document|proposal|report|memo|letter|policy|guide|plan|summary|brief|outline)\b/i.test(fullText) && (
-          <div style={{ marginTop: 12 }}>
-            <DocumentGenerator title="Generated Document" content={fullText} onDocumentGenerated={handleDocumentGenerated} />
+          {/* Message body */}
+          <div style={{
+            background: T.aiBg,
+            border: `1px solid ${T.aiBdr}`,
+            borderRadius: '4px 16px 16px 16px',
+            padding: '14px 18px',
+          }}>
+            <MessageContent>
+              {renderParts()}
+              {status === 'submitted' && isLast && parts.every((p: any) => !p.text) && <Shimmer duration={1.5}>Thinking…</Shimmer>}
+            </MessageContent>
           </div>
-        )}
 
-        {/* Message action toolbar */}
-        {message.role === 'assistant' && !msgIsStreaming && fullText && (
-          <MessageActions className="opacity-0 group-hover:opacity-100 transition-opacity">
-            <MessageAction tooltip="Copy" onClick={() => handleCopyMessage(fullText)}><CopyIcon className="size-3.5" /></MessageAction>
-            <MessageAction tooltip="Helpful" onClick={() => toast.success('Thanks!')}><ThumbsUpIcon className="size-3.5" /></MessageAction>
-            <MessageAction tooltip="Not helpful" onClick={() => toast.info('Noted')}><ThumbsDownIcon className="size-3.5" /></MessageAction>
-          </MessageActions>
-        )}
-      </AIMessage>
+          {/* Document generator */}
+          {!msgIsStreaming && fullText && /\b(document|proposal|report|memo|letter|policy|guide|plan|summary|brief|outline)\b/i.test(fullText) && (
+            <div style={{ marginTop: 4 }}>
+              <DocumentGenerator title="Generated Document" content={fullText} onDocumentGenerated={handleDocumentGenerated} />
+            </div>
+          )}
+
+          {/* Action toolbar */}
+          {!msgIsStreaming && fullText && (
+            <div className="msg-actions" style={{ display: 'flex', gap: '4px', opacity: 0, transition: 'opacity .15s' }}>
+              {[
+                { tip: 'Copy',        icon: CopyIcon,       fn: () => handleCopyMessage(fullText) },
+                { tip: 'Helpful',     icon: ThumbsUpIcon,   fn: () => toast.success('Thanks!') },
+                { tip: 'Not helpful', icon: ThumbsDownIcon, fn: () => toast.info('Noted') },
+              ].map(({ tip, icon: Icon, fn }) => (
+                <button key={tip} title={tip} onClick={fn} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 26, height: 26, borderRadius: 7,
+                  background: 'none', border: `1px solid ${T.border}`,
+                  cursor: 'pointer', color: T.muted,
+                  transition: 'background .15s, color .15s, border-color .15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = T.text; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = T.muted; }}
+                >
+                  <Icon size={12} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     );
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  // Theme tokens matching dashboard aesthetic
-  const bg         = isDark ? '#080809' : '#F5F5F6';
-  const bgCard     = isDark ? '#0D0D10' : '#FFFFFF';
-  const border     = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
-  const textPrimary = isDark ? '#EFEFEF' : '#0A0A0B';
-  const textMuted   = isDark ? '#606068' : '#808088';
-  const dotColor    = isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)';
+  const T = {
+    text:    isDark ? '#EFEFEF'                    : '#0A0A0B',
+    muted:   isDark ? '#606068'                    : '#808088',
+    border:  isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
+    card:    isDark ? '#0D0D10'                    : '#FFFFFF',
+    userBg:  isDark ? 'rgba(254,192,15,0.07)'      : 'rgba(254,192,15,0.09)',
+    userBdr: isDark ? 'rgba(254,192,15,0.18)'      : 'rgba(254,192,15,0.25)',
+    aiBg:    isDark ? 'rgba(255,255,255,0.03)'     : 'rgba(0,0,0,0.02)',
+    aiBdr:   isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
+    dim:     isDark ? 'rgba(255,255,255,0.18)'     : 'rgba(0,0,0,0.25)',
+  };
+
+  const cssVars = {
+    '--chat-bg':  isDark ? '#080809' : '#F5F5F6',
+    '--chat-dot': isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)',
+  } as React.CSSProperties;
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CHAT_STYLES }} />
-    <div style={{
-      height: '100%',
-      display: 'flex',
-      overflow: 'hidden',
-      position: 'relative',
-      background: isDark
-        ? `radial-gradient(ellipse 140% 60% at 70% -5%, rgba(254,192,15,0.04) 0%, transparent 55%), ${bg}`
-        : `radial-gradient(ellipse 140% 60% at 70% -5%, rgba(254,192,15,0.05) 0%, transparent 55%), ${bg}`,
-      backgroundImage: `radial-gradient(${dotColor} 1px, transparent 1px)`,
-      backgroundSize: '24px 24px',
-      fontFamily: "'Instrument Sans', 'Quicksand', sans-serif",
-    }}>
+    <div
+      className="chat-root"
+      style={{
+        ...cssVars,
+        height: '100%',
+        display: 'flex',
+        overflow: 'hidden',
+        position: 'relative',
+        fontFamily: "'Instrument Sans', 'Quicksand', sans-serif",
+      }}>
 
       {/* ── Backend unavailable banner ─────────────────────────────────────── */}
       {!backendAvailable && (
@@ -973,10 +955,10 @@ export function ChatPage() {
             style={{
               flex: 1, overflowY: 'auto', overflowX: 'hidden',
               WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
-              color: textPrimary,
+              color: T.text,
             } as React.CSSProperties}
           >
-            <div style={{ maxWidth: '820px', margin: '0 auto', padding: isMobile ? '24px 16px 16px' : '40px 28px 20px', color: textPrimary }}>
+            <div style={{ maxWidth: '820px', margin: '0 auto', padding: isMobile ? '24px 16px 16px' : '40px 28px 24px' }}>
 
               {allMessages.length === 0 ? (
                 /* ── Empty state ──────────────────────────────────────────── */
@@ -1023,13 +1005,13 @@ export function ChatPage() {
                         fontFamily: "'Syne', var(--font-rajdhani), sans-serif",
                         fontSize: isMobile ? '26px' : '34px',
                         fontWeight: 800, letterSpacing: '-0.025em',
-                        color: textPrimary, margin: '0 0 10px',
+                        color: T.text, margin: '0 0 10px',
                         lineHeight: 1.1,
                       }}>
                         Potomac Analyst Chat
                       </h2>
                       <p style={{
-                        fontSize: '14px', color: textMuted,
+                        fontSize: '14px', color: T.muted,
                         lineHeight: 1.75, maxWidth: '420px', margin: '0 auto',
                       }}>
                         Advanced AFL generation, strategy analysis, and trading guidance — ask anything.
@@ -1062,7 +1044,7 @@ export function ChatPage() {
 
                   {/* Artifacts */}
                   {artifacts.length > 0 && (
-                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${border}` }}>
+                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${T.border}` }}>
                       {artifacts.map((artifact) => (
                         <ArtifactRenderer
                           key={artifact.id}
@@ -1115,7 +1097,7 @@ export function ChatPage() {
                         <span style={{
                           fontFamily: "'Syne', sans-serif",
                           fontSize: '12px', fontWeight: 700,
-                          color: textPrimary, letterSpacing: '-0.01em',
+                          color: T.text, letterSpacing: '-0.01em',
                         }}>Yang</span>
                       </div>
                       <MessageContent><Shimmer duration={1.5}>Thinking...</Shimmer></MessageContent>
@@ -1157,7 +1139,7 @@ export function ChatPage() {
               </button>
               <button
                 onClick={() => setPageError('')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, fontSize: '16px', lineHeight: 1, padding: '2px 4px' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.muted, fontSize: '16px', lineHeight: 1, padding: '2px 4px' }}
               >
                 ×
               </button>
@@ -1172,7 +1154,7 @@ export function ChatPage() {
           background: isDark
             ? 'linear-gradient(to top, rgba(8,8,9,0.98) 0%, rgba(8,8,9,0.92) 100%)'
             : 'linear-gradient(to top, rgba(245,245,246,0.98) 0%, rgba(245,245,246,0.92) 100%)',
-          borderTop: `1px solid ${border}`,
+          borderTop: `1px solid ${T.border}`,
           backdropFilter: 'blur(12px)',
         }}>
           {/* Thin gold accent line above input */}
