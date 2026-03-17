@@ -102,6 +102,19 @@ import { Database } from 'lucide-react';
 
 const logo = '/potomac-icon.png';
 
+const CHAT_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap');
+  @keyframes chat-fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  [data-scroll-container]::-webkit-scrollbar { width: 4px; }
+  [data-scroll-container]::-webkit-scrollbar-track { background: transparent; }
+  [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(254,192,15,0.2); border-radius: 4px; }
+  [data-scroll-container]::-webkit-scrollbar-thumb:hover { background: rgba(254,192,15,0.35); }
+  .chat-msg-enter { animation: chat-fadeIn .3s cubic-bezier(.22,.68,0,1.2) both; }
+`;
+
 // ─── Utility: Fetch with timeout ─────────────────────────────────────────────
 async function fetchWithTimeout(
   url: string,
@@ -556,22 +569,34 @@ export function ChatPage() {
     return (
       <AIMessage key={message.id} from={message.role}>
         {/* Sender label */}
-        <div className={cn('flex items-center gap-2 text-xs', message.role === 'user' ? 'justify-end' : '')}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start' }}>
           {message.role === 'user' ? (
             <>
-              <span className="font-medium text-muted-foreground">{userName}</span>
               {message.createdAt && (
-                <span className="text-muted-foreground/60">
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9.5px', color: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.3)', letterSpacing: '0.05em' }}>
                   {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
+              <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)', letterSpacing: '0.02em' }}>
+                {userName}
+              </span>
             </>
           ) : (
             <>
-              <img src={logo} alt="Yang AI" className="w-5 h-5 rounded flex-shrink-0" />
-              <span className="font-semibold text-foreground">Yang</span>
+              <div style={{
+                width: 28, height: 28, borderRadius: '8px',
+                background: 'rgba(254,192,15,0.1)',
+                border: '1px solid rgba(254,192,15,0.22)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <img src={logo} alt="Yang" style={{ width: 16, height: 16, borderRadius: '4px' }} />
+              </div>
+              <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 700, color: isDark ? '#EFEFEF' : '#0A0A0B', letterSpacing: '-0.01em' }}>
+                Yang
+              </span>
               {message.createdAt && (
-                <span className="text-muted-foreground/60">
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9.5px', color: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.3)', letterSpacing: '0.05em' }}>
                   {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
@@ -822,51 +847,74 @@ export function ChatPage() {
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return (
-    <div style={{ height: '100%', backgroundColor: colors.background, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
-      {/* ── Backend unavailable warning banner ────────────────────────────────── */}
+  // Theme tokens matching dashboard aesthetic
+  const bg         = isDark ? '#080809' : '#F5F5F6';
+  const bgCard     = isDark ? '#0D0D10' : '#FFFFFF';
+  const border     = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+  const textPrimary = isDark ? '#EFEFEF' : '#0A0A0B';
+  const textMuted   = isDark ? '#606068' : '#808088';
+  const dotColor    = isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)';
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: CHAT_STYLES }} />
+    <div style={{
+      height: '100%',
+      display: 'flex',
+      overflow: 'hidden',
+      position: 'relative',
+      background: isDark
+        ? `radial-gradient(ellipse 140% 60% at 70% -5%, rgba(254,192,15,0.04) 0%, transparent 55%), ${bg}`
+        : `radial-gradient(ellipse 140% 60% at 70% -5%, rgba(254,192,15,0.05) 0%, transparent 55%), ${bg}`,
+      backgroundImage: `radial-gradient(${dotColor} 1px, transparent 1px)`,
+      backgroundSize: '24px 24px',
+      fontFamily: "'Instrument Sans', 'Quicksand', sans-serif",
+    }}>
+
+      {/* ── Backend unavailable banner ─────────────────────────────────────── */}
       {!backendAvailable && (
-        <div 
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            backgroundColor: '#FEC00F',
-            color: '#1A1A1A',
-            padding: '12px 20px',
-            textAlign: 'center',
-            fontSize: '14px',
-            fontWeight: 600,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          }}
-        >
-          ⚠️ Backend server is unavailable. Please start the server on port 8000.
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px',
+          background: isDark ? 'rgba(254,192,15,0.1)' : 'rgba(254,192,15,0.12)',
+          borderBottom: '1px solid rgba(254,192,15,0.3)',
+          padding: '9px 20px',
+          backdropFilter: 'blur(8px)',
+        }}>
+          <div style={{
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: '#FEC00F', flexShrink: 0,
+            boxShadow: '0 0 8px rgba(254,192,15,0.6)',
+          }} />
+          <span style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: '11px', letterSpacing: '0.06em',
+            color: isDark ? '#FEC00F' : '#92700A',
+          }}>
+            Backend server unavailable — start server on port 8000
+          </span>
           <button
-            onClick={() => {
-              setBackendAvailable(true);
-              recheckConnection();
-            }}
+            onClick={() => { setBackendAvailable(true); recheckConnection(); }}
             style={{
-              marginLeft: '16px',
-              padding: '4px 12px',
-              backgroundColor: '#1A1A1A',
-              color: '#FEC00F',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 600,
+              padding: '4px 14px',
+              background: 'rgba(254,192,15,0.15)',
+              border: '1px solid rgba(254,192,15,0.4)',
+              borderRadius: '6px', cursor: 'pointer',
+              fontFamily: "'DM Mono', monospace",
+              fontSize: '10px', letterSpacing: '0.08em',
+              color: '#FEC00F', fontWeight: 500,
+              transition: 'background .15s',
             }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(254,192,15,0.25)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(254,192,15,0.15)'}
           >
-            Retry Connection
+            Retry
           </button>
         </div>
       )}
 
-      {/* ── Sidebar (extracted component) ─────────────────────────────────── */}
+      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <ChatSidebar
         conversations={conversations}
         selectedConversation={selectedConversation}
@@ -885,46 +933,125 @@ export function ChatPage() {
       />
 
       {/* ── Main area ─────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', height: '100%', marginTop: !backendAvailable ? '48px' : 0 }}>
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        minWidth: 0, overflow: 'hidden', height: '100%',
+        marginTop: !backendAvailable ? '40px' : 0,
+      }}>
+
+        {/* Sidebar expand button when collapsed */}
         {sidebarCollapsed && (
           <button
             onClick={() => setSidebarCollapsed(false)}
-            style={{ position: 'absolute', top: backendAvailable ? 24 : 72, left: 24, zIndex: 100, background: 'rgba(254,192,15,0.3)', border: '1px solid rgba(254,192,15,0.5)', borderRadius: 8, padding: 8, cursor: 'pointer' }}
+            style={{
+              position: 'absolute',
+              top: backendAvailable ? 20 : 60,
+              left: 20, zIndex: 100,
+              background: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.1)',
+              border: '1px solid rgba(254,192,15,0.3)',
+              borderRadius: '9px', padding: '8px',
+              cursor: 'pointer',
+              transition: 'background .15s, border-color .15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(254,192,15,0.18)';
+              e.currentTarget.style.borderColor = 'rgba(254,192,15,0.5)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.1)';
+              e.currentTarget.style.borderColor = 'rgba(254,192,15,0.3)';
+            }}
           >
-            <ChevronRight size={18} color="#FEC00F" />
+            <ChevronRight size={16} color="#FEC00F" />
           </button>
         )}
 
-        {/* Message list */}
+        {/* ── Message scroll area ─────────────────────────────────────────── */}
         <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div
             data-scroll-container
-            style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', backgroundColor: colors.background, color: colors.text } as React.CSSProperties}
+            style={{
+              flex: 1, overflowY: 'auto', overflowX: 'hidden',
+              WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
+              color: textPrimary,
+            } as React.CSSProperties}
           >
-            <div className="max-w-[900px] mx-auto px-6 py-10" style={{ color: colors.text }}>
+            <div style={{ maxWidth: '820px', margin: '0 auto', padding: isMobile ? '24px 16px 16px' : '40px 28px 20px', color: textPrimary }}>
+
               {allMessages.length === 0 ? (
+                /* ── Empty state ──────────────────────────────────────────── */
                 <ConversationEmptyState
-                  icon={<img src={logo} alt="Logo" className="w-20 opacity-30" />}
-                  title="Welcome to Potomac Analyst Chat"
-                  description="Advanced analysis and trading strategy guidance"
+                  icon={<img src={logo} alt="Logo" style={{ width: 48, opacity: 0.25 }} />}
+                  title=""
+                  description=""
                 >
-                  <div className="flex flex-col items-center gap-4" style={{ padding: 20 }}>
-                    <img src={logo} alt="Logo" className="w-24" style={{ filter: 'drop-shadow(0 4px 8px rgba(254,192,15,0.2))' }} />
-                    <div className="space-y-1 text-center">
-                      <h3 style={{ fontFamily: "var(--font-rajdhani),'Rajdhani',sans-serif", fontSize: 20, fontWeight: 700, color: colors.primaryYellow, margin: '8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        WELCOME TO POTOMAC ANALYST CHAT
-                      </h3>
-                      <p style={{ fontFamily: "var(--font-quicksand),'Quicksand',sans-serif", fontSize: 14, color: colors.textMuted, margin: '4px 0' }}>
-                        Advanced analysis and trading strategy guidance powered by Potomac
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '28px', padding: '40px 20px 20px' }}>
+
+                    {/* Logo + glow */}
+                    <div style={{ position: 'relative' }}>
+                      <div style={{
+                        position: 'absolute', inset: '-20px',
+                        background: 'radial-gradient(circle, rgba(254,192,15,0.15) 0%, transparent 70%)',
+                        borderRadius: '50%', pointerEvents: 'none',
+                      }} />
+                      <img src={logo} alt="Yang" style={{
+                        width: 68,
+                        filter: 'drop-shadow(0 4px 16px rgba(254,192,15,0.3))',
+                        position: 'relative',
+                      }} />
+                    </div>
+
+                    {/* Headline */}
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                        background: isDark ? 'rgba(254,192,15,0.07)' : 'rgba(254,192,15,0.08)',
+                        border: '1px solid rgba(254,192,15,0.2)',
+                        borderRadius: '100px', padding: '4px 14px 4px 10px',
+                        marginBottom: '18px',
+                      }}>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#FEC00F' }} />
+                        <span style={{
+                          fontFamily: "'DM Mono', monospace",
+                          fontSize: '9px', letterSpacing: '0.16em',
+                          textTransform: 'uppercase' as const, color: '#FEC00F',
+                        }}>
+                          AI Chat · Online
+                        </span>
+                      </div>
+                      <h2 style={{
+                        fontFamily: "'Syne', var(--font-rajdhani), sans-serif",
+                        fontSize: isMobile ? '26px' : '34px',
+                        fontWeight: 800, letterSpacing: '-0.025em',
+                        color: textPrimary, margin: '0 0 10px',
+                        lineHeight: 1.1,
+                      }}>
+                        Potomac Analyst Chat
+                      </h2>
+                      <p style={{
+                        fontSize: '14px', color: textMuted,
+                        lineHeight: 1.75, maxWidth: '420px', margin: '0 auto',
+                      }}>
+                        Advanced AFL generation, strategy analysis, and trading guidance — ask anything.
                       </p>
                     </div>
-                    <Suggestions className="justify-center mt-4">
+
+                    {/* Suggestion chips */}
+                    <Suggestions className="justify-center">
                       <Suggestion suggestion="Generate a moving average crossover AFL" onClick={(s: string) => setInput(s)} />
                       <Suggestion suggestion="Explain RSI divergence strategy" onClick={(s: string) => setInput(s)} />
                       <Suggestion suggestion="Show me AAPL stock data" onClick={(s: string) => setInput(s)} />
                       <Suggestion suggestion="Search knowledge base for Bollinger Bands" onClick={(s: string) => setInput(s)} />
                     </Suggestions>
-                    <p className="text-xs text-muted-foreground mt-2">Click a suggestion or type your own message below</p>
+
+                    <span style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: '9.5px', letterSpacing: '0.1em',
+                      color: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.22)',
+                      textTransform: 'uppercase' as const,
+                    }}>
+                      Select a suggestion or type below
+                    </span>
                   </div>
                 </ConversationEmptyState>
               ) : (
@@ -935,7 +1062,7 @@ export function ChatPage() {
 
                   {/* Artifacts */}
                   {artifacts.length > 0 && (
-                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${colors.border}` }}>
+                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${border}` }}>
                       {artifacts.map((artifact) => (
                         <ArtifactRenderer
                           key={artifact.id}
@@ -949,7 +1076,7 @@ export function ChatPage() {
                     </div>
                   )}
 
-                  {/* Orphaned generation cards from localStorage */}
+                  {/* Orphaned generation cards */}
                   {(() => {
                     try {
                       const raw = localStorage.getItem('gen_cards');
@@ -975,9 +1102,21 @@ export function ChatPage() {
                   {/* Submitted waiting indicator */}
                   {status === 'submitted' && allMessages.length > 0 && allMessages[allMessages.length - 1]?.role === 'user' && (
                     <AIMessage from="assistant">
-                      <div className="flex items-center gap-2 text-xs">
-                        <img src={logo} alt="Yang AI" className="w-5 h-5 rounded flex-shrink-0" />
-                        <span className="font-semibold text-foreground">Yang</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: 28, height: 28, borderRadius: '8px',
+                          background: 'rgba(254,192,15,0.1)',
+                          border: '1px solid rgba(254,192,15,0.2)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0,
+                        }}>
+                          <img src={logo} alt="Yang" style={{ width: 16, height: 16, borderRadius: '4px' }} />
+                        </div>
+                        <span style={{
+                          fontFamily: "'Syne', sans-serif",
+                          fontSize: '12px', fontWeight: 700,
+                          color: textPrimary, letterSpacing: '-0.01em',
+                        }}>Yang</span>
                       </div>
                       <MessageContent><Shimmer duration={1.5}>Thinking...</Shimmer></MessageContent>
                     </AIMessage>
@@ -989,22 +1128,59 @@ export function ChatPage() {
           </div>
         </div>
 
-        {/* Error banner */}
+        {/* ── Error banner ───────────────────────────────────────────────────── */}
         {(pageError || chatError) && (
-          <div className="px-6 py-3 bg-destructive/10 border-t border-destructive text-destructive text-sm flex justify-between items-center">
-            <span>{pageError || chatError?.message || 'An error occurred'}</span>
-            <div className="flex gap-2">
-              <button onClick={() => regenerate()} className="border border-destructive rounded-md text-destructive cursor-pointer px-3 py-1 text-xs flex items-center gap-1 bg-transparent">
-                <RefreshCw size={12} /> Retry
+          <div style={{
+            padding: '10px 24px',
+            background: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)',
+            borderTop: '1px solid rgba(239,68,68,0.25)',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            gap: '12px',
+          }}>
+            <span style={{ fontSize: '12.5px', color: isDark ? '#FCA5A5' : '#DC2626', flex: 1 }}>
+              {pageError || chatError?.message || 'An error occurred'}
+            </span>
+            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+              <button
+                onClick={() => regenerate()}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  padding: '5px 12px',
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '7px', cursor: 'pointer',
+                  fontSize: '11px', color: isDark ? '#FCA5A5' : '#DC2626',
+                  fontFamily: "'DM Mono', monospace", letterSpacing: '0.06em',
+                }}
+              >
+                <RefreshCw size={11} /> Retry
               </button>
-              <button onClick={() => setPageError('')} className="bg-transparent border-none text-destructive cursor-pointer text-lg">×</button>
+              <button
+                onClick={() => setPageError('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, fontSize: '16px', lineHeight: 1, padding: '2px 4px' }}
+              >
+                ×
+              </button>
             </div>
           </div>
         )}
 
-        {/* ── PromptInput ─────────────────────────────────────────────────── */}
-        <div className="px-6 py-5" style={{ flexShrink: 0, borderTop: `2px solid ${colors.primaryYellow}`, backgroundColor: isDark ? 'rgba(254,192,15,0.03)' : 'rgba(254,192,15,0.05)' }}>
-          <div className="max-w-[900px] mx-auto">
+        {/* ── Prompt Input ───────────────────────────────────────────────────── */}
+        <div style={{
+          padding: isMobile ? '12px 14px 14px' : '14px 24px 18px',
+          flexShrink: 0,
+          background: isDark
+            ? 'linear-gradient(to top, rgba(8,8,9,0.98) 0%, rgba(8,8,9,0.92) 100%)'
+            : 'linear-gradient(to top, rgba(245,245,246,0.98) 0%, rgba(245,245,246,0.92) 100%)',
+          borderTop: `1px solid ${border}`,
+          backdropFilter: 'blur(12px)',
+        }}>
+          {/* Thin gold accent line above input */}
+          <div style={{
+            height: '1px', marginBottom: '12px',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(254,192,15,0.35) 40%, rgba(254,192,15,0.12) 70%, transparent 100%)',
+          }} />
+          <div style={{ maxWidth: '820px', margin: '0 auto' }}>
             <TooltipProvider>
               <PromptInput
                 accept=".pdf,.csv,.json,.txt,.afl,.doc,.docx,.xls,.xlsx,.pptx,.ppt,.png,.jpg,.jpeg,.gif,.mp3,.wav,.m4a"
@@ -1184,6 +1360,7 @@ export function ChatPage() {
         document.body,
       )}
     </div>
+    </>
   );
 }
 
