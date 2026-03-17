@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL ||
-  'https://developer-potomaac.up.railway.app//').replace(/\/+$/, '');
+  'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
 
 /**
  * Proxy route for File Upload
  * 
- * Proxies requests to backend: POST /chat/conversations/{conversation_id}/upload
+ * Proxies requests to backend: POST /upload/conversations/{conversation_id}
  * Supports file uploads with optional conversation context
  * 
  * Query params:
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     let response: Response;
     try {
       response = await fetch(
-        `${BACKEND_URL}/chat/conversations/${conversationId}/upload`,
+        `${BACKEND_URL}/upload/conversations/${conversationId}`,
         {
           method: 'POST',
           headers: {

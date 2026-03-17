@@ -29,6 +29,8 @@ export interface BackgroundProcess {
   error?: string;
   result?: unknown;       // Result data when complete
   onComplete?: (result: unknown) => void;
+  /** ID of the conversation this process is associated with (used for deep-link navigation) */
+  conversationId?: string;
 }
 
 interface ProcessManagerContextType {

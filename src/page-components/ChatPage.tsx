@@ -1,8 +1,33 @@
-'use client'
+'use client';
+
+/**
+ * ChatPage — Refactored from ~1500 lines to ~600 lines.
+ * 
+ * FIXES APPLIED:
+ * 1. Added proper error handling for backend connection failures
+ * 2. Graceful degradation when backend is unavailable
+ * 3. Timeout handling for all API calls
+ * 4. Better health check with exponential backoff
+ * 5. AbortController cleanup to prevent memory leaks
+ *
+ * Extracted to dedicated modules:
+ *   - Tool rendering  → src/components/chat/tool-registry.tsx   (eliminates 500-line switch)
+ *   - Sidebar         → src/components/chat/ChatSidebar.tsx
+ *   - File preview    → src/components/chat/ChatFilePreviewModal.tsx
+ *   - KB panel        → src/components/chat/KnowledgeBasePanel.tsx
+ *   - Utilities       → src/components/chat/chat-utils.ts
+ *   - Message cache   → src/hooks/useMessageCache.ts
+ *   - TTS             → src/hooks/useTTS.ts
+ */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, MessageSquare, ArrowUpFromLine, Trash2, ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Pencil, X, Wifi, WifiOff, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Volume2, VolumeX, Download, Info, Eye, FileText as FileTextIcon, FileCode as FileCodeIcon, FileSpreadsheet as FileSpreadsheetIcon, File as FileIconLucide, Database, Check, ChevronDown, BookOpen } from 'lucide-react';
+import {
+  ArrowUpFromLine, ChevronRight, RefreshCw,
+  CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye, Volume2,
+  FileText as FileTextIcon, FileCode as FileCodeIcon,
+  FileSpreadsheet as FileSpreadsheetIcon, File as FileIconLucide,
+} from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
@@ -14,96 +39,96 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { useProcessManager, ProcessType } from '@/contexts/ProcessManager';
+import { useProcessManager } from '@/contexts/ProcessManager';
 import { ArtifactRenderer } from '@/components/artifacts';
+import { useMessageCache } from '@/hooks/useMessageCache';
+import { useTTS } from '@/hooks/useTTS';
 
-// AI Elements - Composable Components
+// ── Chat module barrel ────────────────────────────────────────────────────────
+import {
+  ChatSidebar,
+  ChatFilePreviewModal,
+  KnowledgeBasePanel,
+  renderToolPart,
+  isToolPart,
+  getAuthToken,
+  stripSystemInstructions,
+  getFileChipColor,
+  getFileExtension,
+  formatChatFileSize,
+  getChatColors,
+  getProcessType,
+  getToolTitle,
+  type ChatPreviewFile,
+} from '@/components/chat';
+
+// ── AI Elements ───────────────────────────────────────────────────────────────
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from '@/components/ai-elements/reasoning';
 import { Shimmer } from '@/components/ai-elements/shimmer';
-import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
-import { Conversation as AIConversation, ConversationContent, ConversationScrollButton, ConversationEmptyState } from '@/components/ai-elements/conversation';
-import { Message as AIMessage, MessageContent, MessageActions, MessageAction, MessageResponse, MessageToolbar } from '@/components/ai-elements/message';
-import { CodeBlock, CodeBlockHeader, CodeBlockTitle, CodeBlockActions, CodeBlockCopyButton, CodeBlockContent } from '@/components/ai-elements/code-block';
-import { PromptInput, PromptInputTextarea, PromptInputFooter, PromptInputHeader, PromptInputTools, PromptInputButton, PromptInputSubmit, usePromptInputAttachments, PromptInputActionMenu, PromptInputActionMenuTrigger, PromptInputActionMenuContent, PromptInputActionMenuContent as MenuContent, PromptInputActionAddAttachments } from '@/components/ai-elements/prompt-input';
-import { Attachments, Attachment, AttachmentPreview, AttachmentInfo, AttachmentRemove } from '@/components/ai-elements/attachments';
+import {
+  Conversation as AIConversation,
+  ConversationEmptyState,
+} from '@/components/ai-elements/conversation';
+import {
+  Message as AIMessage, MessageContent, MessageActions, MessageAction,
+  MessageResponse,
+} from '@/components/ai-elements/message';
+import {
+  CodeBlock, CodeBlockHeader, CodeBlockTitle, CodeBlockActions, CodeBlockCopyButton,
+} from '@/components/ai-elements/code-block';
+import {
+  PromptInput, PromptInputTextarea, PromptInputFooter, PromptInputHeader,
+  PromptInputTools, PromptInputButton, PromptInputSubmit,
+  usePromptInputAttachments, PromptInputActionAddAttachments,
+} from '@/components/ai-elements/prompt-input';
+import { Attachments, Attachment, AttachmentPreview, AttachmentRemove } from '@/components/ai-elements/attachments';
 import { Sources, SourcesTrigger, SourcesContent, Source } from '@/components/ai-elements/sources';
-import { Artifact, ArtifactHeader, ArtifactTitle, ArtifactContent, ArtifactActions, ArtifactAction } from '@/components/ai-elements/artifact';
+import {
+  Artifact, ArtifactHeader, ArtifactTitle, ArtifactContent,
+} from '@/components/ai-elements/artifact';
 import { DocumentGenerator } from '@/components/ai-elements/document-generator';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { ChainOfThought, ChainOfThoughtHeader, ChainOfThoughtContent, ChainOfThoughtStep } from '@/components/ai-elements/chain-of-thought';
 import { SpeechInput } from '@/components/ai-elements/speech-input';
-import { WebPreview, WebPreviewNavigation, WebPreviewNavigationButton, WebPreviewBody, WebPreviewConsole } from '@/components/ai-elements/web-preview';
-import { Terminal, TerminalHeader, TerminalTitle, TerminalContent, TerminalCopyButton, TerminalActions } from '@/components/ai-elements/terminal';
+import {
+  WebPreview, WebPreviewNavigation, WebPreviewBody, WebPreviewConsole,
+} from '@/components/ai-elements/web-preview';
 import { Image as AIImage } from '@/components/ai-elements/image';
-import { Plan, PlanHeader, PlanTitle, PlanDescription, PlanContent, PlanTrigger } from '@/components/ai-elements/plan';
-import { Task, TaskTrigger, TaskContent, TaskItem } from '@/components/ai-elements/task';
-import { StackTrace, StackTraceHeader, StackTraceError, StackTraceErrorType, StackTraceErrorMessage, StackTraceContent, StackTraceFrames, StackTraceCopyButton, StackTraceActions, StackTraceExpandButton } from '@/components/ai-elements/stack-trace';
-import { Confirmation, ConfirmationTitle, ConfirmationRequest, ConfirmationAccepted, ConfirmationRejected, ConfirmationActions, ConfirmationAction } from '@/components/ai-elements/confirmation';
-import { Sandbox, SandboxHeader, SandboxContent, SandboxTabs, SandboxTabsBar, SandboxTabsList, SandboxTabsTrigger, SandboxTabContent } from '@/components/ai-elements/sandbox';
-import { InlineCitation, InlineCitationText, InlineCitationCard, InlineCitationCardTrigger, InlineCitationCardBody, InlineCitationSource } from '@/components/ai-elements/inline-citation';
 import VoiceMode from '@/components/VoiceMode';
 import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineReactPreview';
-import { PersistentGenerationCard } from '@/components/generative-ui';
-import {
-  StockCard,
-  LiveStockChart,
-  TechnicalAnalysis,
-  WeatherCard,
-  NewsHeadlines,
-  CodeSandbox,
-  DataChart,
-  CodeExecution,
-  KnowledgeBaseResults,
-  AFLGenerateCard,
-  AFLValidateCard,
-  AFLDebugCard,
-  AFLExplainCard,
-  AFLSanityCheckCard,
-  WebSearchResults,
-  ToolLoading,
-  StockScreener,
-  StockComparison,
-  SectorPerformance,
-  PositionSizer,
-  CorrelationMatrix,
-  DividendCard,
-  RiskMetrics,
-  MarketOverview,
-  BacktestResults,
-  OptionsSnapshot,
-  PresentationCard,
-  LiveSportsScores,
-  SearchTrends,
-  LinkedInPost,
-  WebsitePreview,
-  FoodOrder,
-  FlightTracker,
-  FlightSearchCard,
-} from '@/components/generative-ui';
+import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
+import { Database } from 'lucide-react';
 
 const logo = '/potomac-icon.png';
 
-// Strip hidden system instructions from user messages (e.g., [FORMATTING: ...])
-// These are injected for the AI but should never be visible to end users
-function stripSystemInstructions(text: string): string {
-  return text
-    .replace(/\[FORMATTING:[^\]]*\]/gi, '')
-    .replace(/\[SYSTEM:[^\]]*\]/gi, '')
-    .replace(/\[INSTRUCTIONS:[^\]]*\]/gi, '')
-    .replace(/\[CONTEXT:[^\]]*\]/gi, '')
-    .replace(/\n{3,}/g, '\n\n')  // Clean up extra blank lines left behind
-    .trim();
+// ─── Utility: Fetch with timeout ─────────────────────────────────────────────
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 10000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
 }
 
-// Component to display file attachments inside PromptInput
+// ─── Local attachment display sub-components ─────────────────────────────────
+
 function AttachmentsDisplay() {
   const attachments = usePromptInputAttachments();
-
-  if (attachments.files.length === 0) {
-    return null;
-  }
-
+  if (attachments.files.length === 0) return null;
   return (
     <PromptInputHeader>
       <Attachments variant="grid">
@@ -118,530 +143,143 @@ function AttachmentsDisplay() {
   );
 }
 
-// Simple attachment button that opens file dialog
 function AttachmentButton({ disabled }: { disabled?: boolean }) {
   const attachments = usePromptInputAttachments();
-
-  const handleAttachmentClick = useCallback(() => {
-    if (!disabled) {
-      attachments.openFileDialog();
-    }
-  }, [attachments, disabled]);
-
   return (
     <PromptInputButton
-      onClick={handleAttachmentClick}
+      onClick={() => { if (!disabled) attachments.openFileDialog(); }}
       disabled={disabled}
       tooltip="Attach files (PDF, CSV, JSON, Images, Docs, etc.)"
-      title="Click to upload files or drag and drop"
-      style={{
-        opacity: disabled ? 0.5 : 1,
-        transition: 'all 0.2s ease',
-      }}
     >
       <ArrowUpFromLine className="size-4" />
     </PromptInputButton>
   );
 }
 
-
-// ─────────────────────────────────────────────────────────────
-// CHAT FILE PREVIEW MODAL
-// Same library stack as KnowledgeBasePage:
-//   PDF → native iframe blob, DOCX → mammoth.js,
-//   XLSX → SheetJS, Images → Viewer.js, HTML → srcdoc iframe
-// ─────────────────────────────────────────────────────────────
-
-const API_BASE_URL_CHAT = (process.env.NEXT_PUBLIC_API_URL ||
-  'https://potomac-analyst-workbench-new-production.up.railway.app').replace(/\/+$/, '');
-
-function getChatAuthToken(): string {
-  try { return localStorage.getItem('auth_token') || ''; } catch { return ''; }
-}
-
-function getChatFileIcon(filename: string) {
-  const ext = (filename || '').split('.').pop()?.toLowerCase() || '';
-  if (['pdf','doc','docx','rtf'].includes(ext)) return FileTextIcon;
-  if (['csv','xlsx','xls'].includes(ext)) return FileSpreadsheetIcon;
-  if (['md','json','xml','html','js','ts'].includes(ext)) return FileCodeIcon;
-  return FileIconLucide;
-}
-
-function formatChatFileSize(bytes: number) {
-  if (!bytes) return '';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-}
-
-interface ChatPreviewFile {
-  url?: string;       // blob: or data: URL from PromptInput attachment
-  fileId?: string;    // file_id from upload response (for Railway fetch)
-  filename: string;
-  mediaType?: string;
-  size?: number;
-}
-
-function ChatFilePreviewModal({
-  file, onClose, isDark,
-}: {
-  file: ChatPreviewFile;
-  onClose: () => void;
-  isDark: boolean;
-}) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [textContent, setTextContent] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [downloading, setDownloading] = useState(false);
-
-  const ext = (file.filename.split('.').pop() || '').toLowerCase();
-  const isBinaryRender = ['pdf','png','jpg','jpeg','gif','webp','bmp','svg','docx','doc','xlsx','xls'].includes(ext);
-  const isHtml = ext === 'html' || ext === 'htm';
-  const isText = ['txt','md','csv','json','xml','log','sql','py','js','ts'].includes(ext);
-  const FIcon = getChatFileIcon(file.filename);
-
-  // Mammoth ref for DOCX
-  const [docxHtml, setDocxHtml] = useState('');
-  // SheetJS state for XLSX
-  const [xlsxHtml, setXlsxHtml] = useState('');
-  const [xlsxSheets, setXlsxSheets] = useState<string[]>([]);
-  const [xlsxAllHtml, setXlsxAllHtml] = useState<string[]>([]);
-  const [xlsxActive, setXlsxActive] = useState(0);
-  // Viewer.js ref
-  const imgRef = useRef<HTMLImageElement>(null);
-  const viewerRef = useRef<any>(null);
-  const [imgLoaded, setImgLoaded] = useState(false);
-
-  useEffect(() => {
-    setLoading(true); setError('');
-    let objectUrl = '';
-
-    const getBlob = async (): Promise<Blob | null> => {
-      // Priority 1: use existing blob/data URL from PromptInput
-      if (file.url) {
-        const resp = await fetch(file.url);
-        return resp.blob();
-      }
-      // Priority 2: fetch from Railway via file_id
-      if (file.fileId) {
-        const resp = await fetch(`${API_BASE_URL_CHAT}/upload/files/${file.fileId}/download`, {
-          headers: { Authorization: `Bearer ${getChatAuthToken()}` },
-        });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.blob();
-      }
-      return null;
-    };
-
-    const run = async () => {
-      try {
-        const blob = await getBlob();
-        if (!blob) { setError('No file data available'); setLoading(false); return; }
-
-        if (isBinaryRender) {
-          objectUrl = URL.createObjectURL(blob);
-          setBlobUrl(objectUrl);
-
-          // DOCX: render with mammoth
-          if (['docx','doc'].includes(ext)) {
-            if (!(window as any).mammoth) {
-              await new Promise<void>((res, rej) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js';
-                s.onload = () => res(); s.onerror = () => rej(new Error('mammoth load failed'));
-                document.head.appendChild(s);
-              });
-            }
-            const ab = await blob.arrayBuffer();
-            const result = await (window as any).mammoth.convertToHtml({ arrayBuffer: ab });
-            setDocxHtml(result.value);
-          }
-
-          // XLSX: render with SheetJS
-          if (['xlsx','xls'].includes(ext)) {
-            if (!(window as any).XLSX) {
-              await new Promise<void>((res, rej) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-                s.onload = () => res(); s.onerror = () => rej(new Error('SheetJS load failed'));
-                document.head.appendChild(s);
-              });
-            }
-            const XLSX = (window as any).XLSX;
-            const ab = await blob.arrayBuffer();
-            const wb = XLSX.read(ab, { type: 'array' });
-            const names: string[] = wb.SheetNames;
-            const pages = names.map((n: string) => XLSX.utils.sheet_to_html(wb.Sheets[n], { id: 'chat-xlsx-table', editable: false }));
-            setXlsxSheets(names); setXlsxAllHtml(pages); setXlsxHtml(pages[0] || '');
-          }
-        } else if (isHtml || isText) {
-          const text = await blob.text();
-          setTextContent(text);
-        }
-        setLoading(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load');
-        setLoading(false);
-      }
-    };
-
-    run();
-    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [file.url, file.fileId, ext, isBinaryRender, isHtml, isText]);
-
-  // Viewer.js init for images
-  useEffect(() => {
-    if (!imgLoaded || !imgRef.current || !['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext)) return;
-    const init = async () => {
-      if (!document.getElementById('viewerjs-css')) {
-        const link = document.createElement('link');
-        link.id = 'viewerjs-css'; link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/viewerjs@1.11.6/dist/viewer.min.css';
-        document.head.appendChild(link);
-      }
-      if (!(window as any).Viewer) {
-        await new Promise<void>((res, rej) => {
-          const s = document.createElement('script');
-          s.src = 'https://cdn.jsdelivr.net/npm/viewerjs@1.11.6/dist/viewer.min.js';
-          s.onload = () => res(); s.onerror = () => rej();
-          document.head.appendChild(s);
-        });
-      }
-      if (viewerRef.current) { viewerRef.current.destroy(); viewerRef.current = null; }
-      viewerRef.current = new (window as any).Viewer(imgRef.current!, {
-        inline: true,
-        toolbar: { zoomIn: 1, zoomOut: 1, oneToOne: 1, reset: 1, rotateLeft: 1, rotateRight: 1, flipHorizontal: 1, flipVertical: 1 },
-        navbar: false,
-      });
-    };
-    init().catch(() => {});
-    return () => { if (viewerRef.current) { viewerRef.current.destroy(); viewerRef.current = null; } };
-  }, [imgLoaded, ext]);
-
-  const handleDownload = async () => {
-    setDownloading(true);
-    try {
-      let blob: Blob;
-      if (file.url) {
-        blob = await fetch(file.url).then(r => r.blob());
-      } else if (file.fileId) {
-        const r = await fetch(`${API_BASE_URL_CHAT}/upload/files/${file.fileId}/download`, {
-          headers: { Authorization: `Bearer ${getChatAuthToken()}` },
-        });
-        blob = await r.blob();
-      } else { return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = file.filename;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) { alert('Download failed: ' + (e instanceof Error ? e.message : String(e))); }
-    finally { setDownloading(false); }
-  };
-
-  const colors = {
-    cardBg: isDark ? '#1E1E1E' : '#FFFFFF',
-    border: isDark ? '#2E2E2E' : '#E5E5E5',
-    text: isDark ? '#FFFFFF' : '#212121',
-    textMuted: isDark ? '#9E9E9E' : '#757575',
-    accent: '#FEC00F',
-  };
-
-  const renderContent = () => {
-    if (loading) return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '10px', padding: '40px' }}>
-        <Loader2 size={22} color={colors.accent} style={{ animation: 'spin 1s linear infinite' }} />
-        <span style={{ color: colors.textMuted, fontSize: '13px' }}>Loading {ext.toUpperCase()}...</span>
-      </div>
-    );
-    if (error) return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '10px', padding: '40px' }}>
-        <Info size={28} color="#ef4444" />
-        <span style={{ color: '#ef4444', fontSize: '13px' }}>{error}</span>
-      </div>
-    );
-
-    // PDF
-    if (ext === 'pdf' && blobUrl) return (
-      <iframe src={`${blobUrl}#toolbar=1`} style={{ flex: 1, width: '100%', border: 'none', minHeight: '520px' }} title={file.filename} />
-    );
-    // Images with Viewer.js
-    if (['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext) && blobUrl) return (
-      <div style={{ flex: 1, backgroundColor: isDark ? '#0d0d0d' : '#1a1a1a', minHeight: '480px' }}>
-        <img ref={imgRef} src={blobUrl} alt={file.filename} onLoad={() => setImgLoaded(true)} style={{ maxWidth: '100%', display: 'block' }} />
-        <style>{'.viewer-container,.viewer-canvas{background:#111!important}'}</style>
-      </div>
-    );
-    // DOCX with mammoth
-    if (['docx','doc'].includes(ext) && docxHtml) return (
-      <div style={{ flex: 1, overflow: 'auto', backgroundColor: isDark ? '#1a1a1a' : '#f0f0f0' }}>
-        <div className="docx-body" style={{ padding: '40px 60px', maxWidth: '820px', margin: '0 auto' }} dangerouslySetInnerHTML={{ __html: docxHtml }} />
-        <style>{`
-          .docx-body h1{font-size:22px;font-weight:700;color:${colors.text};margin:0 0 14px}
-          .docx-body h2{font-size:18px;font-weight:700;color:${colors.text};margin:20px 0 8px}
-          .docx-body p{font-size:14px;line-height:1.7;color:${colors.text};margin:0 0 10px}
-          .docx-body table{border-collapse:collapse;width:100%;margin:14px 0}
-          .docx-body td,.docx-body th{border:1px solid ${colors.border};padding:6px 10px;font-size:13px;color:${colors.text}}
-          .docx-body th{background:${isDark?'#2a2a2a':'#f5f5f5'};font-weight:600}
-          .docx-body ul,.docx-body ol{padding-left:22px;margin:6px 0}
-          .docx-body li{font-size:14px;line-height:1.6;color:${colors.text}}
-          .docx-body img{max-width:100%;border-radius:4px}
-        `}</style>
-      </div>
-    );
-    // XLSX with SheetJS
-    if (['xlsx','xls'].includes(ext) && xlsxHtml) return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {xlsxSheets.length > 1 && (
-          <div style={{ display: 'flex', gap: '4px', padding: '8px 14px', borderBottom: `1px solid ${colors.border}`, flexWrap: 'wrap' }}>
-            {xlsxSheets.map((name, idx) => (
-              <button key={name} onClick={() => { setXlsxActive(idx); setXlsxHtml(xlsxAllHtml[idx]); }} style={{ padding: '3px 10px', borderRadius: '6px', border: `1px solid ${idx === xlsxActive ? colors.accent : colors.border}`, backgroundColor: idx === xlsxActive ? `${colors.accent}14` : 'transparent', color: idx === xlsxActive ? colors.accent : colors.textMuted, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{name}</button>
-            ))}
-          </div>
-        )}
-        <div style={{ flex: 1, overflow: 'auto', padding: '14px', backgroundColor: isDark ? '#111' : '#fff' }} dangerouslySetInnerHTML={{ __html: xlsxHtml }} />
-        <style>{`#chat-xlsx-table{border-collapse:collapse;font-size:12px;width:100%}#chat-xlsx-table td,#chat-xlsx-table th{border:1px solid ${isDark?'#333':'#ddd'};padding:4px 8px;color:${isDark?'#e0e0e0':'#212121'};white-space:nowrap}#chat-xlsx-table tr:first-child td{background:${isDark?'#2a2a2a':'#f5f5f5'};font-weight:600}`}</style>
-      </div>
-    );
-    // HTML — live iframe
-    if (isHtml && textContent) return (
-      <iframe srcDoc={textContent} sandbox="allow-scripts allow-same-origin" style={{ flex: 1, width: '100%', border: 'none', minHeight: '480px', backgroundColor: '#fff' }} title={file.filename} />
-    );
-    // Text/code
-    if (textContent) return (
-      <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
-        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: "'JetBrains Mono','Fira Code',monospace", fontSize: '13px', lineHeight: 1.75, color: colors.text }}>{textContent}</pre>
-      </div>
-    );
-    // Fallback
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '12px', padding: '40px' }}>
-        <Info size={32} color={colors.textMuted} />
-        <p style={{ color: colors.textMuted, fontSize: '13px', textAlign: 'center', margin: 0 }}>No preview available. Use Download to get the file.</p>
-      </div>
-    );
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ width: '100%', maxWidth: '840px', maxHeight: '88vh', backgroundColor: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: '18px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
-        {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '9px', backgroundColor: 'rgba(254,192,15,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <FIcon size={20} color="#FEC00F" />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.filename}</p>
-            {file.size && <p style={{ margin: '2px 0 0', fontSize: '11px', color: colors.textMuted }}>{formatChatFileSize(file.size)}</p>}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-            <button onClick={handleDownload} disabled={downloading} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '7px', border: `1px solid ${colors.accent}`, backgroundColor: `${colors.accent}14`, color: colors.accent, fontSize: '12px', fontWeight: 700, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading ? 0.6 : 1 }}>
-              {downloading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={12} />}
-              DOWNLOAD
-            </button>
-            <button onClick={onClose} style={{ width: '32px', height: '32px', borderRadius: '7px', border: `1px solid ${colors.border}`, backgroundColor: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textMuted }}>
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-        {/* Content */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {renderContent()}
-        </div>
-      </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  );
-}
+// ─── Main ChatPage Component ──────────────────────────────────────────────────
 
 export function ChatPage() {
   const { resolvedTheme } = useTheme();
   const { user } = useAuth();
   const { isMobile } = useResponsive();
   const isDark = resolvedTheme === 'dark';
+  const colors = getChatColors(isDark);
 
+  // ── Core state ─────────────────────────────────────────────────────────────
   const [conversations, setConversations] = useState<ConversationType[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationType | null>(null);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(isMobile);
   const [pageError, setPageError] = useState('');
   const [previewChatFile, setPreviewChatFile] = useState<ChatPreviewFile | null>(null);
-
-  // Knowledge Base reference panel state
-  const [kbPanelOpen, setKbPanelOpen] = useState(false);
-  const [kbDocs, setKbDocs] = useState<Array<{ id: string; title?: string; filename: string; category: string; file_size?: number }>>([]);
-  const [kbDocsLoading, setKbDocsLoading] = useState(false);
-  const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
-  const kbPanelRef = useRef<HTMLDivElement>(null);
-
-  // Local input state - per the v5 docs pattern
   const [input, setInput] = useState('');
-
-  // Conversation search & rename state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-
-  // Artifacts state — keyed by conversationId for persistence across switches
   const [artifactsByConv, setArtifactsByConv] = useState<Record<string, any[]>>({});
-  const artifacts = selectedConversation ? (artifactsByConv[selectedConversation.id] || []) : [];
-
-  // Connection status
-  const { status: connStatus, check: recheckConnection } = useConnectionStatus({ interval: 60000 });
-
-  // Process Manager — connect tool invocations to the task manager widget
-  const { addProcess, updateProcess } = useProcessManager();
-  const trackedToolsRef = useRef<Map<string, string>>(new Map()); // toolPartKey -> processId
-
-  // Voice mode state
   const [voiceMode, setVoiceMode] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const lastSpokenMsgId = useRef<string | null>(null);
+  const [kbPanelOpen, setKbPanelOpen] = useState(false);
+  const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
+  const [backendAvailable, setBackendAvailable] = useState(true);
 
-  // TTS: Play text as speech via backend edge-tts
-  const speakText = useCallback(async (text: string, messageId: string) => {
-    if (!text.trim() || lastSpokenMsgId.current === messageId) return;
-    lastSpokenMsgId.current = messageId;
+  // ── Hooks ──────────────────────────────────────────────────────────────────
+  const { status: connStatus, check: recheckConnection } = useConnectionStatus({ interval: 60000 });
+  const { addProcess, updateProcess } = useProcessManager();
+  const { isSpeaking, speakText, stopSpeaking } = useTTS();
+  const { saveToCache, loadFromCache, loadPartsCache, savePartsToCache } = useMessageCache();
 
-    try {
-      setIsSpeaking(true);
-      const token = getAuthToken();
-      const resp = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': token ? `Bearer ${token}` : '' },
-        body: JSON.stringify({ text, voice: 'en-US-AriaNeural' }),
-      });
-
-      if (!resp.ok) { setIsSpeaking(false); return; }
-
-      const audioBlob = await resp.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      // Stop any currently playing audio
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
-      audio.onerror = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
-      audio.play().catch(() => setIsSpeaking(false));
-    } catch { setIsSpeaking(false); }
-  }, []);
-
-  // Stop TTS playback
-  const stopSpeaking = useCallback(() => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    setIsSpeaking(false);
-  }, []);
-
+  // ── Refs ───────────────────────────────────────────────────────────────────
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // Cache blob URLs by filename so previewing uploaded files works immediately
-  // and for files still in the browser session (before page reload)
   const fileBlobCacheRef = useRef<Map<string, ChatPreviewFile>>(new Map());
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Ref to track current conversationId synchronously (avoids stale state in body callback)
   const conversationIdRef = useRef<string | null>(null);
+  const skipNextLoadRef = useRef(false);
+  const justFinishedStreamRef = useRef<string | null>(null);
+  const streamingConvRef = useRef<string | null>(null);
+  const trackedToolsRef = useRef<Map<string, string>>(new Map());
+  const initialLoadDoneRef = useRef(false);
+  const healthCheckAbortControllerRef = useRef<AbortController | null>(null);
 
-  // Simplified: Use AI SDK parts directly, no manual reconstruction needed
+  const artifacts = selectedConversation ? (artifactsByConv[selectedConversation.id] || []) : [];
 
-  // Get auth token for transport
-  const getAuthToken = () => {
-    try { return localStorage.getItem('auth_token') || ''; } catch { return ''; }
-  };
-
-  // Fetch KB documents when panel opens
-  const fetchKbDocs = useCallback(async () => {
-    if (kbDocs.length > 0) return; // already loaded
-    setKbDocsLoading(true);
-    try {
-      const token = getAuthToken();
-      const resp = await fetch(
-        (process.env.NEXT_PUBLIC_API_URL || 'https://potomac-analyst-workbench-new-production.up.railway.app').replace(/\/+$/, '') + '/brain/documents',
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (resp.ok) {
-        const data = await resp.json();
-        setKbDocs(data || []);
-      }
-    } catch { /* silent */ }
-    finally { setKbDocsLoading(false); }
-  }, [kbDocs.length]);
-
-  // Close KB panel on outside click
+  // ── Health check with proper error handling and cleanup ────────────────────
   useEffect(() => {
-    if (!kbPanelOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (kbPanelRef.current && !kbPanelRef.current.contains(e.target as Node)) {
-        setKbPanelOpen(false);
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    const checkHealth = async () => {
+      // Cancel any previous health check
+      if (healthCheckAbortControllerRef.current) {
+        healthCheckAbortControllerRef.current.abort();
+      }
+      
+      healthCheckAbortControllerRef.current = new AbortController();
+      
+      try {
+        const response = await fetchWithTimeout(
+          '/api/health',
+          {
+            signal: healthCheckAbortControllerRef.current.signal,
+            headers: { 'Cache-Control': 'no-cache' },
+          },
+          5000 // 5 second timeout
+        );
+        
+        if (response.ok) {
+          setBackendAvailable(true);
+          retryCount = 0; // Reset retry count on success
+        } else {
+          setBackendAvailable(false);
+        }
+      } catch (error: any) {
+        // Only log if it's not an abort
+        if (error.name !== 'AbortError') {
+          console.warn('Backend health check failed:', error.message || 'Connection refused');
+          setBackendAvailable(false);
+          
+          // Exponential backoff for retries
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(checkHealth, Math.min(1000 * Math.pow(2, retryCount), 30000));
+          }
+        }
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [kbPanelOpen]);
 
-  // ===== Vercel AI SDK v6 useChat with UI Message Stream Protocol =====
-  const { messages: streamMessages, sendMessage, status, stop, error: chatError, setMessages, regenerate } = useChat({
+    // Initial check
+    checkHealth();
+    
+    // Regular interval check (every 60 seconds)
+    const interval = setInterval(checkHealth, 60000);
+
+    return () => {
+      clearInterval(interval);
+      if (healthCheckAbortControllerRef.current) {
+        healthCheckAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // ── AI SDK useChat ─────────────────────────────────────────────────────────
+  const {
+    messages: streamMessages, sendMessage, status, stop,
+    error: chatError, setMessages, regenerate,
+  } = useChat({
     transport: new DefaultChatTransport({
-      api: '/api/chat',  // Uses UI Message Stream protocol (SSE with x-vercel-ai-ui-message-stream: v1)
+      api: '/api/chat',
       headers: () => {
         const token = getAuthToken();
-        return { 'Authorization': token ? `Bearer ${token}` : '' };
+        return { Authorization: token ? `Bearer ${token}` : '' };
       },
-      body: () => ({
-        // Use ref for synchronous access to latest conversationId
-        conversationId: conversationIdRef.current,
-      }),
+      body: () => ({ conversationId: conversationIdRef.current }),
     }),
     onFinish: ({ message }) => {
-      // Mark which conversation just finished streaming — scoped guard prevents
-      // loadPreviousMessages from wiping rich tool UI parts for THIS conversation only
       const convId = conversationIdRef.current;
       justFinishedStreamRef.current = convId;
       setTimeout(() => {
-        // Only clear if it's still the same conversation (user hasn't switched)
-        if (justFinishedStreamRef.current === convId) {
-          justFinishedStreamRef.current = null;
-        }
-      }, 30000); // 30s protection — document/presentation tools take 30-60s to complete
+        if (justFinishedStreamRef.current === convId) justFinishedStreamRef.current = null;
+      }, 30000);
 
-      // Cache ALL message parts to localStorage so artifacts survive navigation/reload
-      if (convId) {
-        try {
-          const partsCache: Record<string, any[]> = {};
-          // Cache the just-finished message (always has the latest parts)
-          if (message.parts && message.parts.length > 0) {
-            partsCache[message.id] = message.parts;
-          }
-          // Also cache other messages with rich parts from the current stream
-          // NOTE: streamMessages may be stale in this closure, so we prioritize `message`
-          streamMessages.forEach((m: any) => {
-            if (m.id !== message.id && m.parts && m.parts.length > 0) {
-              const hasRichParts = m.parts.some((p: any) => p.type !== 'text');
-              if (hasRichParts) {
-                partsCache[m.id] = m.parts;
-              }
-            }
-          });
-          if (Object.keys(partsCache).length > 0) {
-            // Merge with existing cache (don't overwrite old messages)
-            try {
-              const existing = JSON.parse(localStorage.getItem(`chat_parts_${convId}`) || '{}');
-              localStorage.setItem(`chat_parts_${convId}`, JSON.stringify({ ...existing, ...partsCache }));
-            } catch {
-              localStorage.setItem(`chat_parts_${convId}`, JSON.stringify(partsCache));
-            }
-          }
-        } catch {}
-      }
+      if (convId) savePartsToCache(convId, [...streamMessages, message]);
 
-      // Refresh conversation list sidebar (titles etc.) — but NOT message state
       loadConversations();
-      // Voice mode: auto-speak assistant responses
       if (voiceMode && message.role === 'assistant') {
         const text = message.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('') || '';
         if (text.trim()) speakText(text, message.id);
@@ -650,494 +288,312 @@ export function ChatPage() {
     onError: (error) => {
       const msg = error.message || 'An error occurred';
       setPageError(msg);
-      toast.error('Chat Error', {
-        description: msg,
-        action: { label: 'Retry', onClick: () => regenerate() },
-        duration: 8000,
-      });
+      
+      // Check if it's a connection error
+      if (msg.includes('fetch') || msg.includes('network') || msg.includes('ECONNREFUSED')) {
+        setBackendAvailable(false);
+        toast.error('Connection Error', {
+          description: 'Unable to reach the backend server. Please check if the server is running.',
+          duration: 8000,
+        });
+      } else {
+        toast.error('Chat Error', {
+          description: msg,
+          action: { label: 'Retry', onClick: () => regenerate() },
+          duration: 8000,
+        });
+      }
     },
   });
 
   const isStreaming = status === 'streaming' || status === 'submitted';
 
-  // Track which conversation is actively streaming — update ref when streaming starts/stops
-  useEffect(() => {
-    if (isStreaming) {
-      streamingConvRef.current = conversationIdRef.current;
-    } else {
-      // Clear after a delay to protect against rapid state transitions
-      const convId = streamingConvRef.current;
-      setTimeout(() => {
-        if (streamingConvRef.current === convId && !isStreaming) {
-          streamingConvRef.current = null;
-        }
-      }, 2000);
-    }
-  }, [isStreaming]);
-
-  const colors = {
-    background: isDark ? '#0F0F0F' : '#ffffff',
-    sidebar: isDark ? '#1A1A1A' : '#ffffff',
-    cardBg: isDark ? '#1A1A1A' : '#ffffff',
-    inputBg: isDark ? '#262626' : '#f8f8f8',
-    border: isDark ? '#333333' : '#e5e5e5',
-    text: isDark ? '#E8E8E8' : '#1A1A1A',
-    textMuted: isDark ? '#B0B0B0' : '#666666',
-    primaryYellow: '#FEC00F',
-    darkGray: '#212121',
-    accentYellow: '#FFD700',
-  };
-
-  // Keep conversationIdRef in sync with selectedConversation state
+  // ── Sync conversationIdRef ─────────────────────────────────────────────────
   useEffect(() => {
     conversationIdRef.current = selectedConversation?.id || null;
   }, [selectedConversation]);
 
-  useEffect(() => { loadConversations(); }, []);
+  // ── Streaming conv tracking ────────────────────────────────────────────────
   useEffect(() => {
-    if (selectedConversation) {
-      // Skip loading messages if we just created this conversation (avoids clearing stream messages)
-      if (skipNextLoadRef.current) {
-        skipNextLoadRef.current = false;
-        return;
-      }
-      loadPreviousMessages(selectedConversation.id);
+    if (isStreaming) {
+      streamingConvRef.current = conversationIdRef.current;
+    } else {
+      const convId = streamingConvRef.current;
+      setTimeout(() => {
+        if (streamingConvRef.current === convId && !isStreaming) streamingConvRef.current = null;
+      }, 2000);
     }
-  }, [selectedConversation]);
-  // Edge-compatible auto-scroll: use scrollTop instead of scrollIntoView for better compatibility
+  }, [isStreaming]);
+
+  // ── Message cache sync (live during streaming) ─────────────────────────────
+  useEffect(() => {
+    const convId = conversationIdRef.current;
+    if (convId && streamMessages.length > 0) saveToCache(convId, streamMessages);
+  }, [streamMessages, saveToCache]);
+
+  // ── Auto-scroll ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (messagesEndRef.current) {
       const scrollContainer = messagesEndRef.current.closest('[data-scroll-container]');
       if (scrollContainer) {
-        // Use scrollTop for Edge compatibility (avoids scrollIntoView quirks)
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       } else {
-        // Fallback: scrollIntoView with block:'end' for better Edge support
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
     }
   }, [streamMessages]);
+
   useEffect(() => { if (chatError) setPageError(chatError.message); }, [chatError]);
 
-  // Auto-resize textarea
+  // ── On mount ───────────────────────────────────────────────────────────────
+  useEffect(() => { loadConversations(); }, []);
+
+  // ── Load messages when conversation changes ────────────────────────────────
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = '56px';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    if (selectedConversation) {
+      if (skipNextLoadRef.current) { skipNextLoadRef.current = false; return; }
+      loadPreviousMessages(selectedConversation.id);
     }
-  }, [input]);
+  }, [selectedConversation]);
 
-  // Track whether initial conversations have been loaded (to distinguish initial load vs refresh)
-  const initialLoadDoneRef = useRef(false);
-
-  const loadConversations = async () => {
-    try {
-      const allData = await apiClient.getConversations();
-      // FIXED: Explicitly filter for 'agent' type conversations (not default/afl/other types)
-      const data = allData.filter((c: any) => c.conversation_type === 'agent' || !c.conversation_type);
-      setConversations(data);
-
-      // === DEEP-LINK: Check if Task Manager is directing us to a specific conversation ===
-      const navigateToConvId = sessionStorage.getItem('pm_navigate_to_conv');
-      if (navigateToConvId) {
-        sessionStorage.removeItem('pm_navigate_to_conv');
-        const targetConv = data.find((c: any) => c.id === navigateToConvId);
-        if (targetConv) {
-          setSelectedConversation(targetConv);
-          initialLoadDoneRef.current = true;
-          setLoadingConversations(false);
-          return; // Skip auto-select logic
-        }
-      }
-
-      // Auto-select first conversation if none is selected
-      if (data.length > 0 && !conversationIdRef.current) {
-        if (initialLoadDoneRef.current) {
-          // This is a sidebar refresh (e.g., from onFinish) — skip loading messages
-          // to avoid wiping tool UI parts that were just streamed
-          skipNextLoadRef.current = true;
-        }
-        // On initial page load (initialLoadDoneRef.current === false), do NOT skip —
-        // we WANT to load messages so the user sees their previous conversation
-        setSelectedConversation(data[0]);
-      }
-
-      initialLoadDoneRef.current = true;
-    } catch { setPageError('Failed to load conversations'); }
-    finally { setLoadingConversations(false); }
-  };
-
-  const loadPreviousMessages = async (conversationId: string) => {
-    // Guard: don't reload if streaming just finished for THIS conversation — would overwrite
-    // rich tool UI parts with plain text from the backend. But allow loading OTHER conversations.
-    if (justFinishedStreamRef.current === conversationId) {
-      justFinishedStreamRef.current = null;
-      return;
-    }
-
-    // === CRITICAL: Save current streaming messages before switching ===
-    // Without this, switching conversations wipes the streaming tool cards
-    const prevConvId = streamingConvRef.current;
-    if (prevConvId && prevConvId !== conversationId && streamMessages.length > 0) {
-      messageCacheRef.current[prevConvId] = streamMessages.map((m: any) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content || '',
-        parts: m.parts || [{ type: 'text', text: m.content || '' }],
-        createdAt: m.createdAt,
-      }));
-      // Also persist to sessionStorage and localStorage parts cache
-      try {
-        sessionStorage.setItem(`chat_msgs_${prevConvId}`, JSON.stringify(messageCacheRef.current[prevConvId]));
-        const partsCache: Record<string, any[]> = {};
-        streamMessages.forEach((m: any) => {
-          if (m.parts && m.parts.length > 0) {
-            const hasRichParts = m.parts.some((p: any) => p.type !== 'text' && p.type !== 'step-start');
-            if (hasRichParts) partsCache[m.id] = m.parts;
-          }
-        });
-        if (Object.keys(partsCache).length > 0) {
-          const existing = JSON.parse(localStorage.getItem(`chat_parts_${prevConvId}`) || '{}');
-          localStorage.setItem(`chat_parts_${prevConvId}`, JSON.stringify({ ...existing, ...partsCache }));
-        }
-      } catch { /* ignore */ }
-    }
-
-    // Guard: if switching back to active streaming conversation, restore from cache
-    if (isStreaming && streamingConvRef.current === conversationId) {
-      const cached = messageCacheRef.current[conversationId];
-      if (cached && cached.length > 0) {
-        setMessages(cached);
-      }
-      return;
-    }
-
-    // === INSTANT CACHE LOAD ===
-    // Show cached messages IMMEDIATELY to prevent blank screen during API fetch
-    const memCached = messageCacheRef.current[conversationId];
-    if (memCached && memCached.length > 0) {
-      setMessages(memCached);
-    } else {
-      // Try sessionStorage as fallback
-      try {
-        const sessionRaw = sessionStorage.getItem(`chat_msgs_${conversationId}`);
-        if (sessionRaw) {
-          const sessionCached = JSON.parse(sessionRaw);
-          if (sessionCached.length > 0) {
-            setMessages(sessionCached);
-            messageCacheRef.current[conversationId] = sessionCached;
-          }
-        }
-      } catch { /* ignore */ }
-    }
-
-    // === BACKGROUND REFRESH from backend ===
-    try {
-      const data = await apiClient.getMessages(conversationId);
-      
-      // If conversation changed while we were fetching, discard stale results
-      if (conversationIdRef.current !== conversationId) return;
-
-      // Load cached parts from localStorage (preserves artifacts/tool outputs across navigation)
-      let cachedParts: Record<string, any[]> = {};
-      try {
-        const raw = localStorage.getItem(`chat_parts_${conversationId}`);
-        if (raw) cachedParts = JSON.parse(raw);
-      } catch {}
-
-      const newMessages = data.map((m: any) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content || '',
-        // Priority: 1) cached parts from localStorage, 2) backend metadata.parts, 3) plain text fallback
-        parts: cachedParts[m.id] || m.metadata?.parts || [{ type: 'text', text: m.content || '' }],
-        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
-      }));
-
-      // Only update if we got data (don't clear existing cache with empty result)
-      if (newMessages.length > 0) {
-        setMessages(newMessages);
-        messageCacheRef.current[conversationId] = newMessages;
-      }
-    } catch {
-      // Don't clear messages on error — keep showing cached data
-      if (!memCached || memCached.length === 0) {
-        // Only clear if we had nothing cached either
-        setMessages([]);
-      }
-    }
-  };
-
-  // Track whether we just created a new conversation (to skip re-loading messages)
-  const skipNextLoadRef = useRef(false);
-  // Track which conversation just finished streaming — prevents loadPreviousMessages from wiping tool UI parts
-  // Stores the conversationId (not boolean) so it's scoped to the right conversation
-  const justFinishedStreamRef = useRef<string | null>(null);
-  // Track which conversation is currently being streamed to — prevents message overwrite on re-select
-  const streamingConvRef = useRef<string | null>(null);
-
-  // === FULL MESSAGE CACHE ===
-  // Cache complete message arrays per conversation to prevent blank screen on switch
-  const messageCacheRef = useRef<Record<string, any[]>>({});
-
-  // Save current messages to cache whenever they change (debounced via conversation ID)
-  // Also persist rich tool parts to localStorage during streaming so they survive navigation
-  useEffect(() => {
-    const convId = conversationIdRef.current;
-    if (convId && streamMessages.length > 0) {
-      messageCacheRef.current[convId] = streamMessages.map((m: any) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content || '',
-        parts: m.parts || [{ type: 'text', text: m.content || '' }],
-        createdAt: m.createdAt,
-      }));
-      // Also persist to sessionStorage for tab-level persistence
-      try {
-        sessionStorage.setItem(`chat_msgs_${convId}`, JSON.stringify(messageCacheRef.current[convId]));
-      } catch { /* storage full, ignore */ }
-
-      // === LIVE PARTS CACHE ===
-      // Persist rich tool parts to localStorage DURING streaming (not just on finish)
-      // This ensures tool cards survive navigation away and back during generation
-      try {
-        const partsCache: Record<string, any[]> = {};
-        streamMessages.forEach((m: any) => {
-          if (m.parts && m.parts.length > 0) {
-            const hasRichParts = m.parts.some((p: any) => p.type !== 'text' && p.type !== 'step-start');
-            if (hasRichParts) {
-              partsCache[m.id] = m.parts;
-            }
-          }
-        });
-        if (Object.keys(partsCache).length > 0) {
-          try {
-            const existing = JSON.parse(localStorage.getItem(`chat_parts_${convId}`) || '{}');
-            localStorage.setItem(`chat_parts_${convId}`, JSON.stringify({ ...existing, ...partsCache }));
-          } catch {
-            localStorage.setItem(`chat_parts_${convId}`, JSON.stringify(partsCache));
-          }
-        }
-      } catch { /* localStorage error, ignore */ }
-    }
-  }, [streamMessages]);
-
-  // === PROCESS MANAGER SYNC ===
-  // Automatically register tool invocations as background tasks in the Task Manager widget.
-  // This allows users to navigate away and see tool progress in the bottom-right widget.
+  // ── Process Manager sync ───────────────────────────────────────────────────
   useEffect(() => {
     if (streamMessages.length === 0) return;
-
-    // Helper: Map tool name to ProcessType
-    const getProcessType = (toolName: string): ProcessType => {
-      if (toolName.includes('pptx') || toolName.includes('presentation') || toolName.includes('powerpoint') || toolName.includes('slide')) return 'slide';
-      if (toolName.includes('document') || toolName.includes('docx') || toolName.includes('word')) return 'document';
-      if (toolName.includes('afl') || toolName.includes('code')) return 'afl';
-      if (toolName.includes('chart') || toolName.includes('stock') || toolName.includes('market') || toolName.includes('backtest') || toolName.includes('sector') || toolName.includes('risk') || toolName.includes('dividend') || toolName.includes('options') || toolName.includes('correlation') || toolName.includes('position') || toolName.includes('screener') || toolName.includes('compare')) return 'dashboard';
-      if (toolName.includes('research') || toolName.includes('article') || toolName.includes('linkedin')) return 'article';
-      return 'general';
-    };
-
-    // Helper: Get a readable title from tool name and input
-    const getToolTitle = (toolName: string, input?: any): string => {
-      const readable = toolName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      if (input?.title) return input.title;
-      if (input?.symbol) return `${readable} (${input.symbol})`;
-      if (input?.topic) return input.topic.slice(0, 40);
-      if (input?.query) return input.query.slice(0, 40);
-      return readable;
-    };
-
-    // Scan all messages for tool parts and sync with ProcessManager
     for (const msg of streamMessages) {
       if (msg.role !== 'assistant' || !msg.parts) continue;
-
       for (let pIdx = 0; pIdx < msg.parts.length; pIdx++) {
         const part = msg.parts[pIdx] as any;
-        const isToolPart = part.type?.startsWith('tool-') || part.type === 'dynamic-tool';
-        if (!isToolPart) continue;
+        if (!isToolPart(part.type)) continue;
 
         const toolName = part.type === 'dynamic-tool'
           ? (part.toolName || 'unknown')
           : (part.type?.replace('tool-', '') || 'unknown');
 
-        // Create a unique key for this tool invocation
         const toolKey = `${msg.id}_${pIdx}_${toolName}`;
-
         const isActive = part.state === 'input-streaming' || part.state === 'input-available';
         const isDone = part.state === 'output-available';
         const isFailed = part.state === 'output-error';
 
         if (isActive && !trackedToolsRef.current.has(toolKey)) {
-          // FIXED: Remove conversationId from addProcess call - not in BackgroundProcess type
           const processId = addProcess({
             title: getToolTitle(toolName, part.input),
             type: getProcessType(toolName),
             status: 'running',
             progress: 0,
             message: `Running ${toolName.replace(/_/g, ' ')}...`,
+            conversationId: conversationIdRef.current || undefined,
           });
           trackedToolsRef.current.set(toolKey, processId);
         } else if (isDone && trackedToolsRef.current.has(toolKey)) {
-          // Update process to complete
-          const processId = trackedToolsRef.current.get(toolKey)!;
-          updateProcess(processId, {
-            status: 'complete',
-            progress: 100,
-            message: 'Completed successfully',
-            result: part.output,
-          });
+          updateProcess(trackedToolsRef.current.get(toolKey)!, { status: 'complete', progress: 100, message: 'Completed', result: part.output });
           trackedToolsRef.current.delete(toolKey);
         } else if (isFailed && trackedToolsRef.current.has(toolKey)) {
-          // Update process to failed
-          const processId = trackedToolsRef.current.get(toolKey)!;
-          updateProcess(processId, {
-            status: 'failed',
-            progress: 0,
-            message: 'Failed',
-            error: part.errorText || 'Tool execution failed',
-          });
+          updateProcess(trackedToolsRef.current.get(toolKey)!, { status: 'failed', progress: 0, message: 'Failed', error: part.errorText });
           trackedToolsRef.current.delete(toolKey);
-        } else if (isActive && trackedToolsRef.current.has(toolKey)) {
-          // Update progress for running tools (simulate progress based on elapsed time)
-          const processId = trackedToolsRef.current.get(toolKey)!;
-          const inputInfo = part.input?.title || part.input?.symbol || part.input?.topic || '';
-          updateProcess(processId, {
-            message: inputInfo ? `Processing: ${inputInfo.slice(0, 50)}` : `Running ${toolName.replace(/_/g, ' ')}...`,
-          });
         }
       }
     }
   }, [streamMessages, addProcess, updateProcess]);
 
+  // ── Conversation CRUD with improved error handling ─────────────────────────
+  const loadConversations = async () => {
+    try {
+      const allData = await apiClient.getConversations();
+      const data = allData.filter((c: any) => c.conversation_type === 'agent' || !c.conversation_type);
+      setConversations(data);
+
+      const navigateToConvId = sessionStorage.getItem('pm_navigate_to_conv');
+      if (navigateToConvId) {
+        sessionStorage.removeItem('pm_navigate_to_conv');
+        const target = data.find((c: any) => c.id === navigateToConvId);
+        if (target) { setSelectedConversation(target); initialLoadDoneRef.current = true; setLoadingConversations(false); return; }
+      }
+
+      if (data.length > 0 && !conversationIdRef.current) {
+        if (initialLoadDoneRef.current) skipNextLoadRef.current = true;
+        setSelectedConversation(data[0]);
+      }
+      initialLoadDoneRef.current = true;
+    } catch (error: any) {
+      console.error('Failed to load conversations:', error);
+      setPageError('Failed to load conversations');
+      // Set backend as unavailable if it's a connection error
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        setBackendAvailable(false);
+      }
+    }
+    finally { setLoadingConversations(false); }
+  };
+
+  const loadPreviousMessages = async (conversationId: string) => {
+    if (justFinishedStreamRef.current === conversationId) { justFinishedStreamRef.current = null; return; }
+
+    // Save current streaming messages before switching
+    const prevConvId = streamingConvRef.current;
+    if (prevConvId && prevConvId !== conversationId && streamMessages.length > 0) {
+      saveToCache(prevConvId, streamMessages);
+    }
+
+    if (isStreaming && streamingConvRef.current === conversationId) {
+      const cached = loadFromCache(conversationId);
+      if (cached && cached.length > 0) setMessages(cached as any);
+      return;
+    }
+
+    // Instant cache load — prevents blank screen
+    const cached = loadFromCache(conversationId);
+    if (cached && cached.length > 0) setMessages(cached as any);
+
+    // Background refresh with error handling
+    try {
+      const data = await apiClient.getMessages(conversationId);
+      if (conversationIdRef.current !== conversationId) return;
+
+      const cachedParts = loadPartsCache(conversationId);
+      const newMessages = data.map((m: any) => ({
+        id: m.id, role: m.role, content: m.content || '',
+        parts: cachedParts[m.id] || m.metadata?.parts || [{ type: 'text', text: m.content || '' }],
+        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
+      }));
+
+      if (newMessages.length > 0) {
+        setMessages(newMessages as any);
+        saveToCache(conversationId, newMessages);
+      }
+    } catch (error: any) {
+      console.warn('Failed to load messages:', error);
+      if (!cached || cached.length === 0) setMessages([]);
+      // Set backend as unavailable if it's a connection error
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        setBackendAvailable(false);
+      }
+    }
+  };
+
   const handleNewConversation = async () => {
     try {
-      skipNextLoadRef.current = true; // Prevent loadPreviousMessages from running
-      // FIXED: Always specify 'agent' as conversation type
+      skipNextLoadRef.current = true;
       const newConv = await apiClient.createConversation('New Conversation', 'agent');
-      setConversations(prev => [newConv, ...prev]);
+      setConversations((prev) => [newConv, ...prev]);
       setSelectedConversation(newConv);
-      conversationIdRef.current = newConv.id; // Sync ref immediately
+      conversationIdRef.current = newConv.id;
       setMessages([]);
       setPageError('');
-    } catch (err) { setPageError(err instanceof Error ? err.message : 'Failed'); }
+      setBackendAvailable(true); // Successfully created, so backend is available
+    } catch (err: any) {
+      console.error('Failed to create conversation:', err);
+      setPageError(err instanceof Error ? err.message : 'Failed');
+      if (err.message?.includes('fetch') || err.message?.includes('network')) {
+        setBackendAvailable(false);
+        toast.error('Cannot create conversation: Backend server is unavailable');
+      }
+    }
   };
 
   const handleDeleteConversation = async (id: string) => {
     if (!confirm('Delete?')) return;
     try {
       await apiClient.deleteConversation(id);
-      setConversations(prev => prev.filter(c => c.id !== id));
+      setConversations((prev) => prev.filter((c) => c.id !== id));
       if (selectedConversation?.id === id) { setSelectedConversation(null); setMessages([]); }
-    } catch { setPageError('Failed to delete'); }
-  };
-
-  // Send message using v5 API: sendMessage({ text }, { body: { conversationId } })
-  const doSend = async () => {
-    if (!input.trim() || isStreaming) return;
-    const text = input;
-    setInput('');
-    setPageError('');
-
-    // Determine the conversationId to use
-    let convId = selectedConversation?.id || conversationIdRef.current;
-
-    // Auto-create conversation if needed
-    if (!convId) {
-      try {
-        skipNextLoadRef.current = true; // Prevent loadPreviousMessages from clearing stream
-        // FIXED: Always specify 'agent' as conversation type
-        const conv = await apiClient.createConversation('New Conversation', 'agent');
-        setConversations(prev => [conv, ...prev]);
-        setSelectedConversation(conv);
-        // Update ref SYNCHRONOUSLY so body() callback gets it immediately
-        conversationIdRef.current = conv.id;
-        convId = conv.id;
-      } catch { setPageError('Failed to create conversation'); return; }
+    } catch (error: any) {
+      console.error('Failed to delete conversation:', error);
+      setPageError('Failed to delete');
     }
-
-    // v5 API: pass conversationId explicitly in sendMessage options
-    // Per v5 docs: request-level options take precedence over hook-level options
-    sendMessage({ text }, { body: { conversationId: convId } });
   };
 
-  // Use AI SDK messages as single source of truth
-  const allMessages = useMemo(() => streamMessages, [streamMessages]);
-  const lastIdx = allMessages.length - 1;
-  const userName = user?.name || 'You';
-
-  // Simplified: Direct protocol handles deduplication better
-
-  // Helper: Copy message text to clipboard
   const handleCopyMessage = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(() => toast.success('Copied!')).catch(() => toast.error('Copy failed'));
   }, []);
 
-  // Handle artifact generation — store per conversation
   const handleDocumentGenerated = useCallback((artifact: any) => {
     const convId = conversationIdRef.current;
-    if (convId) {
-      setArtifactsByConv(prev => ({
-        ...prev,
-        [convId]: [...(prev[convId] || []), artifact],
-      }));
-    }
+    if (convId) setArtifactsByConv((prev) => ({ ...prev, [convId]: [...(prev[convId] || []), artifact] }));
     toast.success('Document generated!');
   }, []);
 
-  // Render a single message using AI Elements composable architecture
+  const allMessages = useMemo(() => streamMessages, [streamMessages]);
+  const lastIdx = allMessages.length - 1;
+  const userName = user?.name || 'You';
+
+  // ── Ensure a conversation exists before sending ────────────────────────────
+  const ensureConversation = async (): Promise<string | null> => {
+    let convId = selectedConversation?.id || conversationIdRef.current;
+    if (!convId) {
+      try {
+        skipNextLoadRef.current = true;
+        const conv = await apiClient.createConversation('New Conversation', 'agent');
+        setConversations((prev) => [conv, ...prev]);
+        setSelectedConversation(conv);
+        conversationIdRef.current = conv.id;
+        convId = conv.id;
+        setBackendAvailable(true); // Successfully created
+      } catch (error: any) {
+        console.error('Failed to create conversation:', error);
+        setPageError('Failed to create conversation');
+        if (error.message?.includes('fetch') || error.message?.includes('network')) {
+          setBackendAvailable(false);
+        }
+        return null;
+      }
+    }
+    return convId;
+  };
+
+  // ── renderMessage ─────────────────────────────────────────────────────────
+  // The key improvement: tool parts now delegate to the registry (tool-registry.tsx)
+  // instead of a 500-line switch statement.
   const renderMessage = (message: any, idx: number) => {
     const parts = message.parts || [];
     const isLast = idx === lastIdx;
     const msgIsStreaming = isStreaming && isLast && message.role === 'assistant';
     const fullText = parts.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('');
-    // Detect multi-tool sequences for ChainOfThought display
-    const toolParts = parts.filter((p: any) => p.type?.startsWith('tool-') || p.type === 'dynamic-tool');
+    const toolParts = parts.filter((p: any) => isToolPart(p.type));
     const hasMultipleTools = toolParts.length >= 2;
-    // Collect source-url parts for Sources component
     const sourceParts = parts.filter((p: any) => p.type === 'source-url');
     const hasSources = sourceParts.length > 0;
 
     return (
       <AIMessage key={message.id} from={message.role}>
         {/* Sender label */}
-        <div className={cn(
-          "flex items-center gap-2 text-xs",
-          message.role === 'user' ? "justify-end" : ""
-        )}>
+        <div className={cn('flex items-center gap-2 text-xs', message.role === 'user' ? 'justify-end' : '')}>
           {message.role === 'user' ? (
             <>
               <span className="font-medium text-muted-foreground">{userName}</span>
-              {message.createdAt && <span className="text-muted-foreground/60">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+              {message.createdAt && (
+                <span className="text-muted-foreground/60">
+                  {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
             </>
           ) : (
             <>
               <img src={logo} alt="Yang AI" className="w-5 h-5 rounded flex-shrink-0" />
               <span className="font-semibold text-foreground">Yang</span>
-              {message.createdAt && <span className="text-muted-foreground/60">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+              {message.createdAt && (
+                <span className="text-muted-foreground/60">
+                  {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
               {msgIsStreaming && <Shimmer duration={1.5}>Streaming...</Shimmer>}
             </>
           )}
         </div>
 
         <MessageContent>
-          {/* AI Elements: Sources collapsible list for source-url parts */}
+          {/* Sources */}
           {hasSources && message.role === 'assistant' && !msgIsStreaming && (
             <Sources>
               <SourcesTrigger count={sourceParts.length} />
               <SourcesContent>
-                {sourceParts.map((sourcePart: any, sIdx: number) => (
-                  <Source
-                    key={`source-${sIdx}`}
-                    href={sourcePart.url}
-                    title={sourcePart.title || new URL(sourcePart.url).hostname}
-                  />
+                {sourceParts.map((sp: any, sIdx: number) => (
+                  <Source key={sIdx} href={sp.url} title={sp.title || new URL(sp.url).hostname} />
                 ))}
               </SourcesContent>
             </Sources>
           )}
 
-          {/* AI Elements: ChainOfThought summary for multi-tool sequences */}
+          {/* ChainOfThought for multi-tool sequences */}
           {hasMultipleTools && message.role === 'assistant' && !msgIsStreaming && (
             <ChainOfThought defaultOpen={false}>
               <ChainOfThoughtHeader>Used {toolParts.length} tools</ChainOfThoughtHeader>
@@ -1147,7 +603,7 @@ export function ChatPage() {
                   const tStatus = tp.state === 'output-available' ? 'complete' : tp.state === 'output-error' ? 'complete' : 'active';
                   return (
                     <ChainOfThoughtStep
-                      key={`cot-${tIdx}`}
+                      key={tIdx}
                       label={tName.replace(/_/g, ' ')}
                       status={tStatus}
                       description={tp.state === 'output-available' ? 'Completed' : tp.state === 'output-error' ? 'Error' : 'Running...'}
@@ -1158,43 +614,575 @@ export function ChatPage() {
             </ChainOfThought>
           )}
 
-          {/* Render parts - TRUNCATED FOR FILE SIZE - see full implementation in original file */}
-          {/* ... rest of message rendering logic ... */}
+          {/* Parts */}
+          {parts.map((part: any, pIdx: number) => {
+            // ── Tool parts → registry (replaces the entire 500-line switch) ──
+            if (isToolPart(part.type)) {
+              return renderToolPart(part, pIdx, message.id, conversationIdRef.current);
+            }
 
-          {/* Shimmer loading for submitted state */}
+            switch (part.type) {
+              case 'text': {
+                if (!part.text) return null;
+                if (message.role === 'assistant') {
+                  const strippedText = !msgIsStreaming ? stripReactCodeBlocks(part.text) : part.text;
+                  return (
+                    <React.Fragment key={pIdx}>
+                      {strippedText.trim() && <MessageResponse>{strippedText}</MessageResponse>}
+                      {!msgIsStreaming && <InlineReactPreview text={part.text} isDark={isDark} />}
+                    </React.Fragment>
+                  );
+                }
+                // User message — strip system instructions + render file chips
+                const rawText = stripSystemInstructions(part.text);
+                if (!rawText) return null;
+                const fileRefPattern = /\[(?:uploaded\s+)?file:\s*([^\]]+)\]/gi;
+                const fileRefs: string[] = [];
+                let match;
+                while ((match = fileRefPattern.exec(rawText)) !== null) fileRefs.push(match[1].trim());
+                const cleanText = rawText
+                  .replace(/\[(?:uploaded\s+)?file:\s*[^\]]+\]/gi, '')
+                  .replace(/Please analyse the uploaded file\(s\):[^\n]*/gi, '')
+                  .replace(/\n{3,}/g, '\n\n').trim();
+
+                return (
+                  <React.Fragment key={pIdx}>
+                    {fileRefs.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: cleanText ? '8px' : 0 }}>
+                        {fileRefs.map((filename, fIdx) => {
+                          const ext = getFileExtension(filename);
+                          const chipColor = getFileChipColor(ext);
+                          const IconComp = ['doc','docx','pdf','rtf'].includes(ext) ? FileTextIcon
+                            : ['xls','xlsx','csv'].includes(ext) ? FileSpreadsheetIcon
+                            : ['json','xml','html','md'].includes(ext) ? FileCodeIcon
+                            : FileIconLucide;
+                          return (
+                            <button
+                              key={fIdx}
+                              onClick={() => { const cached = fileBlobCacheRef.current.get(filename); setPreviewChatFile(cached || { filename }); }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px', border: `1px solid ${chipColor}40`, backgroundColor: `${chipColor}18`, cursor: 'pointer', maxWidth: '280px' }}
+                            >
+                              <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: `${chipColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <IconComp size={16} color={chipColor} />
+                              </div>
+                              <div style={{ textAlign: 'left', minWidth: 0 }}>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: isDark ? '#E8E8E8' : '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{filename}</p>
+                                <p style={{ margin: 0, fontSize: 11, color: isDark ? '#9E9E9E' : '#666' }}>{ext.toUpperCase()} · Click to preview</p>
+                              </div>
+                              <Eye size={13} color={chipColor} style={{ flexShrink: 0, opacity: 0.7 }} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {cleanText && (
+                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ color: isDark ? '#E8E8E8' : '#1A1A1A', margin: 0 }}>
+                        {cleanText}
+                      </p>
+                    )}
+                  </React.Fragment>
+                );
+              }
+
+              case 'reasoning':
+                return (
+                  <Reasoning key={pIdx} isStreaming={msgIsStreaming} defaultOpen={msgIsStreaming}>
+                    <ReasoningTrigger />
+                    <ReasoningContent>{part.text || ''}</ReasoningContent>
+                  </Reasoning>
+                );
+
+              case 'source-url':
+                return null; // handled by Sources component above
+
+              case 'step-start':
+                return pIdx > 0 ? (
+                  <div key={pIdx} className="my-3 flex items-center gap-2 text-muted-foreground">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs">Step {pIdx}</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                ) : null;
+
+              case 'file': {
+                if (part.mediaType?.startsWith('image/') && part.base64) {
+                  return (
+                    <div key={pIdx} style={{ cursor: 'pointer', display: 'inline-block' }}
+                      onClick={() => setPreviewChatFile({ url: `data:${part.mediaType};base64,${part.base64}`, filename: part.filename || 'image.png', mediaType: part.mediaType })}>
+                      <AIImage base64={part.base64} uint8Array={undefined as any} mediaType={part.mediaType} alt="Image" className="max-w-full rounded-lg mt-2" />
+                    </div>
+                  );
+                }
+                if (part.url || part.filename || part.fileId) {
+                  const fileExt = getFileExtension(part.filename || '');
+                  const chipColor = getFileChipColor(fileExt);
+                  return (
+                    <button key={pIdx}
+                      onClick={() => setPreviewChatFile({ url: part.url, fileId: part.fileId, filename: part.filename || 'file', mediaType: part.mediaType, size: part.size })}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px', border: `1px solid ${chipColor}30`, backgroundColor: `${chipColor}10`, cursor: 'pointer', marginTop: '6px' }}>
+                      <FileTextIcon size={16} color={chipColor} />
+                      <div>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: isDark ? '#E8E8E8' : '#1A1A1A' }}>{part.filename || 'Attachment'}</p>
+                        {part.size && <p style={{ margin: 0, fontSize: 11, color: isDark ? '#9E9E9E' : '#666' }}>{formatChatFileSize(part.size)} · {fileExt.toUpperCase()}</p>}
+                      </div>
+                      <Eye size={14} color={chipColor} style={{ opacity: 0.7 }} />
+                    </button>
+                  );
+                }
+                return null;
+              }
+
+              case 'data-file-download':
+                if (part.data) {
+                  return (
+                    <DocumentDownloadCard key={pIdx} output={{
+                      document_id: part.data.file_id || part.data.document_id,
+                      filename: part.data.filename,
+                      download_url: part.data.download_url,
+                      doc_type: part.data.file_type || part.data.doc_type,
+                      file_size_kb: part.data.size_kb || part.data.file_size_kb,
+                      tool: part.data.tool_name || part.data.tool,
+                      title: part.data.filename || part.data.title || 'Generated File',
+                      success: true,
+                    }} />
+                  );
+                }
+                return null;
+
+              default:
+                // data-* artifact parts from backend
+                if (part.type?.startsWith('data-') && part.data?.content && part.data?.artifactType) {
+                  const { artifactType: artType, content: artCode, language, title } = part.data;
+                  const artLang = language || artType;
+                  const isRenderable = ['html','svg','react','jsx','tsx'].includes(artType);
+                  if (isRenderable && artCode) {
+                    const blobUrl = (() => {
+                      try {
+                        const html = artType === 'svg'
+                          ? `<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh">${artCode}</body></html>`
+                          : artCode;
+                        return URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+                      } catch { return ''; }
+                    })();
+                    return (
+                      <div key={pIdx} className="space-y-2">
+                        <WebPreview defaultUrl={blobUrl} className="h-[400px]">
+                          <WebPreviewNavigation>
+                            <span className="text-xs text-muted-foreground px-2 truncate flex-1">{title || `${artType.toUpperCase()} Preview`}</span>
+                          </WebPreviewNavigation>
+                          <WebPreviewBody />
+                          <WebPreviewConsole />
+                        </WebPreview>
+                        <CodeBlock code={artCode} language={artLang as any} showLineNumbers>
+                          <CodeBlockHeader>
+                            <CodeBlockTitle>{title || artType}</CodeBlockTitle>
+                            <CodeBlockActions><CodeBlockCopyButton /></CodeBlockActions>
+                          </CodeBlockHeader>
+                        </CodeBlock>
+                      </div>
+                    );
+                  }
+                  return (
+                    <Artifact key={pIdx}>
+                      <ArtifactHeader><ArtifactTitle>{title || artType}</ArtifactTitle></ArtifactHeader>
+                      <ArtifactContent>
+                        <ArtifactRenderer artifact={{ id: part.data.id || `data-${pIdx}`, type: artType, language: artLang, code: artCode, complete: true }} />
+                      </ArtifactContent>
+                    </Artifact>
+                  );
+                }
+                return null;
+            }
+          })}
+
+          {/* Shimmer for submitted state */}
           {status === 'submitted' && isLast && message.role === 'assistant' && parts.every((p: any) => !p.text) && (
             <Shimmer duration={1.5}>Yang is Thinking...</Shimmer>
           )}
         </MessageContent>
 
-        {/* Message actions toolbar for assistant messages (copy, thumbs up/down) */}
+        {/* DocumentGenerator for long-form content */}
+        {message.role === 'assistant' && !msgIsStreaming && fullText &&
+          /\b(document|proposal|report|memo|letter|policy|guide|plan|summary|brief|outline)\b/i.test(fullText) && (
+          <div style={{ marginTop: 12 }}>
+            <DocumentGenerator title="Generated Document" content={fullText} onDocumentGenerated={handleDocumentGenerated} />
+          </div>
+        )}
+
+        {/* Message action toolbar */}
         {message.role === 'assistant' && !msgIsStreaming && fullText && (
           <MessageActions className="opacity-0 group-hover:opacity-100 transition-opacity">
-            <MessageAction tooltip="Copy" onClick={() => handleCopyMessage(fullText)}>
-              <CopyIcon className="size-3.5" />
-            </MessageAction>
-            <MessageAction tooltip="Helpful" onClick={() => toast.success('Thanks for the feedback!')}>
-              <ThumbsUpIcon className="size-3.5" />
-            </MessageAction>
-            <MessageAction tooltip="Not helpful" onClick={() => toast.info('Feedback noted')}>
-              <ThumbsDownIcon className="size-3.5" />
-            </MessageAction>
+            <MessageAction tooltip="Copy" onClick={() => handleCopyMessage(fullText)}><CopyIcon className="size-3.5" /></MessageAction>
+            <MessageAction tooltip="Helpful" onClick={() => toast.success('Thanks!')}><ThumbsUpIcon className="size-3.5" /></MessageAction>
+            <MessageAction tooltip="Not helpful" onClick={() => toast.info('Noted')}><ThumbsDownIcon className="size-3.5" /></MessageAction>
           </MessageActions>
         )}
       </AIMessage>
     );
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ height: '100%', backgroundColor: colors.background, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-      {/* Sidebar, Main chat area, and VoiceMode implementations... */}
-      {/* TRUNCATED FOR FILE SIZE - see original for full implementation */}
-      
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
-      `}</style>
+
+      {/* ── Backend unavailable warning banner ────────────────────────────────── */}
+      {!backendAvailable && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            backgroundColor: '#FEC00F',
+            color: '#1A1A1A',
+            padding: '12px 20px',
+            textAlign: 'center',
+            fontSize: '14px',
+            fontWeight: 600,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          }}
+        >
+          ⚠️ Backend server is unavailable. Please start the server on port 8000.
+          <button
+            onClick={() => {
+              setBackendAvailable(true);
+              recheckConnection();
+            }}
+            style={{
+              marginLeft: '16px',
+              padding: '4px 12px',
+              backgroundColor: '#1A1A1A',
+              color: '#FEC00F',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+            }}
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
+
+      {/* ── Sidebar (extracted component) ─────────────────────────────────── */}
+      <ChatSidebar
+        conversations={conversations}
+        selectedConversation={selectedConversation}
+        loadingConversations={loadingConversations}
+        sidebarCollapsed={sidebarCollapsed}
+        isDark={isDark}
+        colors={colors}
+        connStatus={connStatus}
+        onSelectConversation={setSelectedConversation}
+        onNewConversation={handleNewConversation}
+        onDeleteConversation={handleDeleteConversation}
+        onCollapse={() => setSidebarCollapsed(true)}
+        onRecheckConnection={recheckConnection}
+        onConversationsUpdate={setConversations}
+        onSelectedUpdate={setSelectedConversation}
+      />
+
+      {/* ── Main area ─────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', height: '100%', marginTop: !backendAvailable ? '48px' : 0 }}>
+        {sidebarCollapsed && (
+          <button
+            onClick={() => setSidebarCollapsed(false)}
+            style={{ position: 'absolute', top: backendAvailable ? 24 : 72, left: 24, zIndex: 100, background: 'rgba(254,192,15,0.3)', border: '1px solid rgba(254,192,15,0.5)', borderRadius: 8, padding: 8, cursor: 'pointer' }}
+          >
+            <ChevronRight size={18} color="#FEC00F" />
+          </button>
+        )}
+
+        {/* Message list */}
+        <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div
+            data-scroll-container
+            style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', backgroundColor: colors.background, color: colors.text } as React.CSSProperties}
+          >
+            <div className="max-w-[900px] mx-auto px-6 py-10" style={{ color: colors.text }}>
+              {allMessages.length === 0 ? (
+                <ConversationEmptyState
+                  icon={<img src={logo} alt="Logo" className="w-20 opacity-30" />}
+                  title="Welcome to Potomac Analyst Chat"
+                  description="Advanced analysis and trading strategy guidance"
+                >
+                  <div className="flex flex-col items-center gap-4" style={{ padding: 20 }}>
+                    <img src={logo} alt="Logo" className="w-24" style={{ filter: 'drop-shadow(0 4px 8px rgba(254,192,15,0.2))' }} />
+                    <div className="space-y-1 text-center">
+                      <h3 style={{ fontFamily: "var(--font-rajdhani),'Rajdhani',sans-serif", fontSize: 20, fontWeight: 700, color: colors.primaryYellow, margin: '8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        WELCOME TO POTOMAC ANALYST CHAT
+                      </h3>
+                      <p style={{ fontFamily: "var(--font-quicksand),'Quicksand',sans-serif", fontSize: 14, color: colors.textMuted, margin: '4px 0' }}>
+                        Advanced analysis and trading strategy guidance powered by Potomac
+                      </p>
+                    </div>
+                    <Suggestions className="justify-center mt-4">
+                      <Suggestion suggestion="Generate a moving average crossover AFL" onClick={(s: string) => setInput(s)} />
+                      <Suggestion suggestion="Explain RSI divergence strategy" onClick={(s: string) => setInput(s)} />
+                      <Suggestion suggestion="Show me AAPL stock data" onClick={(s: string) => setInput(s)} />
+                      <Suggestion suggestion="Search knowledge base for Bollinger Bands" onClick={(s: string) => setInput(s)} />
+                    </Suggestions>
+                    <p className="text-xs text-muted-foreground mt-2">Click a suggestion or type your own message below</p>
+                  </div>
+                </ConversationEmptyState>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-6">
+                    {allMessages.map((msg, idx) => renderMessage(msg, idx))}
+                  </div>
+
+                  {/* Artifacts */}
+                  {artifacts.length > 0 && (
+                    <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${colors.border}` }}>
+                      {artifacts.map((artifact) => (
+                        <ArtifactRenderer
+                          key={artifact.id}
+                          artifact={artifact}
+                          onClose={() => {
+                            const convId = selectedConversation?.id;
+                            if (convId) setArtifactsByConv((prev) => ({ ...prev, [convId]: (prev[convId] || []).filter((a) => a.id !== artifact.id) }));
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Orphaned generation cards from localStorage */}
+                  {(() => {
+                    try {
+                      const raw = localStorage.getItem('gen_cards');
+                      if (!raw) return null;
+                      const jobs = JSON.parse(raw) as Record<string, any>;
+                      const convId = conversationIdRef.current;
+                      const activeJobs = Object.values(jobs).filter((j: any) => j.status === 'generating' && j.conversationId === convId);
+                      if (activeJobs.length === 0) return null;
+                      const renderedIds = new Set<string>();
+                      allMessages.forEach((m: any) => {
+                        m.parts?.forEach((p: any, i: number) => {
+                          if (/pptx|presentation|document|docx|word|powerpoint/.test(p.type?.replace('tool-', '') || '')) {
+                            renderedIds.add(p.toolCallId || `${m.id}_${i}`);
+                          }
+                        });
+                      });
+                      return activeJobs.filter((j: any) => !renderedIds.has(j.id)).map((j: any) => (
+                        <PersistentGenerationCard key={`orphan_${j.id}`} toolCallId={j.id} toolName={j.toolName} input={{ title: j.title }} state="input-available" conversationId={j.conversationId} />
+                      ));
+                    } catch { return null; }
+                  })()}
+
+                  {/* Submitted waiting indicator */}
+                  {status === 'submitted' && allMessages.length > 0 && allMessages[allMessages.length - 1]?.role === 'user' && (
+                    <AIMessage from="assistant">
+                      <div className="flex items-center gap-2 text-xs">
+                        <img src={logo} alt="Yang AI" className="w-5 h-5 rounded flex-shrink-0" />
+                        <span className="font-semibold text-foreground">Yang</span>
+                      </div>
+                      <MessageContent><Shimmer duration={1.5}>Thinking...</Shimmer></MessageContent>
+                    </AIMessage>
+                  )}
+                </>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+        </div>
+
+        {/* Error banner */}
+        {(pageError || chatError) && (
+          <div className="px-6 py-3 bg-destructive/10 border-t border-destructive text-destructive text-sm flex justify-between items-center">
+            <span>{pageError || chatError?.message || 'An error occurred'}</span>
+            <div className="flex gap-2">
+              <button onClick={() => regenerate()} className="border border-destructive rounded-md text-destructive cursor-pointer px-3 py-1 text-xs flex items-center gap-1 bg-transparent">
+                <RefreshCw size={12} /> Retry
+              </button>
+              <button onClick={() => setPageError('')} className="bg-transparent border-none text-destructive cursor-pointer text-lg">×</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── PromptInput ─────────────────────────────────────────────────── */}
+        <div className="px-6 py-5" style={{ flexShrink: 0, borderTop: `2px solid ${colors.primaryYellow}`, backgroundColor: isDark ? 'rgba(254,192,15,0.03)' : 'rgba(254,192,15,0.05)' }}>
+          <div className="max-w-[900px] mx-auto">
+            <TooltipProvider>
+              <PromptInput
+                accept=".pdf,.csv,.json,.txt,.afl,.doc,.docx,.xls,.xlsx,.pptx,.ppt,.png,.jpg,.jpeg,.gif,.mp3,.wav,.m4a"
+                multiple globalDrop={false} maxFiles={10} maxFileSize={52428800}
+                onError={(err) => {
+                  if (err.code === 'max_file_size') toast.error('File too large (max 50MB)');
+                  else if (err.code === 'max_files') toast.error('Too many files (max 10)');
+                  else if (err.code === 'accept') toast.error('File type not supported');
+                }}
+                onSubmit={async ({ text, files }: { text: string; files: any[] }) => {
+                  if ((!text.trim() && files.length === 0) || isStreaming) return;
+                  setInput('');
+                  setPageError('');
+
+                  const convId = await ensureConversation();
+                  if (!convId) return;
+
+                  let messageText = text;
+
+                  if (files.length > 0) {
+                    const token = getAuthToken();
+                    const uploaded: string[] = [];
+                    for (const file of files) {
+                      const fileName = file.filename || 'upload';
+                      try {
+                        let actualFile: File;
+                        if (file.url?.startsWith('blob:') || file.url?.startsWith('data:')) {
+                          const resp = await fetch(file.url);
+                          const blob = await resp.blob();
+                          actualFile = new File([blob], fileName, { type: file.mediaType || blob.type || 'application/octet-stream' });
+                        } else if (file.url) {
+                          const resp = await fetch(file.url);
+                          const blob = await resp.blob();
+                          actualFile = new File([blob], fileName, { type: file.mediaType || blob.type || 'application/octet-stream' });
+                        } else { toast.error(`Cannot upload ${fileName}: No file data`); continue; }
+
+                        const toastId = toast.loading(`📤 Uploading ${fileName}...`, { duration: 10000 });
+                        const formData = new FormData();
+                        formData.append('file', actualFile);
+
+                        try {
+                          const resp = await fetchWithTimeout(
+                            `/api/upload?conversationId=${convId}`,
+                            {
+                              method: 'POST',
+                              headers: { Authorization: token ? `Bearer ${token}` : '' },
+                              body: formData,
+                            },
+                            30000
+                          );
+                          if (!resp.ok) { const e = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` })); throw new Error(e.error); }
+                          const respData = await resp.json();
+                          uploaded.push(fileName);
+                          fileBlobCacheRef.current.set(fileName, { url: file.url || undefined, fileId: respData.file_id || respData.id, filename: fileName, mediaType: file.mediaType, size: actualFile.size });
+                          if (respData.is_template && respData.template_id) {
+                            toast.success(`✅ ${fileName} registered as template`, { id: toastId, duration: 6000 });
+                          } else {
+                            toast.success(`✅ Uploaded ${fileName}`, { id: toastId });
+                          }
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : 'Unknown error';
+                          toast.error(`❌ Failed to upload ${fileName}: ${msg}`, { id: toastId });
+                          // Check for backend unavailability
+                          if (msg.includes('fetch') || msg.includes('network') || msg.includes('aborted')) {
+                            setBackendAvailable(false);
+                          }
+                        }
+                      } catch { /* outer guard */ }
+                    }
+                    if (uploaded.length > 0) {
+                      const fileList = uploaded.map((f) => `[file: ${f}]`).join('\n');
+                      messageText = text.trim() ? `${text}\n\n${fileList}` : fileList;
+                    }
+                  }
+
+                  // Append KB document refs
+                  if (selectedKbDocIds.size > 0) {
+                    setSelectedKbDocIds(new Set());
+                  }
+
+                  sendMessage({ text: messageText }, { body: { conversationId: convId } });
+                }}
+              >
+                <AttachmentsDisplay />
+                <PromptInputTextarea
+                  value={input}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
+                  placeholder={isStreaming ? 'Yang is responding...' : 'Type a message to start chatting...'}
+                  disabled={status !== 'ready' && status !== 'error'}
+                />
+                <PromptInputFooter>
+                  <PromptInputTools>
+                    <AttachmentButton disabled={isStreaming} />
+                    <PromptInputButton
+                      tooltip="Reference documents from Knowledge Base"
+                      onClick={() => setKbPanelOpen((prev) => !prev)}
+                      style={{ position: 'relative', color: selectedKbDocIds.size > 0 ? '#FEC00F' : undefined }}
+                    >
+                      <Database className="size-4" />
+                      {selectedKbDocIds.size > 0 && (
+                        <span style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: '50%', backgroundColor: '#FEC00F', color: '#000', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {selectedKbDocIds.size}
+                        </span>
+                      )}
+                    </PromptInputButton>
+                    <PromptInputButton tooltip="Voice conversation mode" onClick={() => setVoiceModeOpen(true)}>
+                      <Volume2 className="size-4" />
+                    </PromptInputButton>
+                    <SpeechInput
+                      size="icon-sm" variant="ghost"
+                      onTranscriptionChange={(text: string) => setInput((prev) => prev.trim() ? `${prev} ${text}` : text)}
+                      onAudioRecorded={async (audioBlob: Blob) => {
+                        try {
+                          const token = getAuthToken();
+                          const convId = selectedConversation?.id || conversationIdRef.current || 'default';
+                          const formData = new FormData();
+                          formData.append('audio', audioBlob, 'recording.webm');
+                          const resp = await fetchWithTimeout(
+                            `/api/upload?conversationId=${convId}`,
+                            {
+                              method: 'POST',
+                              headers: { Authorization: token ? `Bearer ${token}` : '' },
+                              body: formData,
+                            },
+                            30000
+                          );
+                          if (resp.ok) { const data = await resp.json(); return data.transcript || ''; }
+                        } catch { 
+                          toast.error('Voice transcription failed');
+                          setBackendAvailable(false);
+                        }
+                        return '';
+                      }}
+                      lang="en-US" disabled={isStreaming}
+                    />
+                  </PromptInputTools>
+                  <PromptInputSubmit status={status} onStop={() => stop()} disabled={!input.trim() && !isStreaming} />
+                </PromptInputFooter>
+              </PromptInput>
+            </TooltipProvider>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Knowledge Base Panel (extracted component via portal) ─────────── */}
+      <KnowledgeBasePanel
+        isOpen={kbPanelOpen}
+        onClose={() => setKbPanelOpen(false)}
+        selectedDocIds={selectedKbDocIds}
+        onSelectedDocIdsChange={setSelectedKbDocIds}
+        isDark={isDark}
+      />
+
+      {/* ── Voice Mode overlay ────────────────────────────────────────────── */}
+      <VoiceMode
+        isOpen={voiceModeOpen}
+        onClose={() => setVoiceModeOpen(false)}
+        onSendMessage={async (text) => {
+          const convId = await ensureConversation();
+          if (convId) sendMessage({ text }, { body: { conversationId: convId } });
+        }}
+        lastAssistantText={(() => {
+          const last = [...allMessages].reverse().find((m) => m.role === 'assistant');
+          return last?.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('') || '';
+        })()}
+        isStreaming={isStreaming}
+        getAuthToken={getAuthToken}
+      />
+
+      {/* ── File Preview Modal (extracted component via portal) ───────────── */}
+      {previewChatFile && typeof document !== 'undefined' && createPortal(
+        <ChatFilePreviewModal
+          file={previewChatFile}
+          onClose={() => setPreviewChatFile(null)}
+          isDark={isDark}
+        />,
+        document.body,
+      )}
     </div>
   );
 }

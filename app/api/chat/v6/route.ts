@@ -7,10 +7,10 @@
 
 import { NextRequest } from 'next/server';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 
   (process.env.NODE_ENV === 'development' 
     ? 'http://localhost:8080' 
-    : 'https://developer-potomaac.up.railway.app//');
+    : 'https://developer-potomaac.up.railway.app')).replace(/\/+$/, '');
 
 // Edge runtime: CPU-time billing prevents wall-clock timeouts during long streams.
 export const runtime = 'edge';

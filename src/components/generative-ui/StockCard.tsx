@@ -32,7 +32,7 @@ interface StockInfoData {
 }
 
 interface StockCardProps {
-  symbol: string;
+  symbol?: string;
   data_type?: string;
   data?: StockPriceData | StockHistoryEntry[] | StockInfoData;
   cached?: boolean;
@@ -246,6 +246,9 @@ function InfoCard({ symbol, data }: { symbol: string; data: StockInfoData }) {
 }
 
 export function StockCard(props: StockCardProps) {
+  const symbol = props.symbol
+    || (props.data && !Array.isArray(props.data) && (props.data as StockInfoData).name)
+    || 'UNKNOWN';
   if (!props.success && props.error) {
     return (
       <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', color: '#ef4444', fontSize: '14px' }}>
@@ -255,20 +258,20 @@ export function StockCard(props: StockCardProps) {
   }
 
   if (props.data_type === 'price' && props.data && !Array.isArray(props.data)) {
-    return <PriceCard symbol={props.symbol} data={props.data as StockPriceData} cached={props.cached} fetch_time_ms={props.fetch_time_ms} />;
+    return <PriceCard symbol={symbol} data={props.data as StockPriceData} cached={props.cached} fetch_time_ms={props.fetch_time_ms} />;
   }
 
   if (props.data_type === 'history' && Array.isArray(props.data)) {
-    return <HistoryCard symbol={props.symbol} data={props.data as StockHistoryEntry[]} period={props.period} />;
+    return <HistoryCard symbol={symbol} data={props.data as StockHistoryEntry[]} period={props.period} />;
   }
 
   if (props.data_type === 'info' && props.data && !Array.isArray(props.data)) {
-    return <InfoCard symbol={props.symbol} data={props.data as StockInfoData} />;
+    return <InfoCard symbol={symbol} data={props.data as StockInfoData} />;
   }
 
   return (
     <div style={{ padding: '16px', backgroundColor: 'rgba(254, 192, 15, 0.1)', borderRadius: '12px', border: '1px solid rgba(254, 192, 15, 0.3)' }}>
-      <DollarSign size={16} style={{ display: 'inline' }} /> Stock data for <strong>{props.symbol}</strong>
+      <DollarSign size={16} style={{ display: 'inline' }} /> Stock data for <strong>{symbol}</strong>
       <pre style={{ fontSize: '12px', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{JSON.stringify(props.data, null, 2)}</pre>
     </div>
   );
