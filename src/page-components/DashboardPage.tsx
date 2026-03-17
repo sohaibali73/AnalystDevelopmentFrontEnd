@@ -339,7 +339,7 @@ export default function DashboardPage() {
           : 'radial-gradient(ellipse 120% 60% at 60% -10%, rgba(254,192,15,0.06) 0%, transparent 60%), var(--bg)',
         fontFamily: "'Instrument Sans', sans-serif",
         color: 'var(--text)',
-        overflowX: 'hidden' as const,
+        
       }}>
 
         {/* ── Top bar ── */}
