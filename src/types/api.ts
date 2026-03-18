@@ -471,7 +471,9 @@ export type SkillCategory =
   | 'backtest'
   | 'market_analysis'
   | 'quant'
-  | 'research';
+  | 'research'
+  | 'financial_modeling'
+  | 'data';
 
 export interface Skill {
   skill_id: string;

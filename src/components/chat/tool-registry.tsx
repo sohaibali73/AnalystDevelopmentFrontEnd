@@ -43,6 +43,12 @@ import {
   FoodOrder,
   FlightTracker,
   FlightSearchCard,
+  // Skill result cards
+  SkillResultCard,
+  DCFModelCard,
+  BubbleDetectorCard,
+  FinancialResearchCard,
+  DocInterpreterCard,
 } from '@/components/generative-ui';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
@@ -126,6 +132,50 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   search_flights:           { component: FlightSearchCard, mode: 'flight-search' },
   get_flights:              { component: FlightSearchCard, mode: 'flight-search' },
   find_flights:             { component: FlightSearchCard, mode: 'flight-search' },
+
+  // ── Claude Custom Beta Skills ──────────────
+  // Skills that produce structured output get specialized cards;
+  // all others fall through to the generic SkillResultCard.
+  execute_skill:                  { component: SkillResultCard, displayName: 'Skill Execution' },
+  run_skill:                      { component: SkillResultCard, displayName: 'Skill Execution' },
+  // DCF / Valuation
+  dcf_model:                      { component: DCFModelCard, displayName: 'DCF Model' },
+  run_dcf_model:                  { component: DCFModelCard, displayName: 'DCF Model' },
+  create_dcf_model:               { component: DCFModelCard, displayName: 'DCF Model' },
+  // Market Bubble Detection
+  us_market_bubble_detector:      { component: BubbleDetectorCard, displayName: 'Bubble Detector' },
+  detect_bubble:                  { component: BubbleDetectorCard, displayName: 'Bubble Detector' },
+  bubble_analysis:                { component: BubbleDetectorCard, displayName: 'Bubble Detector' },
+  // Financial Research / Initiating Coverage
+  financial_deep_research:        { component: FinancialResearchCard, displayName: 'Financial Research' },
+  deep_research:                  { component: FinancialResearchCard, displayName: 'Financial Research' },
+  initiating_coverage:            { component: FinancialResearchCard, displayName: 'Initiating Coverage' },
+  equity_research:                { component: FinancialResearchCard, displayName: 'Equity Research' },
+  // Document Interpreter
+  doc_interpreter:                { component: DocInterpreterCard, displayName: 'Document Interpreter' },
+  interpret_document:             { component: DocInterpreterCard, displayName: 'Document Interpreter' },
+  extract_document:               { component: DocInterpreterCard, displayName: 'Document Interpreter' },
+  read_document:                  { component: DocInterpreterCard, displayName: 'Document Interpreter' },
+  // Quant / Backtest skills (generic card)
+  quant_analyst:                  { component: SkillResultCard, displayName: 'Quant Analyst' },
+  backtest_expert:                { component: SkillResultCard, displayName: 'Backtest Expert' },
+  backtesting_frameworks:         { component: SkillResultCard, displayName: 'Backtesting Frameworks' },
+  // Potomac branded skills (persistent — produce files)
+  potomac_docx:                   { component: PersistentGenerationCard, mode: 'persistent' },
+  potomac_pptx:                   { component: PersistentGenerationCard, mode: 'persistent' },
+  potomac_xlsx:                   { component: PersistentGenerationCard, mode: 'persistent' },
+  create_potomac_docx:            { component: PersistentGenerationCard, mode: 'persistent' },
+  create_potomac_pptx:            { component: PersistentGenerationCard, mode: 'persistent' },
+  create_potomac_xlsx:            { component: PersistentGenerationCard, mode: 'persistent' },
+  // Datapack Builder (persistent — produces Excel)
+  datapack_builder:               { component: PersistentGenerationCard, mode: 'persistent' },
+  build_datapack:                 { component: PersistentGenerationCard, mode: 'persistent' },
+  // AFL Developer skill
+  amibroker_afl_developer:        { component: AFLGenerateCard, displayName: 'AFL Developer' },
+  afl_developer:                  { component: AFLGenerateCard, displayName: 'AFL Developer' },
+  // AI Elements / Artifacts Builder (generic)
+  ai_elements:                    { component: SkillResultCard, displayName: 'AI Elements' },
+  artifacts_builder:              { component: SkillResultCard, displayName: 'Artifacts Builder' },
 
   // ── Document Generation (persistent) ───────
   create_word_document:     { component: PersistentGenerationCard, mode: 'persistent' },

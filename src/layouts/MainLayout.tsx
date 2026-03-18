@@ -37,6 +37,7 @@ const navItems: NavItem[] = [
   { name: 'DASHBOARD', href: '/dashboard', icon: LayoutDashboard },
   { name: 'AFL GENERATOR', href: '/afl', icon: Code2 },
   { name: 'CHAT', href: '/chat', icon: MessageCircle },
+  { name: 'SKILLS', href: '/skills', icon: Sparkles, badge: 'NEW' },
   { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
   { name: 'BACKTEST', href: '/backtest', icon: TrendingUp },
   { name: 'REVERSE ENGINEER', href: '/reverse-engineer', icon: Zap },

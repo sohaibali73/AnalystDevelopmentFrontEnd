@@ -1245,12 +1245,146 @@ class APIClient {
     });
   }
 
-  async getSkills() {
-    return this.request<{ skills: any[] }>('/api/skills');
+  // ==================== SKILLS ENDPOINTS ====================
+
+  async getSkills(category?: string, includeBuiltins: boolean = true) {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    params.append('include_builtins', String(includeBuiltins));
+    return this.request<{ skills: any[]; count: number }>(`/skills?${params.toString()}`);
+  }
+
+  async getSkillCategories() {
+    return this.request<{ categories: any[] }>('/skills/categories');
+  }
+
+  async getSkillDetail(slug: string) {
+    return this.request<any>(`/skills/${slug}`);
   }
 
   async getSkillJobs() {
-    return this.request<{ jobs: any[] }>('/api/skills/jobs');
+    return this.request<{ jobs: any[]; count: number }>('/skills/jobs');
+  }
+
+  async executeSkill(slug: string, message: string, options?: {
+    system_prompt?: string;
+    max_tokens?: number;
+    extra_context?: string;
+    stream?: boolean;
+  }) {
+    return this.request<{
+      text: string;
+      skill: string;
+      skill_name: string;
+      usage?: { input_tokens: number; output_tokens: number };
+      model?: string;
+      execution_time?: number;
+      stop_reason?: string;
+      files?: any[];
+    }>(`/skills/${slug}/execute`, 'POST', {
+      message,
+      ...options,
+    });
+  }
+
+  /**
+   * Execute a skill with streaming response
+   */
+  async executeSkillStream(
+    slug: string,
+    message: string,
+    options?: {
+      system_prompt?: string;
+      max_tokens?: number;
+      extra_context?: string;
+      signal?: AbortSignal;
+      onText?: (text: string) => void;
+      onData?: (data: any) => void;
+      onError?: (error: string) => void;
+      onFinish?: () => void;
+    }
+  ): Promise<{ text: string }> {
+    const token = this.getToken();
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      const url = `${API_BASE_URL}/skills/${slug}/execute`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        mode: 'cors',
+        credentials: 'omit',
+        signal: options?.signal,
+        body: JSON.stringify({
+          message,
+          stream: true,
+          system_prompt: options?.system_prompt,
+          max_tokens: options?.max_tokens,
+          extra_context: options?.extra_context,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          detail: `HTTP ${response.status}`
+        }));
+        throw new Error(error.detail || `HTTP ${response.status}`);
+      }
+
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const typeCode = line[0];
+            const content = line.substring(2);
+            if (!content) continue;
+            const parsed = JSON.parse(content);
+
+            switch (typeCode) {
+              case '0':
+                const text = typeof parsed === 'string' ? parsed : parsed.text || '';
+                if (text) {
+                  fullText += text;
+                  options?.onText?.(text);
+                }
+                break;
+              case '2':
+                options?.onData?.(parsed);
+                break;
+              case '3':
+                options?.onError?.(typeof parsed === 'string' ? parsed : parsed.message || 'Error');
+                break;
+              case 'd':
+                options?.onFinish?.();
+                break;
+            }
+          } catch { /* skip parse errors */ }
+        }
+      }
+
+      return { text: fullText };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      options?.onError?.(msg);
+      throw error;
+    }
   }
 }
 
@@ -1388,5 +1522,13 @@ export const api = {
     list: () => apiClient.listPresentations(),
     download: (id: string) => apiClient.downloadPresentation(id),
     delete: (id: string) => apiClient.deletePresentation(id),
+  },
+  skills: {
+    list: (category?: string, includeBuiltins?: boolean) => apiClient.getSkills(category, includeBuiltins),
+    getCategories: () => apiClient.getSkillCategories(),
+    getDetail: (slug: string) => apiClient.getSkillDetail(slug),
+    getJobs: () => apiClient.getSkillJobs(),
+    execute: (slug: string, message: string, options?: any) => apiClient.executeSkill(slug, message, options),
+    executeStream: (slug: string, message: string, options?: any) => apiClient.executeSkillStream(slug, message, options),
   },
 };
