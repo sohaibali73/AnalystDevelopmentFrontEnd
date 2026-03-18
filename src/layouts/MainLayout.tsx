@@ -18,7 +18,7 @@ import {
   Monitor,
   Rocket,
   Presentation,
-
+  Star,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -98,17 +98,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   const sidebarWidth = isMobile ? 0 : (collapsed ? 80 : 256);
   const isDark = actualTheme === 'dark';
 
-  // Theme-aware colors
+  // Modern blue/teal color palette
   const colors = {
-    background: isDark ? '#121212' : '#ffffff',
-    sidebar: isDark ? '#1E1E1E' : '#f5f5f5',
-    border: isDark ? '#424242' : '#e0e0e0',
-    text: isDark ? '#FFFFFF' : '#212121',
-    textMuted: isDark ? '#9E9E9E' : '#757575',
-    textSecondary: isDark ? '#757575' : '#9E9E9E',
-    hoverBg: isDark ? '#2A2A2A' : '#e8e8e8',
-    accent: '#FEC00F',
-    accentText: '#212121',
+    background: isDark ? '#0A0A0A' : '#ffffff',
+    sidebar: isDark ? '#0D0D0D' : '#ffffff',
+    border: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.1)',
+    text: isDark ? '#FFFFFF' : '#111111',
+    textMuted: isDark ? '#93C5FD' : '#3B82F6',
+    textSecondary: isDark ? '#A5B4FC' : '#60A5FA',
+    hoverBg: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.08)',
+    accent: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)',
+    accentText: '#0A0A0B',
+    accentGlow: 'rgba(96,165,250,0.3)',
   };
 
   const isActive = (href: string) => {
@@ -130,7 +131,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       display: 'flex',
       minHeight: '100vh',
       backgroundColor: colors.background,
-      fontFamily: "'Quicksand', sans-serif",
+      fontFamily: "'Instrument Sans', sans-serif",
       transition: 'background-color 0.3s ease',
       position: 'relative',
     }}>
@@ -142,14 +143,19 @@ export function MainLayout({ children }: MainLayoutProps) {
           left: 0,
           right: 0,
           height: '64px',
-          backgroundColor: colors.sidebar,
+          background: isDark 
+            ? 'linear-gradient(180deg, rgba(96,165,250,0.1), rgba(96,165,250,0.05))'
+            : 'linear-gradient(180deg, rgba(96,165,250,0.08), rgba(96,165,250,0.03))',
           borderBottom: `1px solid ${colors.border}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 20px',
           zIndex: 100,
-          transition: 'all 0.3s ease',
+          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          boxShadow: isDark 
+            ? '0 4px 20px rgba(96,165,250,0.15)'
+            : '0 4px 20px rgba(96,165,250,0.08)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
@@ -160,6 +166,14 @@ export function MainLayout({ children }: MainLayoutProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              background: isDark 
+                ? 'linear-gradient(135deg, rgba(96,165,250,0.15), rgba(167,139,250,0.12))'
+                : 'linear-gradient(135deg, rgba(96,165,250,0.12), rgba(167,139,250,0.09))',
+              border: `1px solid ${colors.border}`,
+              boxShadow: isDark 
+                ? '0 8px 24px rgba(96,165,250,0.15)'
+                : '0 8px 24px rgba(96,165,250,0.1)',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}>
               <img 
                 src={logo} 
@@ -167,16 +181,18 @@ export function MainLayout({ children }: MainLayoutProps) {
                 style={{ 
                   width: '100%', 
                   height: '100%', 
-                  objectFit: 'contain' 
+                  objectFit: 'contain',
+                  filter: isDark ? 'brightness(1.1) saturate(1.2)' : 'none',
                 }} 
               />
             </div>
             <span style={{
-              fontFamily: "'Rajdhani', sans-serif",
-              fontWeight: 700,
+              fontFamily: "'Syne', sans-serif",
+              fontWeight: 800,
               fontSize: '18px',
               color: colors.text,
               letterSpacing: '1.5px',
+              textShadow: isDark ? '0 0 15px rgba(96,165,250,0.3)' : 'none',
             }}>
               ANALYST
             </span>
@@ -193,13 +209,26 @@ export function MainLayout({ children }: MainLayoutProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '8px',
-              transition: 'background-color 0.2s ease',
+              borderRadius: '10px',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
               minWidth: '48px',
               minHeight: '48px',
+              boxShadow: isDark 
+                ? '0 4px 16px rgba(96,165,250,0.15)'
+                : '0 4px 16px rgba(96,165,250,0.1)',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.hoverBg; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = isDark 
+                ? '0 8px 24px rgba(96,165,250,0.25)'
+                : '0 8px 24px rgba(96,165,250,0.15)';
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = isDark 
+                ? '0 4px 20px rgba(96,165,250,0.15)'
+                : '0 4px 20px rgba(96,165,250,0.08)';
+            }}
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -213,11 +242,13 @@ export function MainLayout({ children }: MainLayoutProps) {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            background: isDark 
+              ? 'radial-gradient(circle at 50% 50%, rgba(96,165,250,0.3) 0%, rgba(96,165,250,0.1) 50%, transparent 100%)'
+              : 'radial-gradient(circle at 50% 50%, rgba(96,165,250,0.2) 0%, rgba(96,165,250,0.05) 50%, transparent 100%)',
             zIndex: 98,
             animation: 'fadeIn 0.2s ease',
             WebkitTapHighlightColor: 'transparent',
-            backdropFilter: 'blur(2px)',
+            backdropFilter: 'blur(4px)',
           }}
           onClick={() => setMobileMenuOpen(false)}
           onTouchEnd={(e) => {
@@ -234,35 +265,63 @@ export function MainLayout({ children }: MainLayoutProps) {
         top: isMobile ? '64px' : 0,
         height: isMobile ? 'calc(100vh - 64px)' : '100vh',
         width: isMobile ? '280px' : sidebarWidth,
-        backgroundColor: colors.sidebar,
+        background: isDark 
+          ? 'linear-gradient(180deg, #0D0D0D, #0A0A0A)'
+          : 'linear-gradient(180deg, #ffffff, #fafafa)',
         borderRight: `1px solid ${colors.border}`,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'all 0.3s ease',
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: 99,
         overflowY: 'auto',
         overflowX: 'hidden',
+        boxShadow: isDark 
+          ? '0 8px 32px rgba(96,165,250,0.15), inset 0 0 20px rgba(96,165,250,0.05)'
+          : '0 8px 32px rgba(96,165,250,0.1), inset 0 0 20px rgba(96,165,250,0.03)',
       }}>
-        {/* Desktop Logo Section */}
+        {/* Enhanced Logo Section */}
         {!isMobile && (
           <div style={{
-            height: '72px',
+            height: '80px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0 20px',
             borderBottom: `1px solid ${colors.border}`,
             flexShrink: 0,
+            position: 'relative',
+            overflow: 'hidden',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Floating accent background */}
+            <div style={{
+              position: 'absolute',
+              top: '-50%',
+              right: '-50%',
+              width: '200%',
+              height: '200%',
+              background: `radial-gradient(circle at 70% 30%, rgba(96,165,250,0.08), transparent 50%)`,
+              opacity: 0,
+              transition: 'opacity 0.5s ease',
+              pointerEvents: 'none',
+            }} />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 1 }}>
               <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '14px',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                background: isDark 
+                  ? 'linear-gradient(135deg, rgba(96,165,250,0.15), rgba(167,139,250,0.12))'
+                  : 'linear-gradient(135deg, rgba(96,165,250,0.12), rgba(167,139,250,0.09))',
+                border: `1px solid ${colors.border}`,
+                boxShadow: isDark 
+                  ? '0 8px 24px rgba(96,165,250,0.15)'
+                  : '0 8px 24px rgba(96,165,250,0.1)',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
               }}>
                 <img 
                   src={logo} 
@@ -270,18 +329,20 @@ export function MainLayout({ children }: MainLayoutProps) {
                   style={{ 
                     width: '100%', 
                     height: '100%', 
-                    objectFit: 'contain' 
+                    objectFit: 'contain',
+                    filter: isDark ? 'brightness(1.1) saturate(1.2)' : 'none',
                   }} 
                 />
               </div>
               {!collapsed && (
                 <span style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontWeight: 700,
+                  fontFamily: "'Syne', sans-serif",
+                  fontWeight: 800,
                   fontSize: '20px',
                   color: colors.text,
                   letterSpacing: '2px',
-                  transition: 'color 0.3s ease',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  textShadow: isDark ? '0 0 15px rgba(96,165,250,0.3)' : 'none',
                 }}>
                   ANALYST
                 </span>
@@ -296,16 +357,31 @@ export function MainLayout({ children }: MainLayoutProps) {
                 color: colors.textMuted,
                 cursor: 'pointer',
                 padding: '10px',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'background-color 0.2s ease',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 minWidth: '40px',
                 minHeight: '40px',
+                boxShadow: isDark 
+                  ? '0 4px 16px rgba(96,165,250,0.15)'
+                  : '0 4px 16px rgba(96,165,250,0.1)',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.hoverBg; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              onMouseEnter={(e) => { 
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.color = '#93C5FD';
+                e.currentTarget.style.boxShadow = isDark 
+                  ? '0 8px 24px rgba(96,165,250,0.25)'
+                  : '0 8px 24px rgba(96,165,250,0.15)';
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.color = colors.textMuted;
+                e.currentTarget.style.boxShadow = isDark 
+                  ? '0 4px 16px rgba(96,165,250,0.15)'
+                  : '0 4px 16px rgba(96,165,250,0.1)';
+              }}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
@@ -313,13 +389,13 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         )}
 
-        {/* Navigation */}
+        {/* Enhanced Navigation */}
         <nav style={{
           flex: 1,
-          padding: isMobile ? '24px 16px' : (collapsed ? '20px 8px' : '20px 12px'),
+          padding: isMobile ? '24px 16px' : (collapsed ? '20px 8px' : '24px 16px'),
           overflowY: 'auto',
         }}>
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
@@ -331,57 +407,107 @@ export function MainLayout({ children }: MainLayoutProps) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '16px',
-                  padding: isMobile ? '16px 20px' : (collapsed ? '14px 8px' : '14px 16px'),
-                  marginBottom: '6px',
+                  padding: isMobile ? '16px 20px' : (collapsed ? '14px 8px' : '16px 16px'),
+                  marginBottom: '8px',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '14px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all 0.2s ease',
-                  fontFamily: "'Rajdhani', sans-serif",
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  fontFamily: "'Syne', sans-serif",
                   fontSize: isMobile ? '15px' : '13px',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   letterSpacing: '0.5px',
-                  backgroundColor: active ? colors.accent : 'transparent',
                   color: active ? colors.accentText : colors.textMuted,
                   justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
-                  minHeight: isMobile ? '52px' : '48px',
+                  minHeight: isMobile ? '52px' : '52px',
                   position: 'relative',
+                  transform: 'translateZ(0)',
+                  boxShadow: active 
+                    ? isDark 
+                      ? '0 8px 24px rgba(96,165,250,0.35), inset 0 0 20px rgba(96,165,250,0.2)'
+                      : '0 8px 24px rgba(96,165,250,0.25), inset 0 0 20px rgba(96,165,250,0.15)'
+                    : 'none',
+                  background: active 
+                    ? 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)'
+                    : 'transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
-                    e.currentTarget.style.backgroundColor = colors.hoverBg;
+                    e.currentTarget.style.transform = 'translateX(6px) translateZ(0)';
                     e.currentTarget.style.color = colors.text;
-                    if (!collapsed || isMobile) {
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }
+                    e.currentTarget.style.background = colors.hoverBg;
+                    e.currentTarget.style.boxShadow = isDark 
+                      ? '0 8px 24px rgba(96,165,250,0.2)'
+                      : '0 8px 24px rgba(96,165,250,0.12)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!active) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.transform = 'translateX(0) translateZ(0)';
                     e.currentTarget.style.color = colors.textMuted;
-                    e.currentTarget.style.transform = 'translateX(0)';
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.boxShadow = 'none';
                   }
                 }}
                 title={collapsed && !isMobile ? item.name : undefined}
               >
-                <Icon size={isMobile ? 22 : 20} style={{ flexShrink: 0 }} />
+                {/* Enhanced icon container */}
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: active 
+                    ? 'rgba(255,255,255,0.2)'
+                    : isDark 
+                      ? 'rgba(96,165,250,0.1)'
+                      : 'rgba(96,165,250,0.08)',
+                  border: active 
+                    ? '1px solid rgba(255,255,255,0.3)'
+                    : `1px solid ${colors.border}`,
+                  boxShadow: active 
+                    ? '0 4px 16px rgba(96,165,250,0.4)'
+                    : 'none',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  flexShrink: 0,
+                }}>
+                  <Icon size={isMobile ? 20 : 18} color={active ? '#ffffff' : '#60A5FA'} />
+                </div>
+                
                 {(!collapsed || isMobile) && (
                   <>
-                    <span>{item.name}</span>
+                    <span style={{
+                      position: 'relative',
+                      zIndex: 1,
+                    }}>
+                      {item.name}
+                    </span>
                     {'badge' in item && item.badge && (
                       <span style={{
                         marginLeft: 'auto',
                         fontSize: '9px',
                         fontWeight: 700,
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        backgroundColor: isDark ? 'rgba(254, 192, 15, 0.2)' : 'rgba(254, 192, 15, 0.3)',
-                        color: isDark ? '#FEC00F' : '#996600',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        background: active 
+                          ? 'rgba(255,255,255,0.2)'
+                          : isDark 
+                            ? 'rgba(96,165,250,0.2)'
+                            : 'rgba(96,165,250,0.15)',
+                        color: active ? '#ffffff' : '#60A5FA',
                         letterSpacing: '0.5px',
                         lineHeight: 1.4,
+                        border: active 
+                          ? '1px solid rgba(255,255,255,0.3)'
+                          : `1px solid ${colors.border}`,
+                        boxShadow: active 
+                          ? '0 4px 12px rgba(96,165,250,0.3)'
+                          : 'none',
                         flexShrink: 0,
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                       }}>
                         {item.badge}
                       </span>
@@ -393,30 +519,50 @@ export function MainLayout({ children }: MainLayoutProps) {
           })}
         </nav>
 
-        {/* User Section */}
+        {/* Enhanced User Section */}
         <div style={{
-          padding: isMobile ? '20px 16px' : '20px',
+          padding: isMobile ? '24px 16px' : '24px',
           borderTop: `1px solid ${colors.border}`,
           flexShrink: 0,
+          position: 'relative',
+          overflow: 'hidden',
         }}>
+          {/* Floating accent background */}
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            right: '-50%',
+            width: '200%',
+            height: '200%',
+            background: `radial-gradient(circle at 70% 30%, rgba(96,165,250,0.06), transparent 50%)`,
+            opacity: 0,
+            transition: 'opacity 0.5s ease',
+            pointerEvents: 'none',
+          }} />
+          
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '14px',
-            marginBottom: '16px',
+            gap: '16px',
+            marginBottom: '20px',
+            position: 'relative',
+            zIndex: 1,
           }}>
             <div style={{
-              width: '44px',
-              height: '44px',
+              width: '48px',
+              height: '48px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #FEC00F 0%, #FFD740 100%)',
+              background: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 700,
-              color: '#212121',
+              color: '#0A0A0B',
               fontSize: '16px',
               flexShrink: 0,
+              boxShadow: '0 8px 24px rgba(96,165,250,0.35)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}>
               {user?.name?.charAt(0).toUpperCase() || user?.nickname?.charAt(0).toUpperCase() || 'U'}
             </div>
@@ -425,12 +571,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <div style={{ 
                   color: colors.text, 
                   fontSize: '15px', 
-                  fontWeight: 600, 
+                  fontWeight: 700, 
                   whiteSpace: 'nowrap', 
                   overflow: 'hidden', 
                   textOverflow: 'ellipsis',
                   lineHeight: 1.4,
-                  transition: 'color 0.3s ease',
+                  transition: 'color 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  textShadow: isDark ? '0 0 10px rgba(96,165,250,0.3)' : 'none',
                 }}>
                   {user?.name || user?.nickname || 'User'}
                 </div>
@@ -441,7 +588,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                   overflow: 'hidden', 
                   textOverflow: 'ellipsis',
                   lineHeight: 1.4,
-                  marginTop: '2px',
+                  marginTop: '4px',
+                  fontFamily: "'Instrument Sans', sans-serif",
                 }}>
                   {user?.email || 'user@example.com'}
                 </div>
@@ -460,27 +608,32 @@ export function MainLayout({ children }: MainLayoutProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '10px',
-              padding: '14px 16px',
-              backgroundColor: 'transparent',
-              color: '#DC2626',
+              gap: '12px',
+              padding: '16px 18px',
+              background: 'transparent',
+              color: '#EF4444',
               border: `1px solid ${colors.border}`,
-              borderRadius: '10px',
+              borderRadius: '14px',
               cursor: 'pointer',
               fontSize: isMobile ? '14px' : '13px',
-              fontWeight: 600,
-              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 700,
+              fontFamily: "'Syne', sans-serif",
               letterSpacing: '0.5px',
-              transition: 'all 0.2s ease',
-              minHeight: isMobile ? '52px' : '48px',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              minHeight: isMobile ? '52px' : '52px',
+              boxShadow: 'none',
             }}
             onMouseEnter={(e) => { 
-              e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.1)';
-              e.currentTarget.style.borderColor = '#DC2626';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+              e.currentTarget.style.boxShadow = '0 8px 20px rgba(239, 68, 68, 0.2)';
             }}
             onMouseLeave={(e) => { 
+              e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.backgroundColor = 'transparent';
               e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
             <LogOut size={isMobile ? 18 : 16} />
@@ -496,11 +649,27 @@ export function MainLayout({ children }: MainLayoutProps) {
         marginLeft: isMobile ? 0 : sidebarWidth,
         marginTop: isMobile ? '64px' : 0,
         width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
-        transition: 'margin-left 0.3s ease',
+        transition: 'margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         overflow: 'hidden',
       }}>
         {children}
       </main>
+
+      {/* Enhanced CSS Animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes slideInFromLeft {
+          from { transform: translateX(-100%); }
+          to   { transform: translateX(0); }
+        }
+        @keyframes slideOutToLeft {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-100%); }
+        }
+      `}</style>
     </div>
   );
 }

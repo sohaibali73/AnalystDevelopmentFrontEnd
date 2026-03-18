@@ -55,6 +55,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setActualTheme(resolvedTheme);
       document.documentElement.className = resolvedTheme;
       document.documentElement.style.colorScheme = resolvedTheme;
+      
+      // Apply dashboard-style CSS variables
+      applyDashboardTheme(resolvedTheme, accentColor);
     };
 
     updateActualTheme();
@@ -65,7 +68,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
-  }, [theme]);
+  }, [theme, accentColor]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
@@ -77,12 +80,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     storage.setItem('accentColor', color);
     // Apply to CSS variable for global use
     document.documentElement.style.setProperty('--accent-color', color);
+    // Re-apply theme with new accent color
+    applyDashboardTheme(actualTheme, color);
   };
 
   useEffect(() => {
     // Apply accent color to CSS variable
     document.documentElement.style.setProperty('--accent-color', accentColor);
-  }, [accentColor]);
+    // Apply dashboard theme on initial load
+    applyDashboardTheme(actualTheme, accentColor);
+  }, [accentColor, actualTheme]);
 
   return (
     <ThemeContext.Provider value={{ 
@@ -96,4 +103,39 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       {children}
     </ThemeContext.Provider>
   );
+}
+
+// Helper function to apply dashboard-style CSS variables
+function applyDashboardTheme(theme: 'light' | 'dark', accentColor: string) {
+  const root = document.documentElement;
+  
+  if (theme === 'dark') {
+    root.style.setProperty('--accent', accentColor);
+    root.style.setProperty('--accent-dim', 'rgba(254,192,15,0.08)');
+    root.style.setProperty('--accent-glow', 'rgba(254,192,15,0.3)');
+    root.style.setProperty('--bg', '#080809');
+    root.style.setProperty('--bg-card', '#0D0D10');
+    root.style.setProperty('--bg-card-hover', '#121216');
+    root.style.setProperty('--bg-raised', '#111115');
+    root.style.setProperty('--border', 'rgba(255,255,255,0.06)');
+    root.style.setProperty('--border-hover', 'rgba(254,192,15,0.4)');
+    root.style.setProperty('--text', '#EFEFEF');
+    root.style.setProperty('--text-muted', '#606068');
+    root.style.setProperty('--text-dim', '#2E2E36');
+    root.style.setProperty('--shadow-card', '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)');
+  } else {
+    root.style.setProperty('--accent', accentColor);
+    root.style.setProperty('--accent-dim', 'rgba(254,192,15,0.07)');
+    root.style.setProperty('--accent-glow', 'rgba(254,192,15,0.3)');
+    root.style.setProperty('--bg', '#F5F5F6');
+    root.style.setProperty('--bg-card', '#FFFFFF');
+    root.style.setProperty('--bg-card-hover', '#F9F9FA');
+    root.style.setProperty('--bg-raised', '#FAFAFA');
+    root.style.setProperty('--border', 'rgba(0,0,0,0.07)');
+    root.style.setProperty('--border-hover', 'rgba(254,192,15,0.4)');
+    root.style.setProperty('--text', '#0A0A0B');
+    root.style.setProperty('--text-muted', '#808088');
+    root.style.setProperty('--text-dim', '#D8D8DC');
+    root.style.setProperty('--shadow-card', '0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.06)');
+  }
 }

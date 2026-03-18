@@ -172,75 +172,12 @@ export function RegisterPage() {
     return 'Strong';
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    height: '52px',
-    padding: '0 16px',
-    backgroundColor: isDark ? '#1E1E1E' : '#f5f5f5',
-    border: `1px solid ${isDark ? '#2A2A2A' : '#d0d0d0'}`,
-    borderRadius: '10px',
-    color: isDark ? '#FFFFFF' : '#1a1a1a',
-    fontSize: '16px',
-    fontFamily: "'Quicksand', sans-serif",
-    outline: 'none',
-    boxSizing: 'border-box',
-    WebkitAppearance: 'none',
-    appearance: 'none',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontFamily: "'Rajdhani', sans-serif",
-    fontSize: '12px',
-    fontWeight: 600,
-    color: isDark ? '#FFFFFF' : '#1a1a1a',
-    letterSpacing: '1px',
-    marginBottom: '8px',
-  };
-
-  const primaryButtonStyle: React.CSSProperties = {
-    flex: 1,
-    height: '52px',
-    backgroundColor: loading ? '#424242' : '#FEC00F',
-    border: 'none',
-    borderRadius: '10px',
-    color: loading ? '#757575' : '#0A0A0B',
-    fontSize: '14px',
-    fontFamily: "'Rajdhani', sans-serif",
-    fontWeight: 700,
-    letterSpacing: '1px',
-    cursor: loading ? 'not-allowed' : 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    boxShadow: loading ? 'none' : '0 4px 20px rgba(254, 192, 15, 0.3)',
-  };
-
-  const secondaryButtonStyle: React.CSSProperties = {
-    height: '52px',
-    padding: '0 24px',
-    backgroundColor: 'transparent',
-    border: `1px solid ${isDark ? '#2A2A2A' : '#d0d0d0'}`,
-    borderRadius: '10px',
-    color: isDark ? '#FFFFFF' : '#1a1a1a',
-    fontSize: '14px',
-    fontFamily: "'Rajdhani', sans-serif",
-    fontWeight: 700,
-    letterSpacing: '1px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-  };
-
   return (
     <div style={{
       minHeight: '100dvh',
-      backgroundColor: isDark ? '#0A0A0B' : '#ffffff',
+      backgroundColor: 'var(--bg)',
       display: 'flex',
-      fontFamily: "'Quicksand', sans-serif",
+      fontFamily: "'Instrument Sans', sans-serif",
       flexDirection: isMobile ? 'column' : 'row',
       WebkitUserSelect: 'none',
       WebkitTouchCallout: 'none',
@@ -249,13 +186,13 @@ export function RegisterPage() {
       <div style={{
         flex: isMobile ? undefined : 1,
         width: isMobile ? '100%' : undefined,
-        backgroundColor: isDark ? '#121212' : '#ffffff',
+        backgroundColor: 'var(--bg-card)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
         padding: isSmallMobile ? '32px 24px' : '60px',
-        borderRight: isMobile ? 'none' : `1px solid ${isDark ? '#2A2A2A' : '#e0e0e0'}`,
+        borderRight: isMobile ? 'none' : `1px solid var(--border)`,
         overflowY: 'auto',
         minHeight: isMobile ? 'auto' : '100dvh',
         paddingBottom: isSmallMobile ? 'max(60px, env(safe-area-inset-bottom))' : '60px',
@@ -289,23 +226,25 @@ export function RegisterPage() {
             </div>
             <div>
               <h1 style={{
-                fontFamily: "'Rajdhani', sans-serif",
+                fontFamily: "'Syne', sans-serif",
                 fontSize: '20px',
-                fontWeight: 700,
-                color: isDark ? '#FFFFFF' : '#1a1a1a',
-                letterSpacing: '2px',
+                fontWeight: 800,
+                color: 'var(--text)',
+                letterSpacing: '-0.02em',
                 margin: 0,
+                textTransform: 'uppercase',
               }}>
-                ANALYST
+                Analyst
               </h1>
               <p style={{
-                fontFamily: "'Rajdhani', sans-serif",
+                fontFamily: "'Syne', sans-serif",
                 fontSize: '10px',
-                color: '#FEC00F',
-                letterSpacing: '4px',
+                color: 'var(--accent)',
+                letterSpacing: '0.12em',
                 margin: 0,
+                textTransform: 'uppercase',
               }}>
-                BY POTOMAC
+                by potomac
               </p>
             </div>
           </div>
@@ -322,7 +261,7 @@ export function RegisterPage() {
                   width: '36px',
                   height: '36px',
                   borderRadius: '50%',
-                  backgroundColor: step >= s ? '#FEC00F' : '#2A2A2A',
+                  backgroundColor: step >= s ? 'var(--accent)' : 'var(--border)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -332,10 +271,10 @@ export function RegisterPage() {
                     <Check size={18} color="#0A0A0B" />
                   ) : (
                     <span style={{
-                      fontFamily: "'Rajdhani', sans-serif",
+                      fontFamily: "'Syne', sans-serif",
                       fontSize: '14px',
                       fontWeight: 700,
-                      color: step >= s ? '#0A0A0B' : '#757575',
+                      color: step >= s ? '#0A0A0B' : 'var(--text-muted)',
                     }}>
                       {s}
                     </span>
@@ -345,7 +284,7 @@ export function RegisterPage() {
                   <div style={{
                     flex: 1,
                     height: '2px',
-                    backgroundColor: step > s ? '#FEC00F' : '#2A2A2A',
+                    backgroundColor: step > s ? 'var(--accent)' : 'var(--border)',
                     margin: '0 8px',
                     transition: 'all 0.3s',
                   }} />
@@ -356,21 +295,23 @@ export function RegisterPage() {
 
           {/* Step Title */}
           <h2 style={{
-            fontFamily: "'Rajdhani', sans-serif",
+            fontFamily: "'Syne', sans-serif",
             fontSize: '28px',
             fontWeight: 700,
-            color: isDark ? '#FFFFFF' : '#1a1a1a',
-            letterSpacing: '2px',
+            color: 'var(--text)',
+            letterSpacing: '0.08em',
             marginBottom: '8px',
+            textTransform: 'uppercase',
           }}>
-            {step === 1 && 'CREATE ACCOUNT'}
-            {step === 2 && 'SET PASSWORD'}
-            {step === 3 && 'API CONFIGURATION'}
+            {step === 1 && 'Create Account'}
+            {step === 2 && 'Set Password'}
+            {step === 3 && 'API Configuration'}
           </h2>
           <p style={{
-            color: '#757575',
+            color: 'var(--text-muted)',
             fontSize: '14px',
             marginBottom: '32px',
+            fontFamily: "'Instrument Sans', sans-serif",
           }}>
             {step === 1 && 'Enter your personal information'}
             {step === 2 && 'Create a secure password'}
@@ -390,7 +331,7 @@ export function RegisterPage() {
               marginBottom: '24px',
             }}>
               <AlertCircle size={20} color="#DC2626" />
-              <p style={{ color: '#DC2626', fontSize: '13px', margin: 0 }}>{error}</p>
+              <p style={{ color: '#DC2626', fontSize: '13px', margin: 0, fontFamily: "'Instrument Sans', sans-serif" }}>{error}</p>
             </div>
           )}
 
@@ -399,33 +340,53 @@ export function RegisterPage() {
             {step === 1 && (
               <>
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>FULL NAME</label>
+                  <label className="label-dashboard">
+                    Full Name
+                  </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => updateFormData('name', e.target.value)}
                     placeholder="John Doe"
-                    style={inputStyle}
+                    className="input-dashboard"
+                    style={{
+                      fontFamily: "'Instrument Sans', sans-serif",
+                    }}
                   />
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
-                  <label style={labelStyle}>EMAIL ADDRESS</label>
+                  <label className="label-dashboard">
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => updateFormData('email', e.target.value)}
                     placeholder="you@example.com"
-                    style={inputStyle}
+                    className="input-dashboard"
+                    style={{
+                      fontFamily: "'Instrument Sans', sans-serif",
+                    }}
                   />
                 </div>
 
                 <button
                   type="button"
                   onClick={handleNext}
-                  style={{ ...primaryButtonStyle, width: '100%' }}
+                  className="btn-dashboard"
+                  style={{
+                    width: '100%',
+                    height: '52px',
+                    backgroundColor: 'var(--accent)',
+                    color: '#0A0A0B',
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
                 >
-                  CONTINUE
+                  Continue
                   <ChevronRight size={20} />
                 </button>
               </>
@@ -435,14 +396,20 @@ export function RegisterPage() {
             {step === 2 && (
               <>
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>PASSWORD</label>
+                  <label className="label-dashboard">
+                    Password
+                  </label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
                       onChange={(e) => updateFormData('password', e.target.value)}
                       placeholder="Min. 8 characters"
-                      style={{ ...inputStyle, paddingRight: '48px' }}
+                      className="input-dashboard"
+                      style={{ 
+                        paddingRight: '48px',
+                        fontFamily: "'Instrument Sans', sans-serif",
+                      }}
                     />
                     <button
                       type="button"
@@ -455,7 +422,7 @@ export function RegisterPage() {
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        color: '#757575',
+                        color: 'var(--text-muted)',
                         padding: 0,
                       }}
                     >
@@ -474,13 +441,13 @@ export function RegisterPage() {
                               flex: 1,
                               height: '4px',
                               borderRadius: '2px',
-                              backgroundColor: i <= passwordStrength() ? strengthColor() : '#2A2A2A',
+                              backgroundColor: i <= passwordStrength() ? strengthColor() : 'var(--border)',
                               transition: 'all 0.2s',
                             }}
                           />
                         ))}
                       </div>
-                      <p style={{ color: strengthColor(), fontSize: '12px', margin: 0 }}>
+                      <p style={{ color: strengthColor(), fontSize: '12px', margin: 0, fontFamily: "'Instrument Sans', sans-serif" }}>
                         Password strength: {strengthText()}
                       </p>
                     </div>
@@ -488,14 +455,20 @@ export function RegisterPage() {
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
-                  <label style={labelStyle}>CONFIRM PASSWORD</label>
+                  <label className="label-dashboard">
+                    Confirm Password
+                  </label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={formData.confirmPassword}
                       onChange={(e) => updateFormData('confirmPassword', e.target.value)}
                       placeholder="Confirm your password"
-                      style={{ ...inputStyle, paddingRight: '48px' }}
+                      className="input-dashboard"
+                      style={{ 
+                        paddingRight: '48px',
+                        fontFamily: "'Instrument Sans', sans-serif",
+                      }}
                     />
                     <button
                       type="button"
@@ -508,7 +481,7 @@ export function RegisterPage() {
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        color: '#757575',
+                        color: 'var(--text-muted)',
                         padding: 0,
                       }}
                     >
@@ -516,19 +489,33 @@ export function RegisterPage() {
                     </button>
                   </div>
                   {formData.confirmPassword && formData.password === formData.confirmPassword && (
-                    <p style={{ color: '#2D7F3E', fontSize: '12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <p style={{ color: '#2D7F3E', fontSize: '12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: "'Instrument Sans', sans-serif" }}>
                       <Check size={14} /> Passwords match
                     </p>
                   )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button type="button" onClick={handleBack} style={secondaryButtonStyle}>
+                  <button type="button" onClick={handleBack} className="btn-secondary" style={{
+                    height: '52px',
+                    padding: '0 24px',
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}>
                     <ChevronLeft size={20} />
-                    BACK
+                    Back
                   </button>
-                  <button type="button" onClick={handleNext} style={primaryButtonStyle}>
-                    CONTINUE
+                  <button type="button" onClick={handleNext} className="btn-dashboard" style={{
+                    flex: 1,
+                    height: '52px',
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}>
+                    Continue
                     <ChevronRight size={20} />
                   </button>
                 </div>
@@ -549,23 +536,27 @@ export function RegisterPage() {
                   borderRadius: '10px',
                   marginBottom: '24px',
                 }}>
-                  <Info size={20} color="#FEC00F" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <p style={{ color: '#E0E0E0', fontSize: '13px', lineHeight: 1.5, margin: 0 }}>
+                  <Info size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: 1.5, margin: 0, fontFamily: "'Instrument Sans', sans-serif" }}>
                     Your API keys are encrypted and stored securely. They're only used to make AI requests on your behalf.
                   </p>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    CLAUDE API KEY
+                  <label style={{ ...{ display: 'flex', alignItems: 'center', gap: '8px' }, ...{ fontFamily: "'DM Mono', monospace", fontSize: '9px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: 'var(--text-muted)', marginBottom: '8px' } }}>
+                    Claude API Key
                     <span style={{
                       padding: '2px 8px',
                       backgroundColor: '#2D7F3E',
                       borderRadius: '4px',
                       fontSize: '9px',
                       color: '#FFFFFF',
+                      fontFamily: "'DM Mono', monospace",
+                      fontWeight: 600,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase' as const,
                     }}>
-                      REQUIRED
+                      Required
                     </span>
                   </label>
                   <div style={{ position: 'relative' }}>
@@ -574,7 +565,11 @@ export function RegisterPage() {
                       value={formData.claudeApiKey}
                       onChange={(e) => updateFormData('claudeApiKey', e.target.value)}
                       placeholder="sk-ant-..."
-                      style={{ ...inputStyle, paddingRight: '48px' }}
+                      className="input-dashboard"
+                      style={{ 
+                        paddingRight: '48px',
+                        fontFamily: "'Instrument Sans', sans-serif",
+                      }}
                     />
                     <button
                       type="button"
@@ -587,20 +582,20 @@ export function RegisterPage() {
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        color: '#757575',
+                        color: 'var(--text-muted)',
                         padding: 0,
                       }}
                     >
                       {showClaudeKey ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
-                  <p style={{ color: '#757575', fontSize: '12px', marginTop: '8px' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px', fontFamily: "'Instrument Sans', sans-serif" }}>
                     Get your key from{' '}
                     <a
                       href="https://console.anthropic.com/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: '#FEC00F', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      style={{ color: 'var(--accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     >
                       console.anthropic.com <ExternalLink size={12} />
                     </a>
@@ -608,16 +603,20 @@ export function RegisterPage() {
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
-                  <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    TAVILY API KEY
+                  <label style={{ ...{ display: 'flex', alignItems: 'center', gap: '8px' }, ...{ fontFamily: "'DM Mono', monospace", fontSize: '9px', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: 'var(--text-muted)', marginBottom: '8px' } }}>
+                    Tavily API Key
                     <span style={{
                       padding: '2px 8px',
-                      backgroundColor: '#424242',
+                      backgroundColor: 'var(--border)',
                       borderRadius: '4px',
                       fontSize: '9px',
-                      color: '#9E9E9E',
+                      color: 'var(--text-muted)',
+                      fontFamily: "'DM Mono', monospace",
+                      fontWeight: 600,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase' as const,
                     }}>
-                      OPTIONAL
+                      Optional
                     </span>
                   </label>
                   <input
@@ -625,9 +624,12 @@ export function RegisterPage() {
                     value={formData.tavilyApiKey}
                     onChange={(e) => updateFormData('tavilyApiKey', e.target.value)}
                     placeholder="tvly-..."
-                    style={inputStyle}
+                    className="input-dashboard"
+                    style={{
+                      fontFamily: "'Instrument Sans', sans-serif",
+                    }}
                   />
-                  <p style={{ color: '#757575', fontSize: '12px', marginTop: '8px' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px', fontFamily: "'Instrument Sans', sans-serif" }}>
                     Used for web search features
                   </p>
                 </div>
@@ -648,8 +650,8 @@ export function RegisterPage() {
                       width: '22px',
                       height: '22px',
                       borderRadius: '6px',
-                      border: `2px solid ${formData.agreeToTerms ? '#FEC00F' : '#2A2A2A'}`, 
-                      backgroundColor: formData.agreeToTerms ? '#FEC00F' : 'transparent',
+                      border: `2px solid ${formData.agreeToTerms ? 'var(--accent)' : 'var(--border)'}`, 
+                      backgroundColor: formData.agreeToTerms ? 'var(--accent)' : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -660,29 +662,45 @@ export function RegisterPage() {
                   >
                     {formData.agreeToTerms && <Check size={14} color="#0A0A0B" />}
                   </div>
-                  <span style={{ color: '#9E9E9E', fontSize: '13px', lineHeight: 1.5 }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: 1.5, fontFamily: "'Instrument Sans', sans-serif" }}>
                     I agree to the{' '}
-                    <span style={{ color: '#FEC00F' }}>Terms of Service</span>
+                    <span style={{ color: 'var(--accent)' }}>Terms of Service</span>
                     {' '}and{' '}
-                    <span style={{ color: '#FEC00F' }}>Privacy Policy</span>
+                    <span style={{ color: 'var(--accent)' }}>Privacy Policy</span>
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button type="button" onClick={handleBack} style={secondaryButtonStyle}>
+                  <button type="button" onClick={handleBack} className="btn-secondary" style={{
+                    height: '52px',
+                    padding: '0 24px',
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}>
                     <ChevronLeft size={20} />
-                    BACK
+                    Back
                   </button>
-                  <button type="submit" disabled={loading} style={primaryButtonStyle}>
+                  <button type="submit" disabled={loading} className="btn-dashboard" style={{
+                    flex: 1,
+                    height: '52px',
+                    backgroundColor: loading ? '#424242' : 'var(--accent)',
+                    color: loading ? '#757575' : '#0A0A0B',
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}>
                     {loading ? (
                       <>
                         <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                        CREATING...
+                        Creating...
                       </>
                     ) : (
                       <>
                         <UserPlus size={20} />
-                        CREATE ACCOUNT
+                        Create Account
                       </>
                     )}
                   </button>
@@ -694,12 +712,13 @@ export function RegisterPage() {
           {/* Sign In Link */}
           <p style={{
             textAlign: 'center',
-            color: '#9E9E9E',
+            color: 'var(--text-muted)',
             fontSize: '14px',
             marginTop: '32px',
+            fontFamily: "'Instrument Sans', sans-serif",
           }}>
             Already have an account?{' '}
-            <Link href="/login" style={{ color: '#FEC00F', fontWeight: 600, textDecoration: 'none' }}>
+            <Link href="/login" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none', fontFamily: "'Instrument Sans', sans-serif" }}>
               Sign in
             </Link>
           </p>
@@ -773,24 +792,25 @@ export function RegisterPage() {
           </div>
 
           <h1 style={{
-            fontFamily: "'Rajdhani', sans-serif",
+            fontFamily: "'Syne', sans-serif",
             fontSize: '48px',
-            fontWeight: 700,
-            color: isDark ? '#FFFFFF' : '#1a1a1a',
-            letterSpacing: '6px',
+            fontWeight: 800,
+            color: 'var(--text)',
+            letterSpacing: '-0.03em',
             marginBottom: '8px',
           }}>
             ANALYST
           </h1>
           <p style={{
-            fontFamily: "'Rajdhani', sans-serif",
+            fontFamily: "'Syne', sans-serif",
             fontSize: '16px',
-            fontWeight: 500,
-            color: '#FEC00F',
-            letterSpacing: '10px',
+            fontWeight: 600,
+            color: 'var(--accent)',
+            letterSpacing: '0.12em',
             marginBottom: '40px',
+            textTransform: 'uppercase',
           }}>
-            BY POTOMAC
+            by potomac
           </p>
 
           {/* Tagline */}
@@ -805,16 +825,16 @@ export function RegisterPage() {
               transform: 'translateX(-50%)',
               width: '60px',
               height: '2px',
-              background: 'linear-gradient(90deg, transparent, #FEC00F, transparent)',
+              background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
             }} />
             <h2
               className="tagline-glow"
               style={{
-                fontFamily: "'Rajdhani', sans-serif",
+                fontFamily: "'Syne', sans-serif",
                 fontSize: '28px',
                 fontWeight: 700,
-                color: '#FEC00F',
-                letterSpacing: '6px',
+                color: 'var(--accent)',
+                letterSpacing: '0.12em',
                 textTransform: 'uppercase',
                 margin: 0,
                 lineHeight: 1.4,
@@ -829,7 +849,7 @@ export function RegisterPage() {
               transform: 'translateX(-50%)',
               width: '60px',
               height: '2px',
-              background: 'linear-gradient(90deg, transparent, #FEC00F, transparent)',
+              background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
             }} />
           </div>
         </div>
@@ -837,10 +857,11 @@ export function RegisterPage() {
         <p style={{
           position: 'absolute',
           bottom: '32px',
-          color: '#757575',
+          color: 'var(--text-muted)',
           fontSize: '12px',
+          fontFamily: "'Instrument Sans', sans-serif",
         }}>
-          {'© 2026 Potomac Fund Management. All rights reserved.'}
+          © 2026 Potomac Fund Management. All rights reserved.
         </p>
       </div>
 
@@ -853,8 +874,8 @@ export function RegisterPage() {
         @keyframes taglinePulse {
           0%, 100% {
             text-shadow:
-              0 0 10px  #FEC00F,
-              0 0 20px  #FEC00F,
+              0 0 10px  var(--accent),
+              0 0 20px  var(--accent),
               0 0 40px  rgba(254, 192, 15, 0.85),
               0 0 70px  rgba(254, 192, 15, 0.65),
               0 0 110px rgba(254, 192, 15, 0.45),
@@ -863,8 +884,8 @@ export function RegisterPage() {
           }
           50% {
             text-shadow:
-              0 0 15px  #FEC00F,
-              0 0 30px  #FEC00F,
+              0 0 15px  var(--accent),
+              0 0 30px  var(--accent),
               0 0 60px  rgba(254, 192, 15, 1),
               0 0 100px rgba(254, 192, 15, 0.9),
               0 0 150px rgba(254, 192, 15, 0.7),

@@ -123,14 +123,14 @@ const CHAT_STYLES = `
   /* Slim scrollbar */
   [data-scroll-container]::-webkit-scrollbar { width: 4px; }
   [data-scroll-container]::-webkit-scrollbar-track { background: transparent; }
-  [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(254,192,15,0.18); border-radius: 4px; }
-  [data-scroll-container]::-webkit-scrollbar-thumb:hover { background: rgba(254,192,15,0.35); }
+  [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.18); border-radius: 4px; }
+  [data-scroll-container]::-webkit-scrollbar-thumb:hover { background: rgba(96,165,250,0.35); }
 
   /* Dot-grid background — applied on root, works with the radial gradient */
   .chat-root {
     background-color: var(--chat-bg);
     background-image:
-      radial-gradient(ellipse 130% 55% at 65% -8%, rgba(254,192,15,0.045) 0%, transparent 55%),
+      radial-gradient(ellipse 130% 55% at 65% -8%, rgba(96,165,250,0.045) 0%, transparent 55%),
       radial-gradient(var(--chat-dot) 1px, transparent 1px);
     background-size: auto, 24px 24px;
   }
@@ -580,8 +580,8 @@ export function ChatPage() {
     muted:   isDark ? '#606068'                    : '#808088',
     border:  isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
     card:    isDark ? '#0D0D10'                    : '#FFFFFF',
-    userBg:  isDark ? 'rgba(254,192,15,0.07)'      : 'rgba(254,192,15,0.09)',
-    userBdr: isDark ? 'rgba(254,192,15,0.18)'      : 'rgba(254,192,15,0.25)',
+    userBg:  isDark ? 'rgba(96,165,250,0.07)'      : 'rgba(96,165,250,0.09)',
+    userBdr: isDark ? 'rgba(96,165,250,0.18)'      : 'rgba(96,165,250,0.25)',
     aiBg:    isDark ? 'rgba(255,255,255,0.03)'     : 'rgba(0,0,0,0.02)',
     aiBdr:   isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
     dim:     isDark ? 'rgba(255,255,255,0.18)'     : 'rgba(0,0,0,0.25)',
@@ -737,8 +737,8 @@ export function ChatPage() {
         <div style={{ flexShrink: 0, paddingTop: 2 }}>
           <div style={{
             width: 32, height: 32, borderRadius: '10px',
-            background: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.1)',
-            border: '1px solid rgba(254,192,15,0.2)',
+            background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.1)',
+            border: '1px solid rgba(96,165,250,0.2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <img src={logo} alt="Yang" style={{ width: 18, height: 18, borderRadius: '5px' }} />
@@ -842,25 +842,25 @@ export function ChatPage() {
         fontFamily: "'Instrument Sans', 'Quicksand', sans-serif",
       }}>
 
-      {/* ── Backend unavailable banner ─────────────────────────────────────── */}
-      {!backendAvailable && (
+      {/* ── Backend unavailable banner (removed) ── */}
+      {false && !backendAvailable && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px',
-          background: isDark ? 'rgba(254,192,15,0.1)' : 'rgba(254,192,15,0.12)',
-          borderBottom: '1px solid rgba(254,192,15,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+          background: isDark ? 'rgba(96,165,250,0.1)' : 'rgba(96,165,250,0.12)',
+          borderBottom: '1px solid rgba(96,165,250,0.3)',
           padding: '9px 20px',
           backdropFilter: 'blur(8px)',
         }}>
           <div style={{
             width: '6px', height: '6px', borderRadius: '50%',
-            background: '#FEC00F', flexShrink: 0,
-            boxShadow: '0 0 8px rgba(254,192,15,0.6)',
+            background: '#60A5FA', flexShrink: 0,
+            boxShadow: '0 0 8px rgba(96,165,250,0.6)',
           }} />
           <span style={{
             fontFamily: "'DM Mono', monospace",
             fontSize: '11px', letterSpacing: '0.06em',
-            color: isDark ? '#FEC00F' : '#92700A',
+            color: isDark ? '#60A5FA' : '#1E40AF',
           }}>
             Backend server unavailable — start server on port 8000
           </span>
@@ -868,16 +868,16 @@ export function ChatPage() {
             onClick={() => { setBackendAvailable(true); recheckConnection(); }}
             style={{
               padding: '4px 14px',
-              background: 'rgba(254,192,15,0.15)',
-              border: '1px solid rgba(254,192,15,0.4)',
+              background: 'rgba(96,165,250,0.15)',
+              border: '1px solid rgba(96,165,250,0.4)',
               borderRadius: '6px', cursor: 'pointer',
               fontFamily: "'DM Mono', monospace",
               fontSize: '10px', letterSpacing: '0.08em',
-              color: '#FEC00F', fontWeight: 500,
+              color: '#60A5FA', fontWeight: 500,
               transition: 'background .15s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(254,192,15,0.25)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(254,192,15,0.15)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(96,165,250,0.25)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(96,165,250,0.15)'}
           >
             Retry
           </button>
@@ -917,22 +917,22 @@ export function ChatPage() {
               position: 'absolute',
               top: backendAvailable ? 20 : 60,
               left: 20, zIndex: 100,
-              background: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.1)',
-              border: '1px solid rgba(254,192,15,0.3)',
+              background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.1)',
+              border: '1px solid rgba(96,165,250,0.3)',
               borderRadius: '9px', padding: '8px',
               cursor: 'pointer',
               transition: 'background .15s, border-color .15s',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(254,192,15,0.18)';
-              e.currentTarget.style.borderColor = 'rgba(254,192,15,0.5)';
+              e.currentTarget.style.background = 'rgba(96,165,250,0.18)';
+              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.5)';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.1)';
-              e.currentTarget.style.borderColor = 'rgba(254,192,15,0.3)';
+              e.currentTarget.style.background = isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.1)';
+              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.3)';
             }}
           >
-            <ChevronRight size={16} color="#FEC00F" />
+            <ChevronRight size={16} color="#60A5FA" />
           </button>
         )}
 
@@ -961,12 +961,12 @@ export function ChatPage() {
                     <div style={{ position: 'relative' }}>
                       <div style={{
                         position: 'absolute', inset: '-20px',
-                        background: 'radial-gradient(circle, rgba(254,192,15,0.15) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(96,165,250,0.15) 0%, transparent 70%)',
                         borderRadius: '50%', pointerEvents: 'none',
                       }} />
                       <img src={logo} alt="Yang" style={{
                         width: 68,
-                        filter: 'drop-shadow(0 4px 16px rgba(254,192,15,0.3))',
+                        filter: 'drop-shadow(0 4px 16px rgba(96,165,250,0.3))',
                         position: 'relative',
                       }} />
                     </div>
@@ -975,16 +975,16 @@ export function ChatPage() {
                     <div style={{ textAlign: 'center' }}>
                       <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        background: isDark ? 'rgba(254,192,15,0.07)' : 'rgba(254,192,15,0.08)',
-                        border: '1px solid rgba(254,192,15,0.2)',
+                        background: isDark ? 'rgba(96,165,250,0.07)' : 'rgba(96,165,250,0.08)',
+                        border: '1px solid rgba(96,165,250,0.2)',
                         borderRadius: '100px', padding: '4px 14px 4px 10px',
                         marginBottom: '18px',
                       }}>
-                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#FEC00F' }} />
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#60A5FA' }} />
                         <span style={{
                           fontFamily: "'DM Mono', monospace",
                           fontSize: '9px', letterSpacing: '0.16em',
-                          textTransform: 'uppercase' as const, color: '#FEC00F',
+                          textTransform: 'uppercase' as const, color: '#60A5FA',
                         }}>
                           AI Chat · Online
                         </span>
@@ -1008,10 +1008,10 @@ export function ChatPage() {
 
                     {/* Suggestion chips */}
                     <Suggestions className="justify-center">
-                      <Suggestion suggestion="Generate a moving average crossover AFL" onClick={(s: string) => setInput(s)} />
-                      <Suggestion suggestion="Explain RSI divergence strategy" onClick={(s: string) => setInput(s)} />
-                      <Suggestion suggestion="Show me AAPL stock data" onClick={(s: string) => setInput(s)} />
-                      <Suggestion suggestion="Search knowledge base for Bollinger Bands" onClick={(s: string) => setInput(s)} />
+                      <Suggestion suggestion="Generate a moving average crossover AFL" onClick={(s) => setInput(s)} />
+                      <Suggestion suggestion="Explain RSI divergence strategy" onClick={(s) => setInput(s)} />
+                      <Suggestion suggestion="Show me AAPL stock data" onClick={(s) => setInput(s)} />
+                      <Suggestion suggestion="Search knowledge base for Bollinger Bands" onClick={(s) => setInput(s)} />
                     </Suggestions>
 
                     <span style={{
@@ -1075,8 +1075,8 @@ export function ChatPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
                           width: 28, height: 28, borderRadius: '8px',
-                          background: 'rgba(254,192,15,0.1)',
-                          border: '1px solid rgba(254,192,15,0.2)',
+                          background: 'rgba(96,165,250,0.1)',
+                          border: '1px solid rgba(96,165,250,0.2)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           flexShrink: 0,
                         }}>
@@ -1145,10 +1145,10 @@ export function ChatPage() {
           borderTop: `1px solid ${T.border}`,
           backdropFilter: 'blur(12px)',
         }}>
-          {/* Thin gold accent line above input */}
+          {/* Thin blue accent line above input */}
           <div style={{
             height: '1px', marginBottom: '12px',
-            background: 'linear-gradient(90deg, transparent 0%, rgba(254,192,15,0.35) 40%, rgba(254,192,15,0.12) 70%, transparent 100%)',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(96,165,250,0.35) 40%, rgba(96,165,250,0.12) 70%, transparent 100%)',
           }} />
           <div style={{ maxWidth: '820px', margin: '0 auto' }}>
             <TooltipProvider>
@@ -1160,7 +1160,7 @@ export function ChatPage() {
                   else if (err.code === 'max_files') toast.error('Too many files (max 10)');
                   else if (err.code === 'accept') toast.error('File type not supported');
                 }}
-                onSubmit={async ({ text, files }: { text: string; files: any[] }) => {
+                onSubmit={async ({ text, files }) => {
                   if ((!text.trim() && files.length === 0) || isStreaming) return;
                   setInput('');
                   setPageError('');
@@ -1237,7 +1237,7 @@ export function ChatPage() {
                 <AttachmentsDisplay />
                 <PromptInputTextarea
                   value={input}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
+                  onChange={(e) => setInput(e.target.value)}
                   placeholder={isStreaming ? 'Yang is responding...' : 'Type a message to start chatting...'}
                   disabled={status !== 'ready' && status !== 'error'}
                 />
@@ -1247,11 +1247,11 @@ export function ChatPage() {
                     <PromptInputButton
                       tooltip="Reference documents from Knowledge Base"
                       onClick={() => setKbPanelOpen((prev) => !prev)}
-                      style={{ position: 'relative', color: selectedKbDocIds.size > 0 ? '#FEC00F' : undefined }}
+                      style={{ position: 'relative', color: selectedKbDocIds.size > 0 ? '#60A5FA' : undefined }}
                     >
                       <Database className="size-4" />
                       {selectedKbDocIds.size > 0 && (
-                        <span style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: '50%', backgroundColor: '#FEC00F', color: '#000', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: '50%', backgroundColor: '#60A5FA', color: '#000', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {selectedKbDocIds.size}
                         </span>
                       )}
@@ -1261,8 +1261,8 @@ export function ChatPage() {
                     </PromptInputButton>
                     <SpeechInput
                       size="icon-sm" variant="ghost"
-                      onTranscriptionChange={(text: string) => setInput((prev) => prev.trim() ? `${prev} ${text}` : text)}
-                      onAudioRecorded={async (audioBlob: Blob) => {
+                      onTranscriptionChange={(text) => setInput((prev) => prev.trim() ? `${prev} ${text}` : text)}
+                      onAudioRecorded={async (audioBlob) => {
                         try {
                           const token = getAuthToken();
                           const convId = selectedConversation?.id || conversationIdRef.current || 'default';

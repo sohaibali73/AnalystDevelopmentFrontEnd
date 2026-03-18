@@ -139,7 +139,7 @@ export function AFLGeneratorPage() {
     try { return localStorage.getItem('auth_token') || ''; } catch { return ''; }
   };
 
-  // Colors - Enhanced palette
+  // Colors - Enhanced blue/teal palette
   const colors = useMemo(() => ({
     background: isDark ? '#0A0A0A' : '#FAFAFA',
     sidebar: isDark ? '#111111' : '#FFFFFF',
@@ -150,12 +150,15 @@ export function AFLGeneratorPage() {
     text: isDark ? '#FFFFFF' : '#0A0A0A',
     textMuted: isDark ? '#A0A0A0' : '#737373',
     textSubtle: isDark ? '#666666' : '#A3A3A3',
-    primaryYellow: '#FEC00F',
-    primaryYellowHover: '#FFD700',
+    primaryBlue: '#60A5FA',
+    primaryBlueHover: '#93C5FD',
+    primaryViolet: '#A78BFA',
+    primaryVioletHover: '#C084FC',
     darkGray: '#1A1A1A',
     codePanelBg: isDark ? '#0D0D0D' : '#FAFAFA',
     hoverBg: isDark ? '#1A1A1A' : '#F5F5F5',
-    activeBg: isDark ? 'rgba(254, 192, 15, 0.08)' : 'rgba(254, 192, 15, 0.06)',
+    activeBg: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)',
+    accentGlow: isDark ? 'rgba(96,165,250,0.3)' : 'rgba(96,165,250,0.15)',
   }), [isDark]);
 
   // AI SDK useChat
@@ -454,7 +457,7 @@ export function AFLGeneratorPage() {
                 height: '20px', 
                 borderRadius: '6px', 
                 overflow: 'hidden',
-                backgroundColor: colors.primaryYellow + '15',
+                backgroundColor: colors.primaryBlue + '15',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -639,19 +642,19 @@ export function AFLGeneratorPage() {
           alignItems: 'center', 
           justifyContent: 'space-between',
           background: isDark 
-            ? 'linear-gradient(135deg, rgba(254, 192, 15, 0.03) 0%, rgba(254, 192, 15, 0.01) 100%)'
-            : 'linear-gradient(135deg, rgba(254, 192, 15, 0.04) 0%, rgba(254, 192, 15, 0.01) 100%)'
+            ? 'linear-gradient(135deg, rgba(96,165,250,0.03) 0%, rgba(96,165,250,0.01) 100%)'
+            : 'linear-gradient(135deg, rgba(96,165,250,0.04) 0%, rgba(96,165,250,0.01) 100%)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '32px',
               height: '32px',
               borderRadius: '8px',
-              background: `linear-gradient(135deg, ${colors.primaryYellow} 0%, ${colors.primaryYellowHover} 100%)`,
+              background: `linear-gradient(135deg, ${colors.primaryBlue} 0%, ${colors.primaryBlueHover} 100%)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(254, 192, 15, 0.2)'
+              boxShadow: '0 2px 8px rgba(96,165,250,0.2)'
             }}>
               <Code2 size={18} color="#1A1A1A" strokeWidth={2.5} />
             </div>
@@ -701,7 +704,7 @@ export function AFLGeneratorPage() {
             style={{ 
               width: '100%', 
               padding: '12px', 
-              background: `linear-gradient(135deg, ${colors.primaryYellow} 0%, ${colors.primaryYellowHover} 100%)`, 
+              background: `linear-gradient(135deg, ${colors.primaryBlue} 0%, ${colors.primaryBlueHover} 100%)`, 
               border: 'none', 
               borderRadius: '10px', 
               cursor: 'pointer', 
@@ -714,16 +717,16 @@ export function AFLGeneratorPage() {
               fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
               fontSize: '13px', 
               transition: 'all 0.2s ease', 
-              boxShadow: '0 2px 8px rgba(254, 192, 15, 0.25)',
+              boxShadow: '0 2px 8px rgba(96,165,250,0.25)',
               letterSpacing: '0.3px'
             }} 
             onMouseOver={(e) => { 
               e.currentTarget.style.transform = 'translateY(-1px)'; 
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(254, 192, 15, 0.35)'; 
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(96,165,250,0.35)'; 
             }} 
             onMouseOut={(e) => { 
               e.currentTarget.style.transform = 'translateY(0)'; 
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(254, 192, 15, 0.25)'; 
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(96,165,250,0.25)'; 
             }}
           >
             <Plus size={18} strokeWidth={2.5} /> New Strategy
@@ -748,8 +751,8 @@ export function AFLGeneratorPage() {
                 fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
                 transition: 'all 0.2s ease' 
               }}
-              onFocus={(e) => { 
-                e.currentTarget.style.borderColor = colors.primaryYellow; 
+                onFocus={(e) => { 
+                e.currentTarget.style.borderColor = colors.primaryBlue; 
                 e.currentTarget.style.backgroundColor = isDark ? '#1F1F1F' : '#FFFFFF';
               }}
               onBlur={(e) => { 
@@ -856,7 +859,7 @@ export function AFLGeneratorPage() {
                   padding: '12px', 
                   marginBottom: '6px', 
                   backgroundColor: selectedConversation?.id === conv.id ? colors.activeBg : 'transparent', 
-                  border: selectedConversation?.id === conv.id ? `1px solid ${colors.primaryYellow}` : '1px solid transparent', 
+                  border: selectedConversation?.id === conv.id ? `1px solid ${colors.primaryBlue}` : '1px solid transparent', 
                   borderRadius: '10px', 
                   cursor: 'pointer', 
                   color: colors.text, 
@@ -884,7 +887,7 @@ export function AFLGeneratorPage() {
                   height: '32px',
                   borderRadius: '8px',
                   backgroundColor: selectedConversation?.id === conv.id 
-                    ? colors.primaryYellow + '20'
+                    ? colors.primaryBlue + '20'
                     : colors.inputBg,
                   display: 'flex',
                   alignItems: 'center',
@@ -894,7 +897,7 @@ export function AFLGeneratorPage() {
                 }}>
                   <Code2 
                     size={16} 
-                    color={selectedConversation?.id === conv.id ? colors.primaryYellow : colors.textMuted}
+                    color={selectedConversation?.id === conv.id ? colors.primaryBlue : colors.textMuted}
                     strokeWidth={2}
                   />
                 </div>
@@ -924,7 +927,7 @@ export function AFLGeneratorPage() {
                     style={{ 
                       flex: 1, 
                       background: colors.inputBg, 
-                      border: `2px solid ${colors.primaryYellow}`, 
+                      border: `2px solid ${colors.primaryBlue}`, 
                       borderRadius: '6px', 
                       color: colors.text, 
                       fontSize: '13px', 
@@ -1028,7 +1031,7 @@ export function AFLGeneratorPage() {
               justifyContent: 'center'
             }}
             onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = colors.primaryYellow;
+              e.currentTarget.style.borderColor = colors.primaryBlue;
               e.currentTarget.style.transform = 'scale(1.05)';
             }}
             onMouseOut={(e) => {
@@ -1036,7 +1039,7 @@ export function AFLGeneratorPage() {
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <ChevronRight size={18} color={colors.primaryYellow} strokeWidth={2.5} />
+            <ChevronRight size={18} color={colors.primaryBlue} strokeWidth={2.5} />
           </button>
         )}
 
@@ -1069,12 +1072,12 @@ export function AFLGeneratorPage() {
                   fontWeight: 600,
                   borderRadius: '8px',
                   border: strategyType === type
-                    ? `1.5px solid ${colors.primaryYellow}`
+                    ? `1.5px solid ${colors.primaryBlue}`
                     : `1px solid ${colors.border}`,
                   backgroundColor: strategyType === type
                     ? colors.activeBg
                     : 'transparent',
-                  color: strategyType === type ? colors.primaryYellow : colors.textMuted,
+                  color: strategyType === type ? colors.primaryBlue : colors.textMuted,
                   cursor: 'pointer',
                   fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
                   textTransform: 'capitalize',
@@ -1084,7 +1087,7 @@ export function AFLGeneratorPage() {
                 onMouseOver={(e) => {
                   if (strategyType !== type) {
                     e.currentTarget.style.backgroundColor = colors.hoverBg;
-                    e.currentTarget.style.borderColor = colors.primaryYellow + '80';
+                    e.currentTarget.style.borderColor = colors.primaryBlue + '80';
                   }
                 }}
                 onMouseOut={(e) => {
@@ -1107,7 +1110,7 @@ export function AFLGeneratorPage() {
               padding: '6px 12px',
               borderRadius: '8px',
               backgroundColor: compositeMode ? colors.activeBg : 'transparent',
-              border: `1px solid ${compositeMode ? colors.primaryYellow : colors.border}`,
+              border: `1px solid ${compositeMode ? colors.primaryBlue : colors.border}`,
               transition: 'all 0.2s ease'
             }}>
               <Switch
@@ -1123,10 +1126,10 @@ export function AFLGeneratorPage() {
                   '--switch-thumb-size': '14px'
                 } as any}
               />
-              <Layers size={14} color={compositeMode ? colors.primaryYellow : colors.textMuted} strokeWidth={2} />
+              <Layers size={14} color={compositeMode ? colors.primaryBlue : colors.textMuted} strokeWidth={2} />
               <span style={{
                 fontSize: '11px',
-                color: compositeMode ? colors.primaryYellow : colors.textMuted,
+                color: compositeMode ? colors.primaryBlue : colors.textMuted,
                 fontWeight: compositeMode ? 600 : 500,
                 fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
                 transition: 'all 0.2s ease',
@@ -1143,14 +1146,14 @@ export function AFLGeneratorPage() {
               onClick={() => setCodePanelOpen(!codePanelOpen)}
               style={{ 
                 background: codePanelOpen ? colors.activeBg : 'transparent', 
-                border: `1px solid ${codePanelOpen ? colors.primaryYellow : colors.border}`, 
+                border: `1px solid ${codePanelOpen ? colors.primaryBlue : colors.border}`, 
                 borderRadius: '8px', 
                 padding: '6px 12px', 
                 cursor: 'pointer', 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '6px', 
-                color: codePanelOpen ? colors.primaryYellow : colors.textMuted, 
+                color: codePanelOpen ? colors.primaryBlue : colors.textMuted, 
                 fontSize: '11px', 
                 fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
                 transition: 'all 0.2s ease',
@@ -1161,7 +1164,7 @@ export function AFLGeneratorPage() {
               onMouseOver={(e) => {
                 if (!codePanelOpen) {
                   e.currentTarget.style.backgroundColor = colors.hoverBg;
-                  e.currentTarget.style.borderColor = colors.primaryYellow + '80';
+                  e.currentTarget.style.borderColor = colors.primaryBlue + '80';
                 }
               }}
               onMouseOut={(e) => {
@@ -1192,18 +1195,18 @@ export function AFLGeneratorPage() {
               {allMessages.length === 0 ? (
                 <ConversationEmptyState
                   icon={
-                    <div style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '20px',
-                      background: `linear-gradient(135deg, ${colors.primaryYellow}20 0%, ${colors.primaryYellow}10 100%)`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '8px'
-                    }}>
-                      <Code2 size={40} color={colors.primaryYellow} strokeWidth={2} />
-                    </div>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '20px',
+                    background: `linear-gradient(135deg, ${colors.primaryBlue}20 0%, ${colors.primaryBlue}10 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '8px'
+                  }}>
+                    <Code2 size={40} color={colors.primaryBlue} strokeWidth={2} />
+                  </div>
                   }
                   title="AFL Code Generator"
                   description="Generate, debug, and optimize AmiBroker Formula Language strategies with AI assistance"
@@ -1255,7 +1258,7 @@ export function AFLGeneratorPage() {
                           height: '20px', 
                           borderRadius: '6px', 
                           overflow: 'hidden',
-                          backgroundColor: colors.primaryYellow + '15',
+                          backgroundColor: colors.primaryBlue + '15',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center'
@@ -1482,23 +1485,23 @@ export function AFLGeneratorPage() {
             alignItems: 'center', 
             justifyContent: 'space-between',
             background: isDark 
-              ? 'linear-gradient(135deg, rgba(254, 192, 15, 0.03) 0%, rgba(254, 192, 15, 0.01) 100%)'
-              : 'linear-gradient(135deg, rgba(254, 192, 15, 0.04) 0%, rgba(254, 192, 15, 0.01) 100%)'
+              ? 'linear-gradient(135deg, rgba(96,165,250,0.03) 0%, rgba(96,165,250,0.01) 100%)'
+              : 'linear-gradient(135deg, rgba(96,165,250,0.04) 0%, rgba(96,165,250,0.01) 100%)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
                 width: '32px',
                 height: '32px',
                 borderRadius: '8px',
-                backgroundColor: colors.primaryYellow + '20',
+                backgroundColor: colors.primaryBlue + '20',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
                 {compositeMode ? (
-                  <Layers size={16} color={colors.primaryYellow} strokeWidth={2.5} />
+                  <Layers size={16} color={colors.primaryBlue} strokeWidth={2.5} />
                 ) : (
-                  <Code2 size={16} color={colors.primaryYellow} strokeWidth={2.5} />
+                  <Code2 size={16} color={colors.primaryBlue} strokeWidth={2.5} />
                 )}
               </div>
               <div>
@@ -1538,7 +1541,7 @@ export function AFLGeneratorPage() {
                 onClick={() => setShowSettings(!showSettings)} 
                 style={{ 
                   background: showSettings ? colors.activeBg : 'transparent',
-                  border: `1px solid ${showSettings ? colors.primaryYellow : 'transparent'}`, 
+                  border: `1px solid ${showSettings ? colors.primaryBlue : 'transparent'}`, 
                   cursor: 'pointer', 
                   padding: '8px', 
                   borderRadius: '8px', 
@@ -1555,14 +1558,14 @@ export function AFLGeneratorPage() {
                   if (!showSettings) e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
-                <Settings2 size={14} color={showSettings ? colors.primaryYellow : colors.textMuted} strokeWidth={2} />
+                <Settings2 size={14} color={showSettings ? colors.primaryBlue : colors.textMuted} strokeWidth={2} />
               </button>
               <button 
                 onClick={handleCopyCode} 
                 disabled={!activeCode} 
                 style={{ 
                   background: copied ? colors.activeBg : 'transparent',
-                  border: `1px solid ${copied ? colors.primaryYellow : 'transparent'}`,
+                  border: `1px solid ${copied ? colors.primaryBlue : 'transparent'}`,
                   cursor: activeCode ? 'pointer' : 'default', 
                   padding: '8px', 
                   borderRadius: '8px', 
@@ -1581,7 +1584,7 @@ export function AFLGeneratorPage() {
                 }}
               >
                 {copied ? (
-                  <Check size={14} color={colors.primaryYellow} strokeWidth={2} />
+                  <Check size={14} color={colors.primaryBlue} strokeWidth={2} />
                 ) : (
                   <CopyIcon size={14} color={colors.textMuted} strokeWidth={2} />
                 )}
@@ -1656,10 +1659,10 @@ export function AFLGeneratorPage() {
                       fontSize: '11px',
                       fontWeight: activeTab === 'composite' ? 700 : 500,
                       borderRadius: '8px 8px 0 0',
-                      border: activeTab === 'composite' ? `1px solid ${colors.primaryYellow}` : `1px solid transparent`,
+                      border: activeTab === 'composite' ? `1px solid ${colors.primaryBlue}` : `1px solid transparent`,
                       borderBottom: 'none',
                       backgroundColor: activeTab === 'composite' ? colors.activeBg : 'transparent',
-                      color: activeTab === 'composite' ? colors.primaryYellow : colors.textMuted,
+                      color: activeTab === 'composite' ? colors.primaryBlue : colors.textMuted,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1686,7 +1689,7 @@ export function AFLGeneratorPage() {
                       <span style={{
                         fontSize: '9px',
                         fontWeight: 700,
-                        backgroundColor: colors.primaryYellow,
+                        backgroundColor: colors.primaryBlue,
                         color: colors.darkGray,
                         borderRadius: '6px',
                         padding: '2px 6px',
@@ -1790,7 +1793,7 @@ export function AFLGeneratorPage() {
               borderBottom: `1px solid ${colors.border}`, 
               backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.02)' 
             }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {[
                   { label: 'Initial Equity', key: 'initial_equity', type: 'number' },
                   { label: 'Max Positions', key: 'max_positions', type: 'number' },
@@ -1832,7 +1835,7 @@ export function AFLGeneratorPage() {
                         transition: 'all 0.2s ease'
                       }}
                       onFocus={(e) => {
-                        e.currentTarget.style.borderColor = colors.primaryYellow;
+                        e.currentTarget.style.borderColor = colors.primaryBlue;
                         e.currentTarget.style.backgroundColor = isDark ? '#1F1F1F' : '#FFFFFF';
                       }}
                       onBlur={(e) => {
@@ -1853,7 +1856,7 @@ export function AFLGeneratorPage() {
                 {isCompositeTab && strategies.length > 0 && (
                   <div style={{
                     padding: '8px 20px',
-                    backgroundColor: isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.04)',
+                    backgroundColor: isDark ? 'rgba(96,165,250,0.05)' : 'rgba(96,165,250,0.04)',
                     borderBottom: `1px solid ${colors.borderLight}`,
                     display: 'flex',
                     alignItems: 'center',
@@ -1867,7 +1870,7 @@ export function AFLGeneratorPage() {
                       alignItems: 'center',
                       gap: '6px'
                     }}>
-                      <Sparkles size={12} color={colors.primaryYellow} strokeWidth={2} />
+                      <Sparkles size={12} color={colors.primaryBlue} strokeWidth={2} />
                       Auto-generated template (read-only)
                     </span>
                   </div>
@@ -1919,7 +1922,7 @@ export function AFLGeneratorPage() {
                   width: '64px',
                   height: '64px',
                   borderRadius: '16px',
-                  background: `linear-gradient(135deg, ${colors.primaryYellow}15 0%, ${colors.primaryYellow}08 100%)`,
+                  background: `linear-gradient(135deg, ${colors.primaryBlue}15 0%, ${colors.primaryBlue}08 100%)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -1963,7 +1966,7 @@ export function AFLGeneratorPage() {
             <div style={{
               padding: '12px 20px',
               borderTop: `1px solid ${colors.border}`,
-              backgroundColor: isDark ? 'rgba(254, 192, 15, 0.02)' : 'rgba(254, 192, 15, 0.03)',
+              backgroundColor: isDark ? 'rgba(96,165,250,0.02)' : 'rgba(96,165,250,0.03)',
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
@@ -1978,9 +1981,9 @@ export function AFLGeneratorPage() {
                   fontSize: '11px',
                   fontWeight: 600,
                   borderRadius: '8px',
-                  border: `1px solid ${colors.primaryYellow}`,
-                  background: `linear-gradient(135deg, ${colors.primaryYellow}15 0%, ${colors.primaryYellow}08 100%)`,
-                  color: colors.primaryYellow,
+                  border: `1px solid ${colors.primaryBlue}`,
+                  background: `linear-gradient(135deg, ${colors.primaryBlue}15 0%, ${colors.primaryBlue}08 100%)`,
+                  color: colors.primaryBlue,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1990,11 +1993,11 @@ export function AFLGeneratorPage() {
                   letterSpacing: '0.3px'
                 }}
                 onMouseOver={(e) => { 
-                  e.currentTarget.style.background = `linear-gradient(135deg, ${colors.primaryYellow}25 0%, ${colors.primaryYellow}15 100%)`;
+                  e.currentTarget.style.background = `linear-gradient(135deg, ${colors.primaryBlue}25 0%, ${colors.primaryBlue}15 100%)`;
                   e.currentTarget.style.transform = 'translateY(-1px)';
                 }}
                 onMouseOut={(e) => { 
-                  e.currentTarget.style.background = `linear-gradient(135deg, ${colors.primaryYellow}15 0%, ${colors.primaryYellow}08 100%)`;
+                  e.currentTarget.style.background = `linear-gradient(135deg, ${colors.primaryBlue}15 0%, ${colors.primaryBlue}08 100%)`;
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
@@ -2054,8 +2057,8 @@ export function AFLGeneratorPage() {
                       letterSpacing: '0.3px'
                     }}
                     onMouseOver={(e) => { 
-                      e.currentTarget.style.borderColor = colors.primaryYellow; 
-                      e.currentTarget.style.color = colors.primaryYellow;
+                      e.currentTarget.style.borderColor = colors.primaryBlue; 
+                      e.currentTarget.style.color = colors.primaryBlue;
                       e.currentTarget.style.backgroundColor = colors.activeBg;
                     }}
                     onMouseOut={(e) => { 
@@ -2115,7 +2118,7 @@ export function AFLGeneratorPage() {
         }
 
         ::-webkit-scrollbar-thumb:hover {
-          background: ${colors.primaryYellow}40;
+          background: ${colors.primaryBlue}40;
         }
       `}</style>
     </div>

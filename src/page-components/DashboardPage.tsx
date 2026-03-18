@@ -691,10 +691,10 @@ export default function DashboardPage() {
             <SectionHead label="Platform Tools" />
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(270px, 1fr))',
-              gap: '14px',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '16px',
             }}>
-              {features.map(feat => {
+              {features.map((feat, index) => {
                 const Icon = feat.icon;
                 return (
                   <div
@@ -704,65 +704,168 @@ export default function DashboardPage() {
                     style={{
                       background: 'var(--bg-card)',
                       border: '1px solid var(--border)',
-                      borderRadius: '16px',
-                      padding: '26px',
+                      borderRadius: '20px',
+                      padding: '28px',
                       cursor: 'pointer',
                       display: 'flex', flexDirection: 'column' as const,
                       boxShadow: 'var(--shadow-card)',
+                      position: 'relative' as const,
+                      overflow: 'hidden',
+                      transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                      transform: 'translateZ(0)',
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = 'var(--border-hover)';
+                      e.currentTarget.style.transform = 'translateY(-8px) translateZ(0)';
+                      e.currentTarget.style.borderColor = 'rgba(254,192,15,0.4)';
                       e.currentTarget.style.boxShadow = isDark
-                        ? '0 20px 48px rgba(0,0,0,0.5), 0 0 0 1px var(--border-hover)'
-                        : '0 12px 32px rgba(0,0,0,0.1), 0 0 0 1px var(--border-hover)';
+                        ? '0 24px 56px rgba(0,0,0,0.6), 0 0 0 1px rgba(254,192,15,0.3), 0 0 40px rgba(254,192,15,0.2)'
+                        : '0 16px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(254,192,15,0.3), 0 0 40px rgba(254,192,15,0.1)';
+                      e.currentTarget.style.background = isDark 
+                        ? 'linear-gradient(180deg, rgba(254,192,15,0.05), rgba(254,192,15,0.02))'
+                        : 'linear-gradient(180deg, rgba(254,192,15,0.04), rgba(254,192,15,0.02))';
                     }}
                     onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'translateY(0) translateZ(0)';
                       e.currentTarget.style.borderColor = 'var(--border)';
                       e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+                      e.currentTarget.style.background = 'var(--bg-card)';
                     }}
                   >
-                    {/* Shimmer layer */}
-                    <div className="shimmer-layer" />
+                    {/* Enhanced shimmer layer with gradient sweep */}
+                    <div className="shimmer-layer" style={{
+                      animation: 'dash-shimmer 0.8s ease-out forwards',
+                      background: `linear-gradient(90deg, transparent, ${feat.color}20, transparent)`,
+                    }} />
+
+                    {/* Floating accent background */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-50%',
+                      right: '-50%',
+                      width: '200%',
+                      height: '200%',
+                      background: `radial-gradient(circle at 70% 30%, ${feat.color}15 0%, transparent 50%)`,
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      pointerEvents: 'none',
+                      zIndex: 0,
+                    }} />
 
                     {/* Icon + sparkline row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start', 
+                      marginBottom: '24px',
+                      position: 'relative' as const,
+                      zIndex: 1,
+                    }}>
                       <div style={{
-                        width: '46px', height: '46px', borderRadius: '12px',
-                        background: feat.bgColor,
-                        border: `1px solid ${feat.color}22`,
+                        width: '52px', height: '52px', borderRadius: '14px',
+                        background: `linear-gradient(135deg, ${feat.bgColor}, ${feat.color}15)`,
+                        border: `1px solid ${feat.color}30`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: `0 8px 24px ${feat.color}20`,
+                        position: 'relative' as const,
+                        overflow: 'hidden',
                       }}>
-                        <Icon size={21} color={feat.color} />
+                        {/* Icon container with subtle pulse */}
+                        <div style={{
+                          position: 'absolute',
+                          inset: '-2px',
+                          borderRadius: '14px',
+                          background: `linear-gradient(135deg, transparent, ${feat.color}10)`,
+                          opacity: 0,
+                          transition: 'opacity 0.3s ease',
+                        }} />
+                        <Icon size={22} color={feat.color} style={{ position: 'relative', zIndex: 2 }} />
                       </div>
-                      <Sparkline values={feat.sparkData} color={feat.color} />
+                      <div style={{
+                        position: 'relative' as const,
+                        padding: '6px',
+                        borderRadius: '12px',
+                        background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                      }}>
+                        <Sparkline values={feat.sparkData} color={feat.color} />
+                      </div>
                     </div>
 
                     <h3 style={{
                       fontFamily: "'Syne', sans-serif",
-                      fontSize: '15px', fontWeight: 700,
+                      fontSize: '16px', fontWeight: 800,
                       color: 'var(--text)',
-                      letterSpacing: '-0.015em',
-                      marginBottom: '8px',
+                      letterSpacing: '-0.02em',
+                      marginBottom: '10px',
+                      lineHeight: 1.2,
+                      position: 'relative' as const,
+                      zIndex: 1,
                     }}>
                       {feat.title}
                     </h3>
                     <p style={{
-                      fontSize: '12.5px',
+                      fontSize: '13px',
                       color: 'var(--text-muted)',
-                      lineHeight: 1.7, flex: 1, marginBottom: '20px',
+                      lineHeight: 1.65, flex: 1, marginBottom: '22px',
+                      position: 'relative' as const,
+                      zIndex: 1,
                     }}>
                       {feat.description}
                     </p>
+                    
+                    {/* Enhanced CTA with gradient border */}
                     <div style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
                       fontFamily: "'DM Mono', monospace",
-                      fontSize: '9.5px', letterSpacing: '0.1em',
+                      fontSize: '10px', 
+                      letterSpacing: '0.12em',
                       textTransform: 'uppercase' as const,
                       color: feat.color,
-                      opacity: 0.85,
-                    }}>
-                      Open tool <ArrowUpRight size={11} />
+                      fontWeight: 600,
+                      position: 'relative' as const,
+                      zIndex: 1,
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      border: `1px solid ${feat.color}40`,
+                      background: isDark ? `${feat.color}08` : `${feat.color}06`,
+                      transition: 'all 0.25s ease',
+                      boxShadow: `0 4px 16px ${feat.color}20`,
+                    }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = `${feat.color}15`;
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = `0 6px 20px ${feat.color}30`;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = isDark ? `${feat.color}08` : `${feat.color}06`;
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = `0 4px 16px ${feat.color}20`;
+                      }}
+                    >
+                      <span style={{ color: feat.color }}>Launch</span>
+                      <div style={{
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        background: `linear-gradient(135deg, ${feat.color}, ${feat.color}80)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: `0 4px 12px ${feat.color}40`,
+                      }}>
+                        <ArrowUpRight size={10} color="#000" />
+                      </div>
                     </div>
+
+                    {/* Interactive hover overlay */}
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: '20px',
+                      background: `linear-gradient(180deg, transparent, ${feat.color}05)`,
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      pointerEvents: 'none',
+                      zIndex: 0,
+                    }} />
                   </div>
                 );
               })}

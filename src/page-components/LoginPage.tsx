@@ -9,10 +9,11 @@ import {
   LogIn, 
   Loader2, 
   AlertCircle,
+  Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-// Import removed - will use direct path
 
 export function LoginPage() {
   const router = useRouter();
@@ -67,9 +68,9 @@ export function LoginPage() {
   return (
     <div style={{
       minHeight: '100dvh',
-      backgroundColor: resolvedTheme === 'dark' ? '#0A0A0B' : '#ffffff',
+      backgroundColor: 'var(--bg)',
       display: 'flex',
-      fontFamily: "'Quicksand', sans-serif",
+      fontFamily: "'Instrument Sans', sans-serif",
       flexDirection: isMobile ? 'column' : 'row',
       WebkitUserSelect: 'none',
       WebkitTouchCallout: 'none',
@@ -83,15 +84,15 @@ export function LoginPage() {
         right: 0,
         zIndex: 9999,
         height: '36px',
-        background: 'repeating-linear-gradient(90deg, #FEC00F 0px, #FEC00F 60px, #0A0A0B 60px, #0A0A0B 120px)',
+        background: 'repeating-linear-gradient(90deg, var(--accent) 0px, var(--accent) 60px, var(--bg) 60px, var(--bg) 120px)',
         backgroundSize: '120px 100%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: '12px',
         animation: 'devBannerScroll 6s linear infinite',
-        borderBottom: '2px solid rgba(254,192,15,0.6)',
-        boxShadow: '0 2px 20px rgba(254,192,15,0.25)',
+        borderBottom: '2px solid rgba(96,165,250,0.6)',
+        boxShadow: '0 2px 20px rgba(96,165,250,0.25)',
       }}>
         {/* Frosted label sits on top of the moving stripes */}
         <div style={{
@@ -106,24 +107,24 @@ export function LoginPage() {
           padding: '0 20px',
           borderRadius: '4px',
           height: '26px',
-          border: '1px solid rgba(254,192,15,0.35)',
+          border: '1px solid rgba(96,165,250,0.35)',
         }}>
           {/* Blinking dot */}
           <span style={{
             width: '7px',
             height: '7px',
             borderRadius: '50%',
-            backgroundColor: '#FEC00F',
+            backgroundColor: 'var(--accent)',
             display: 'inline-block',
             animation: 'devDotBlink 1.2s ease-in-out infinite',
             flexShrink: 0,
           }} />
           <span style={{
-            fontFamily: "'Rajdhani', sans-serif",
+            fontFamily: "'Syne', sans-serif",
             fontSize: '12px',
             fontWeight: 700,
             letterSpacing: '3px',
-            color: '#FEC00F',
+            color: 'var(--accent)',
           }}>
             DEVELOPMENT ENVIRONMENT — NOT FOR PRODUCTION USE
           </span>
@@ -131,7 +132,7 @@ export function LoginPage() {
             width: '7px',
             height: '7px',
             borderRadius: '50%',
-            backgroundColor: '#FEC00F',
+            backgroundColor: 'var(--accent)',
             display: 'inline-block',
             animation: 'devDotBlink 1.2s ease-in-out infinite 0.6s',
             flexShrink: 0,
@@ -151,32 +152,32 @@ export function LoginPage() {
         backgroundColor: isDark ? 'rgba(10,10,11,0.9)' : 'rgba(255,255,255,0.9)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
-        border: '1px solid rgba(254,192,15,0.5)',
+        border: '1px solid rgba(96,165,250,0.5)',
         borderRadius: '8px',
         padding: '6px 12px',
-        boxShadow: '0 0 0 0 rgba(254,192,15,0.4)',
+        boxShadow: '0 0 0 0 rgba(96,165,250,0.4)',
         animation: 'devBadgePulse 2.5s ease-in-out infinite',
       }}>
         <span style={{
           width: '8px',
           height: '8px',
           borderRadius: '50%',
-          backgroundColor: '#FEC00F',
+          backgroundColor: 'var(--accent)',
           display: 'inline-block',
           animation: 'devDotBlink 1.2s ease-in-out infinite',
           flexShrink: 0,
         }} />
         <span style={{
-          fontFamily: "'Rajdhani', sans-serif",
+          fontFamily: "'Syne', sans-serif",
           fontSize: '11px',
           fontWeight: 700,
           letterSpacing: '2px',
-          color: '#FEC00F',
+          color: 'var(--accent)',
         }}>
           DEV
         </span>
         <span style={{
-          fontFamily: "'Quicksand', sans-serif",
+          fontFamily: "'Instrument Sans', sans-serif",
           fontSize: '11px',
           fontWeight: 600,
           color: isDark ? '#757575' : '#999999',
@@ -190,8 +191,8 @@ export function LoginPage() {
       <div style={{
         flex: isMobile ? undefined : 1,
         background: isDark 
-          ? 'linear-gradient(135deg, #1A1A1D 0%, #0A0A0B 50%, #1A1A1D 100%)'
-          : 'linear-gradient(160deg, #fdf8ef 0%, #fefcf7 40%, #f5f0e8 100%)',
+          ? 'linear-gradient(135deg, #0A0A0B 0%, #0D1117 50%, #0A0A0B 100%)'
+          : 'linear-gradient(160deg, #f8fbff 0%, #f0f7ff 40%, #e8f2ff 100%)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -201,7 +202,7 @@ export function LoginPage() {
         overflow: 'hidden',
         minHeight: isMobile ? 'auto' : '100dvh',
       }}>
-        {/* Background Pattern */}
+        {/* Enhanced Background Pattern */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -209,13 +210,14 @@ export function LoginPage() {
           right: 0,
           bottom: 0,
           backgroundImage: `
-            radial-gradient(circle at 20% 50%, rgba(254, 192, 15, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(254, 192, 15, 0.05) 0%, transparent 40%)
+            radial-gradient(circle at 20% 50%, rgba(96,165,250,0.12) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(96,165,250,0.08) 0%, transparent 40%),
+            radial-gradient(circle at 60% 20%, rgba(167,139,250,0.06) 0%, transparent 50%)
           `,
           pointerEvents: 'none',
         }} />
 
-        {/* Grid Lines */}
+        {/* Enhanced Grid Lines */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -223,25 +225,58 @@ export function LoginPage() {
           right: 0,
           bottom: 0,
           backgroundImage: `
-            linear-gradient(rgba(254, 192, 15, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(254, 192, 15, 0.03) 1px, transparent 1px)
+            linear-gradient(rgba(96,165,250,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(96,165,250,0.04) 1px, transparent 1px)
           `,
-          backgroundSize: '50px 50px',
+          backgroundSize: '40px 40px',
           pointerEvents: 'none',
         }} />
+
+        {/* Floating particles */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}>
+          {[...Array(8)].map((_, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              width: `${Math.random() * 4 + 2}px`,
+              height: `${Math.random() * 4 + 2}px`,
+              borderRadius: '50%',
+              background: `rgba(96,165,250,${Math.random() * 0.3 + 0.1})`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${Math.random() * 6 + 4}s linear infinite`,
+              opacity: Math.random() * 0.5 + 0.3,
+            }} />
+          ))}
+        </div>
 
         {/* Content */}
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '500px' }}>
-          {/* Logo */}
+          {/* Logo with enhanced container */}
           <div style={{
-            width: isSmallMobile ? '80px' : '100px',
-            height: isSmallMobile ? '80px' : '100px',
-            borderRadius: '24px',
+            width: isSmallMobile ? '90px' : '110px',
+            height: isSmallMobile ? '90px' : '110px',
+            borderRadius: '28px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 32px',
+            margin: '0 auto 36px',
             overflow: 'hidden',
+            background: isDark 
+              ? 'linear-gradient(135deg, rgba(96,165,250,0.1), rgba(167,139,250,0.08))'
+              : 'linear-gradient(135deg, rgba(96,165,250,0.08), rgba(167,139,250,0.06))',
+            border: `1px solid ${isDark ? 'rgba(96,165,250,0.2)' : 'rgba(96,165,250,0.15)'}`,
+            boxShadow: isDark 
+              ? '0 8px 32px rgba(96,165,250,0.15), inset 0 0 20px rgba(96,165,250,0.05)'
+              : '0 8px 32px rgba(96,165,250,0.1), inset 0 0 20px rgba(96,165,250,0.03)',
+            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           }}>
             <img 
               src="/potomac-icon.png" 
@@ -249,58 +284,72 @@ export function LoginPage() {
               style={{ 
                 width: '100%', 
                 height: '100%', 
-                objectFit: 'contain' 
+                objectFit: 'contain',
+                filter: isDark ? 'brightness(1.1) saturate(1.2)' : 'none',
               }} 
             />
           </div>
 
           <h1 style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: isSmallMobile ? '40px' : '48px',
-            fontWeight: 700,
-            color: isDark ? '#FFFFFF' : '#1a1a1a',
-            letterSpacing: '4px',
+            fontFamily: "'Syne', sans-serif",
+            fontSize: isSmallMobile ? '42px' : '52px',
+            fontWeight: 800,
+            color: isDark ? 'var(--text)' : 'var(--text)',
+            letterSpacing: '-0.03em',
             marginBottom: '8px',
+            textShadow: isDark ? '0 0 20px rgba(96,165,250,0.3)' : 'none',
           }}>
             ANALYST
           </h1>
           <p style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: isSmallMobile ? '13px' : '16px',
-            fontWeight: 500,
-            color: '#FEC00F',
-            letterSpacing: '8px',
-            marginBottom: isSmallMobile ? '32px' : '48px',
+            fontFamily: "'Syne', sans-serif",
+            fontSize: isSmallMobile ? '14px' : '17px',
+            fontWeight: 600,
+            color: 'var(--accent)',
+            letterSpacing: '0.14em',
+            marginBottom: isSmallMobile ? '36px' : '52px',
+            textTransform: 'uppercase',
+            textShadow: '0 0 15px rgba(96,165,250,0.4)',
           }}>
             BY POTOMAC
           </p>
 
-          {/* Tagline - Sleek & Prominent */}
+          {/* Enhanced Tagline */}
           <div style={{
             position: 'relative',
-            padding: isSmallMobile ? '20px 24px' : '28px 40px',
+            padding: isSmallMobile ? '24px 28px' : '32px 44px',
             marginBottom: '0',
+            borderRadius: '16px',
+            background: isDark 
+              ? 'linear-gradient(135deg, rgba(96,165,250,0.08), rgba(167,139,250,0.06))'
+              : 'linear-gradient(135deg, rgba(96,165,250,0.06), rgba(167,139,250,0.04))',
+            border: `1px solid ${isDark ? 'rgba(96,165,250,0.25)' : 'rgba(96,165,250,0.2)'}`,
+            boxShadow: isDark 
+              ? '0 8px 32px rgba(96,165,250,0.15), inset 0 0 20px rgba(96,165,250,0.05)'
+              : '0 8px 32px rgba(96,165,250,0.1), inset 0 0 20px rgba(96,165,250,0.03)',
           }}>
             <div style={{
               position: 'absolute',
               top: 0,
               left: '50%',
               transform: 'translateX(-50%)',
-              width: '60px',
+              width: '80px',
               height: '2px',
-              background: 'linear-gradient(90deg, transparent, #FEC00F, transparent)',
+              background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
+              boxShadow: '0 0 15px rgba(96,165,250,0.5)',
             }} />
             <h2
               className="tagline-glow"
               style={{
-                fontFamily: "'Rajdhani', sans-serif",
-                fontSize: isSmallMobile ? '22px' : '28px',
-                fontWeight: 700,
-                color: '#FEC00F',
-                letterSpacing: '6px',
+                fontFamily: "'Syne', sans-serif",
+                fontSize: isSmallMobile ? '24px' : '30px',
+                fontWeight: 800,
+                color: 'var(--accent)',
+                letterSpacing: '0.14em',
                 textTransform: 'uppercase',
                 margin: 0,
-                lineHeight: 1.4,
+                lineHeight: 1.3,
+                textShadow: '0 0 20px rgba(96,165,250,0.6)',
               }}
             >
               Break the Status Quo
@@ -310,9 +359,10 @@ export function LoginPage() {
               bottom: 0,
               left: '50%',
               transform: 'translateX(-50%)',
-              width: '60px',
+              width: '80px',
               height: '2px',
-              background: 'linear-gradient(90deg, transparent, #FEC00F, transparent)',
+              background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
+              boxShadow: '0 0 15px rgba(96,165,250,0.5)',
             }} />
           </div>
         </div>
@@ -320,36 +370,86 @@ export function LoginPage() {
 
       {/* Right Side - Login Form */}
       <div style={{
-        width: isMobile ? '100%' : '500px',
-        backgroundColor: isDark ? '#121212' : '#ffffff',
+        width: isMobile ? '100%' : '520px',
+        backgroundColor: 'var(--bg-card)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        padding: isSmallMobile ? '32px 24px' : '60px',
-        borderLeft: isMobile ? 'none' : `1px solid ${isDark ? '#2A2A2A' : '#e8e0d0'}`,
-        borderTop: isMobile ? `1px solid ${isDark ? '#2A2A2A' : '#e8e0d0'}` : 'none',
-        boxShadow: isDark ? 'none' : '-8px 0 30px rgba(0,0,0,0.06)',
+        padding: isSmallMobile ? '36px 28px' : '72px 64px',
+        borderLeft: isMobile ? 'none' : `1px solid var(--border)`,
+        borderTop: isMobile ? `1px solid var(--border)` : 'none',
+        boxShadow: isDark ? 'none' : 'var(--shadow-card)',
         minHeight: isMobile ? 'auto' : '100dvh',
-        paddingBottom: isSmallMobile ? 'max(60px, env(safe-area-inset-bottom))' : '80px',
+        paddingBottom: isSmallMobile ? 'max(70px, env(safe-area-inset-bottom))' : '90px',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
-        <div style={{ maxWidth: '360px', margin: '0 auto', width: '100%' }}>
-          <h2 style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: '28px',
-            fontWeight: 700,
-            color: isDark ? '#FFFFFF' : '#1a1a1a',
-            letterSpacing: '2px',
-            marginBottom: '8px',
+        {/* Form accent background */}
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-50%',
+          width: '200%',
+          height: '200%',
+          background: `radial-gradient(circle at 70% 30%, rgba(96,165,250,0.08), transparent 50%)`,
+          opacity: 0,
+          transition: 'opacity 0.5s ease',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }} />
+
+        <div style={{ 
+          position: 'relative', 
+          zIndex: 1, 
+          maxWidth: '380px', 
+          margin: '0 auto', 
+          width: '100%' 
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            marginBottom: '16px',
           }}>
-            WELCOME BACK
-          </h2>
-          <p style={{
-            color: isDark ? '#757575' : '#666666',
-            fontSize: '14px',
-            marginBottom: '40px',
-          }}>
-            Sign in to continue to your dashboard
-          </p>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
+              background: isDark 
+                ? 'linear-gradient(135deg, rgba(96,165,250,0.15), rgba(167,139,250,0.12))'
+                : 'linear-gradient(135deg, rgba(96,165,250,0.12), rgba(167,139,250,0.09))',
+              border: `1px solid ${isDark ? 'rgba(96,165,250,0.3)' : 'rgba(96,165,250,0.25)'}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: isDark 
+                ? '0 8px 24px rgba(96,165,250,0.15)'
+                : '0 8px 24px rgba(96,165,250,0.1)',
+            }}>
+              <Sparkles size={18} color="#60A5FA" />
+            </div>
+            <div>
+              <h2 style={{
+                fontFamily: "'Syne', sans-serif",
+                fontSize: '30px',
+                fontWeight: 800,
+                color: 'var(--text)',
+                letterSpacing: '0.08em',
+                margin: 0,
+                textShadow: isDark ? '0 0 15px rgba(96,165,250,0.3)' : 'none',
+              }}>
+                Welcome Back
+              </h2>
+              <p style={{
+                color: 'var(--text-muted)',
+                fontSize: '14px',
+                margin: '6px 0 0',
+                fontFamily: "'Instrument Sans', sans-serif",
+              }}>
+                Sign in to continue to your dashboard
+              </p>
+            </div>
+          </div>
 
           {/* Error Message */}
           {error && (
@@ -357,30 +457,31 @@ export function LoginPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              padding: '14px 16px',
-              backgroundColor: 'rgba(220, 38, 38, 0.1)',
-              border: '1px solid rgba(220, 38, 38, 0.3)',
-              borderRadius: '10px',
-              marginBottom: '24px',
+              padding: '16px 18px',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '12px',
+              marginBottom: '28px',
+              boxShadow: '0 4px 16px rgba(239, 68, 68, 0.1)',
             }}>
-              <AlertCircle size={20} color="#DC2626" />
-              <p style={{ color: '#DC2626', fontSize: '13px', margin: 0 }}>{error}</p>
+              <AlertCircle size={20} color="#EF4444" />
+              <p style={{ color: '#EF4444', fontSize: '13px', margin: 0, fontFamily: "'Instrument Sans', sans-serif" }}>{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit}>
             {/* Email Field */}
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <label style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: '9px',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
                 display: 'block',
-                fontFamily: "'Rajdhani', sans-serif",
-                fontSize: '12px',
-                fontWeight: 600,
-                color: isDark ? '#FFFFFF' : '#1a1a1a',
-                letterSpacing: '1px',
-                marginBottom: '8px',
+                marginBottom: '10px',
               }}>
-                EMAIL ADDRESS
+                Email Address
               </label>
               <input
                 type="email"
@@ -389,59 +490,64 @@ export function LoginPage() {
                 placeholder="you@example.com"
                 style={{
                   width: '100%',
-                  height: '52px',
-                  padding: '0 16px',
-                  backgroundColor: isDark ? '#1E1E1E' : '#f5f5f5',
-                  border: `1px solid ${isDark ? '#2A2A2A' : '#d0d0d0'}`,
-                  borderRadius: '10px',
-                  color: isDark ? '#FFFFFF' : '#1a1a1a',
-                  fontSize: '16px',
-                  fontFamily: "'Quicksand', sans-serif",
-                  outline: 'none',
-                  transition: 'border-color 0.2s, box-shadow 0.2s',
-                  boxSizing: 'border-box',
-                  WebkitAppearance: 'none',
-                  appearance: 'none',
+                  padding: '16px 18px',
+                  borderRadius: '12px',
+                  border: `1px solid var(--border)`,
+                  backgroundColor: 'var(--bg-raised)',
+                  color: 'var(--text)',
+                  fontFamily: "'Instrument Sans', sans-serif",
+                  fontSize: '14px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: 'var(--shadow-card)',
                 }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#FEC00F';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(254, 192, 15, 0.1)';
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(96,165,250,0.15)';
                 }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#2A2A2A';
-                  e.target.style.boxShadow = 'none';
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-card)';
                 }}
               />
             </div>
 
             {/* Password Field */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '28px' }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: '8px',
+                marginBottom: '10px',
               }}>
                 <label style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: isDark ? '#FFFFFF' : '#1a1a1a',
-                  letterSpacing: '1px',
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: '9px',
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-muted)',
                 }}>
-                  PASSWORD
+                  Password
                 </label>
                 <Link
                   href="/forgot-password"
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#FEC00F',
+                    color: 'var(--accent)',
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    fontFamily: "'Quicksand', sans-serif",
+                    fontFamily: "'Instrument Sans', sans-serif",
                     textDecoration: 'none',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateX(2px)';
+                    e.currentTarget.style.color = '#93C5FD';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translateX(0)';
+                    e.currentTarget.style.color = 'var(--accent)';
                   }}
                 >
                   Forgot password?
@@ -455,27 +561,23 @@ export function LoginPage() {
                   placeholder="Enter your password"
                   style={{
                     width: '100%',
-                    height: '52px',
-                    padding: '0 48px 0 16px',
-                    backgroundColor: isDark ? '#1E1E1E' : '#f5f5f5',
-                    border: `1px solid ${isDark ? '#2A2A2A' : '#d0d0d0'}`,
-                    borderRadius: '10px',
-                    color: isDark ? '#FFFFFF' : '#1a1a1a',
-                    fontSize: '16px',
-                    fontFamily: "'Quicksand', sans-serif",
-                    outline: 'none',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                    boxSizing: 'border-box',
-                    WebkitAppearance: 'none',
-                    appearance: 'none',
+                    padding: '16px 52px 16px 18px',
+                    borderRadius: '12px',
+                    border: `1px solid var(--border)`,
+                    backgroundColor: 'var(--bg-raised)',
+                    color: 'var(--text)',
+                    fontFamily: "'Instrument Sans', sans-serif",
+                    fontSize: '14px',
+                    transition: 'all 0.2s ease',
+                    boxShadow: 'var(--shadow-card)',
                   }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#FEC00F';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(254, 192, 15, 0.1)';
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(96,165,250,0.15)';
                   }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = isDark ? '#2A2A2A' : '#d0d0d0';
-                    e.target.style.boxShadow = 'none';
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-card)';
                   }}
                 />
                 <button
@@ -489,11 +591,18 @@ export function LoginPage() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#757575',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    color: 'var(--text-muted)',
+                    padding: '6px',
+                    borderRadius: '8px',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(96,165,250,0.1)';
+                    e.currentTarget.style.color = '#60A5FA';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'none';
+                    e.currentTarget.style.color = 'var(--text-muted)';
                   }}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -507,35 +616,77 @@ export function LoginPage() {
               disabled={loading}
               style={{
                 width: '100%',
-                height: '52px',
-                backgroundColor: loading ? '#424242' : '#FEC00F',
+                height: '56px',
+                borderRadius: '14px',
                 border: 'none',
-                borderRadius: '10px',
-                color: loading ? '#757575' : '#0A0A0B',
-                fontSize: '14px',
-                fontFamily: "'Rajdhani', sans-serif",
-                fontWeight: 700,
-                letterSpacing: '1px',
+                fontFamily: "'Syne', sans-serif",
+                fontWeight: 800,
+                letterSpacing: '0.08em',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '10px',
-                transition: 'all 0.2s',
-                boxShadow: loading ? 'none' : '0 4px 20px rgba(254, 192, 15, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: loading ? 'none' : '0 8px 24px rgba(96,165,250,0.25), 0 0 0 1px rgba(96,165,250,0.2)',
+              }}
+              onMouseEnter={e => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(96,165,250,0.35), 0 0 0 1px rgba(96,165,250,0.3)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(96,165,250,0.25), 0 0 0 1px rgba(96,165,250,0.2)';
+                }
               }}
             >
-              {loading ? (
-                <>
-                  <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                  SIGNING IN...
-                </>
-              ) : (
-                <>
-                  <LogIn size={20} />
-                  SIGN IN
-                </>
-              )}
+              {/* Animated gradient background */}
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)',
+                opacity: loading ? 0.6 : 1,
+                transition: 'opacity 0.3s ease',
+              }} />
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(135deg, #93C5FD 0%, #C084FC 100%)',
+                opacity: 0,
+                transition: 'opacity 0.3s ease',
+              }} />
+              
+              <span style={{
+                position: 'relative',
+                zIndex: 2,
+                color: loading ? '#6B7280' : '#0A0A0B',
+                textShadow: loading ? 'none' : '0 0 10px rgba(255,255,255,0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}>
+                {loading ? (
+                  <>
+                    <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                      Signing In...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn size={20} />
+                    <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                      Sign In
+                    </span>
+                    <ChevronRight size={16} style={{ transition: 'transform 0.3s ease' }} />
+                  </>
+                )}
+              </span>
             </button>
           </form>
 
@@ -543,32 +694,68 @@ export function LoginPage() {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            margin: '32px 0',
+            margin: '36px 0',
           }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: isDark ? '#2A2A2A' : '#e0e0e0' }} />
-            <span style={{ padding: '0 16px', color: '#757575', fontSize: '12px' }}>OR</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: isDark ? '#2A2A2A' : '#e0e0e0' }} />
+            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
+            <span style={{ padding: '0 16px', color: 'var(--text-muted)', fontSize: '12px', fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em' }}>OR</span>
+            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
           </div>
 
           {/* Sign Up Link */}
-          <p style={{
+          <div style={{
             textAlign: 'center',
-            color: '#9E9E9E',
-            fontSize: '14px',
-            margin: 0,
+            padding: '20px 16px',
+            borderRadius: '14px',
+            background: isDark 
+              ? 'linear-gradient(135deg, rgba(96,165,250,0.06), rgba(167,139,250,0.04))'
+              : 'linear-gradient(135deg, rgba(96,165,250,0.04), rgba(167,139,250,0.03))',
+            border: `1px solid ${isDark ? 'rgba(96,165,250,0.2)' : 'rgba(96,165,250,0.15)'}`,
+            boxShadow: isDark 
+              ? '0 8px 24px rgba(96,165,250,0.1)'
+              : '0 8px 24px rgba(96,165,250,0.05)',
           }}>
-            Don't have an account?{' '}
+              <p style={{
+                color: 'var(--text-muted)',
+                fontSize: '14px',
+                margin: '0 0 8px 0',
+                fontFamily: "'Instrument Sans', sans-serif",
+              }}>
+              Don't have an account?
+            </p>
             <Link
               href="/register"
               style={{
-                color: '#FEC00F',
-                fontWeight: 600,
+                color: 'var(--accent)',
+                fontWeight: 700,
                 textDecoration: 'none',
+                fontFamily: "'Syne', sans-serif",
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                border: `1px solid rgba(96,165,250,0.3)`,
+                background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(96,165,250,0.25)';
+                e.currentTarget.style.background = 'rgba(96,165,250,0.15)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.background = isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)';
               }}
             >
               Create one
+              <ChevronRight size={14} />
             </Link>
-          </p>
+          </div>
         </div>
       </div>
 
@@ -583,20 +770,20 @@ export function LoginPage() {
         backgroundColor: isDark ? 'rgba(10, 10, 11, 0.85)' : 'rgba(255, 255, 255, 0.85)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
-        borderTop: `1px solid ${isDark ? 'rgba(42, 42, 42, 0.5)' : 'rgba(0,0,0,0.06)'}`,
+        borderTop: `1px solid var(--border)`,
         zIndex: 50,
       }}>
         <p style={{
-          color: '#757575',
+          color: 'var(--text-muted)',
           fontSize: '12px',
           margin: 0,
-          fontFamily: "'Quicksand', sans-serif",
+          fontFamily: "'Instrument Sans', sans-serif",
         }}>
-          {'© 2026 Potomac Fund Management. All rights reserved.'}
+          © 2026 Potomac Fund Management. All rights reserved.
         </p>
       </div>
 
-      {/* CSS Animation */}
+      {/* Enhanced CSS Animations */}
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -611,30 +798,35 @@ export function LoginPage() {
           50%       { opacity: 0.3; transform: scale(0.7); }
         }
         @keyframes devBadgePulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(254,192,15,0); }
-          50%       { box-shadow: 0 0 0 4px rgba(254,192,15,0.15); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); }
+          50%       { box-shadow: 0 0 0 4px rgba(96,165,250,0.15); }
         }
         @keyframes taglinePulse {
           0%, 100% {
             text-shadow:
-              0 0 10px  #FEC00F,
-              0 0 20px  #FEC00F,
-              0 0 40px  rgba(254, 192, 15, 0.85),
-              0 0 70px  rgba(254, 192, 15, 0.65),
-              0 0 110px rgba(254, 192, 15, 0.45),
-              0 0 160px rgba(254, 192, 15, 0.25);
+              0 0 10px  var(--accent),
+              0 0 20px  var(--accent),
+              0 0 40px  rgba(96,165,250,0.85),
+              0 0 70px  rgba(96,165,250,0.65),
+              0 0 110px rgba(96,165,250,0.45),
+              0 0 160px rgba(96,165,250,0.25);
             opacity: 0.95;
           }
           50% {
             text-shadow:
-              0 0 15px  #FEC00F,
-              0 0 30px  #FEC00F,
-              0 0 60px  rgba(254, 192, 15, 1),
-              0 0 100px rgba(254, 192, 15, 0.9),
-              0 0 150px rgba(254, 192, 15, 0.7),
-              0 0 200px rgba(254, 192, 15, 0.4);
+              0 0 15px  var(--accent),
+              0 0 30px  var(--accent),
+              0 0 60px  rgba(96,165,250,1),
+              0 0 100px rgba(96,165,250,0.9),
+              0 0 150px rgba(96,165,250,0.7),
+              0 0 200px rgba(96,165,250,0.4);
             opacity: 1;
           }
+        }
+        @keyframes float {
+          0% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(180deg); }
+          100% { transform: translateY(0px) rotate(360deg); }
         }
         .tagline-glow {
           animation: taglinePulse 3.5s ease-in-out infinite;

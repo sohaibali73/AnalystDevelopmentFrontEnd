@@ -125,9 +125,9 @@ export function ReverseEngineerPage() {
     border: isDark ? '#333333' : '#e5e5e5',
     text: isDark ? '#E8E8E8' : '#1A1A1A',
     textMuted: isDark ? '#B0B0B0' : '#666666',
-    primaryYellow: '#FEC00F',
+    primaryBlue: '#60A5FA',
     darkGray: '#212121',
-    accentYellow: '#FFD700',
+    accentBlue: '#3B82F6',
     codePanelBg: isDark ? '#141414' : '#fafafa',
   };
 
@@ -472,9 +472,9 @@ export function ReverseEngineerPage() {
       {/* ===== SIDEBAR ===== */}
       <div style={{ width: sidebarCollapsed ? '0px' : '280px', backgroundColor: colors.sidebar, borderRight: sidebarCollapsed ? 'none' : `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', transition: 'width 0.3s ease', flexShrink: 0 }}>
         {/* Sidebar Header */}
-        <div style={{ padding: '24px 20px', borderBottom: `2px solid ${colors.primaryYellow}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.08)' }}>
+        <div style={{ padding: '24px 20px', borderBottom: `2px solid ${colors.primaryBlue}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDark ? 'rgba(96,165,250,0.05)' : 'rgba(96,165,250,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <GitBranch size={22} color={colors.primaryYellow} />
+            <GitBranch size={22} color={colors.primaryBlue} />
             <h2 style={{ fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", fontSize: '14px', fontWeight: 700, color: colors.text, margin: 0, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Reverse Engineer</h2>
           </div>
           <button onClick={() => setSidebarCollapsed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
@@ -484,7 +484,7 @@ export function ReverseEngineerPage() {
 
         {/* New Chat + Search */}
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <button onClick={handleNewConversation} style={{ width: '100%', padding: '12px', backgroundColor: colors.primaryYellow, border: 'none', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 700, color: colors.darkGray, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", fontSize: '14px', transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(254, 192, 15, 0.2)' }} onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(254, 192, 15, 0.3)'; }} onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(254, 192, 15, 0.2)'; }}>
+          <button onClick={handleNewConversation} style={{ width: '100%', padding: '12px', backgroundColor: colors.primaryBlue, border: 'none', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 700, color: colors.darkGray, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", fontSize: '14px', transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(96,165,250,0.2)' }} onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(96,165,250,0.3)'; }} onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(96,165,250,0.2)'; }}>
             <Plus size={18} /> New Session
           </button>
           <div style={{ position: 'relative' }}>
@@ -495,7 +495,7 @@ export function ReverseEngineerPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search sessions..."
               style={{ width: '100%', padding: '8px 10px 8px 32px', backgroundColor: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text, fontSize: '12px', outline: 'none', boxSizing: 'border-box', fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", transition: 'border-color 0.2s ease' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryYellow; }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
               onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
             {searchQuery && (
@@ -533,8 +533,8 @@ export function ReverseEngineerPage() {
               );
             }
             return filtered.map(conv => (
-              <div key={conv.id} onClick={() => { if (renamingId !== conv.id) setSelectedConversation(conv); }} style={{ padding: '10px 12px', marginBottom: '4px', backgroundColor: selectedConversation?.id === conv.id ? 'rgba(254, 192, 15, 0.15)' : 'transparent', border: selectedConversation?.id === conv.id ? `2px solid ${colors.primaryYellow}` : '1px solid transparent', borderRadius: '10px', cursor: 'pointer', color: colors.text, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", transition: 'all 0.2s ease' }} onMouseOver={(e) => selectedConversation?.id !== conv.id && (e.currentTarget.style.backgroundColor = isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.08)')} onMouseOut={(e) => selectedConversation?.id !== conv.id && (e.currentTarget.style.backgroundColor = 'transparent')}>
-                <GitBranch size={14} style={{ flexShrink: 0, color: selectedConversation?.id === conv.id ? colors.primaryYellow : colors.textMuted }} />
+              <div key={conv.id} onClick={() => { if (renamingId !== conv.id) setSelectedConversation(conv); }} style={{ padding: '10px 12px', marginBottom: '4px', backgroundColor: selectedConversation?.id === conv.id ? 'rgba(96,165,250,0.15)' : 'transparent', border: selectedConversation?.id === conv.id ? `2px solid ${colors.primaryBlue}` : '1px solid transparent', borderRadius: '10px', cursor: 'pointer', color: colors.text, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", transition: 'all 0.2s ease' }} onMouseOver={(e) => selectedConversation?.id !== conv.id && (e.currentTarget.style.backgroundColor = isDark ? 'rgba(96,165,250,0.05)' : 'rgba(96,165,250,0.08)')} onMouseOut={(e) => selectedConversation?.id !== conv.id && (e.currentTarget.style.backgroundColor = 'transparent')}>
+                <GitBranch size={14} style={{ flexShrink: 0, color: selectedConversation?.id === conv.id ? colors.primaryBlue : colors.textMuted }} />
                 {renamingId === conv.id ? (
                   <input
                     autoFocus
@@ -558,7 +558,7 @@ export function ReverseEngineerPage() {
                       apiClient.renameConversation(conv.id, newTitle).catch(() => {});
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ flex: 1, background: colors.inputBg, border: `2px solid ${colors.primaryYellow}`, borderRadius: '4px', color: colors.text, fontSize: '13px', padding: '4px 8px', outline: 'none', minWidth: 0, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}
+                    style={{ flex: 1, background: colors.inputBg, border: `2px solid ${colors.primaryBlue}`, borderRadius: '4px', color: colors.text, fontSize: '13px', padding: '4px 8px', outline: 'none', minWidth: 0, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}
                   />
                 ) : (
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontWeight: selectedConversation?.id === conv.id ? 600 : 400 }}>{conv.title}</span>
@@ -591,11 +591,11 @@ export function ReverseEngineerPage() {
         {/* Top toolbar */}
         <div style={{ padding: '10px 20px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.background, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <GitBranch size={18} color={colors.primaryYellow} />
+            <GitBranch size={18} color={colors.primaryBlue} />
             <span style={{ fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", fontSize: '14px', fontWeight: 700, color: colors.text, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
               Reverse Engineer
             </span>
-            <span style={{ fontSize: '11px', padding: '2px 10px', borderRadius: '6px', backgroundColor: isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.08)', color: colors.primaryYellow, fontWeight: 600, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}>
+            <span style={{ fontSize: '11px', padding: '2px 10px', borderRadius: '6px', backgroundColor: isDark ? 'rgba(96,165,250,0.1)' : 'rgba(96,165,250,0.08)', color: colors.primaryBlue, fontWeight: 600, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" }}>
               Strategy to AFL
             </span>
           </div>
@@ -622,11 +622,11 @@ export function ReverseEngineerPage() {
                   description="Transform strategy descriptions into working AFL code"
                 >
                   <div className="flex flex-col items-center gap-4" style={{ padding: '20px' }}>
-                    <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <GitBranch size={32} color={colors.primaryYellow} />
+                    <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: isDark ? 'rgba(96,165,250,0.1)' : 'rgba(96,165,250,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <GitBranch size={32} color={colors.primaryBlue} />
                     </div>
                     <div className="space-y-1 text-center">
-                      <h3 style={{ fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", fontSize: '20px', fontWeight: 700, color: colors.primaryYellow, margin: '8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>REVERSE ENGINEER</h3>
+                      <h3 style={{ fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", fontSize: '20px', fontWeight: 700, color: colors.primaryBlue, margin: '8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>REVERSE ENGINEER</h3>
                       <p style={{ fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", fontSize: '14px', color: colors.textMuted, margin: '4px 0', maxWidth: '480px' }}>
                         Describe any trading strategy in plain English and I will research its components, build a schematic, and generate production-ready AFL code.
                       </p>
@@ -678,7 +678,7 @@ export function ReverseEngineerPage() {
         )}
 
         {/* PromptInput */}
-        <div className="px-6 py-5" style={{ flexShrink: 0, borderTop: `2px solid ${colors.primaryYellow}`, backgroundColor: isDark ? 'rgba(254, 192, 15, 0.03)' : 'rgba(254, 192, 15, 0.05)', transition: 'all 0.2s ease' }}>
+        <div className="px-6 py-5" style={{ flexShrink: 0, borderTop: `2px solid ${colors.primaryBlue}`, backgroundColor: isDark ? 'rgba(96,165,250,0.03)' : 'rgba(96,165,250,0.05)', transition: 'all 0.2s ease' }}>
           <div className="max-w-[900px] mx-auto">
             <TooltipProvider>
               <PromptInput
@@ -792,11 +792,11 @@ export function ReverseEngineerPage() {
       {codePanelOpen && (
         <div style={{ width: isMobile ? '100%' : '420px', backgroundColor: colors.codePanelBg, borderLeft: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', height: '100%', flexShrink: 0, transition: 'width 0.3s ease', position: isMobile ? 'absolute' : 'relative', right: 0, top: 0, zIndex: isMobile ? 200 : 1 }}>
           {/* Panel Header */}
-          <div style={{ padding: '16px 20px', borderBottom: `2px solid ${colors.primaryYellow}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.08)' }}>
+          <div style={{ padding: '16px 20px', borderBottom: `2px solid ${colors.primaryBlue}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDark ? 'rgba(96,165,250,0.05)' : 'rgba(96,165,250,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Code2 size={18} color={colors.primaryYellow} />
+              <Code2 size={18} color={colors.primaryBlue} />
               <h3 style={{ fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", fontSize: '13px', fontWeight: 700, color: colors.text, margin: 0, letterSpacing: '0.5px', textTransform: 'uppercase' }}>AFL CODE</h3>
-              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', backgroundColor: isDark ? 'rgba(254, 192, 15, 0.15)' : 'rgba(254, 192, 15, 0.1)', color: colors.primaryYellow, fontWeight: 600, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", textTransform: 'uppercase' }}>Reverse Engineered</span>
+              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', backgroundColor: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.1)', color: colors.primaryBlue, fontWeight: 600, fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", textTransform: 'uppercase' }}>Reverse Engineered</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button onClick={handleCopyCode} disabled={!generatedCode} style={{ background: 'none', border: 'none', cursor: generatedCode ? 'pointer' : 'default', padding: '6px', borderRadius: '6px', opacity: generatedCode ? 1 : 0.3 }} title="Copy code">
@@ -875,7 +875,7 @@ export function ReverseEngineerPage() {
                     fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
                     transition: 'all 0.2s ease',
                   }}
-                  onMouseOver={(e) => { e.currentTarget.style.borderColor = colors.primaryYellow; e.currentTarget.style.color = colors.primaryYellow; }}
+                  onMouseOver={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; e.currentTarget.style.color = colors.primaryBlue; }}
                   onMouseOut={(e) => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.color = colors.textMuted; }}
                 >
                   {label}
