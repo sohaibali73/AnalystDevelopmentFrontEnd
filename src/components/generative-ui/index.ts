@@ -110,6 +110,9 @@ export { default as ReactComponent } from './ReactComponent';
 // Persistent generation card for document/presentation generation
 export { default as PersistentGenerationCard } from './PersistentGenerationCard';
 
+// NEW: Document Generation Card with real progress tracking (DOCX, PPTX, XLSX, PDF, AFL, Datapack)
+export { default as DocumentGenerationCard } from './DocumentGenerationCard';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SKILL EXECUTION RESULT CARDS
 // Generative UI components for Claude Custom Beta Skills

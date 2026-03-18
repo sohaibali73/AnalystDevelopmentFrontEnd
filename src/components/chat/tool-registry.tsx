@@ -51,6 +51,7 @@ import {
   DocInterpreterCard,
 } from '@/components/generative-ui';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
+import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
 
@@ -66,7 +67,7 @@ interface ToolPartState {
   toolName?: string;
 }
 
-type ToolRenderMode = 'standard' | 'persistent' | 'flight-search';
+type ToolRenderMode = 'standard' | 'persistent' | 'document-generation' | 'flight-search';
 
 interface ToolRegistryEntry {
   /** The React component to render for output-available state */
@@ -160,16 +161,16 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   quant_analyst:                  { component: SkillResultCard, displayName: 'Quant Analyst' },
   backtest_expert:                { component: SkillResultCard, displayName: 'Backtest Expert' },
   backtesting_frameworks:         { component: SkillResultCard, displayName: 'Backtesting Frameworks' },
-  // Potomac branded skills (persistent — produce files)
-  potomac_docx:                   { component: PersistentGenerationCard, mode: 'persistent' },
-  potomac_pptx:                   { component: PersistentGenerationCard, mode: 'persistent' },
-  potomac_xlsx:                   { component: PersistentGenerationCard, mode: 'persistent' },
-  create_potomac_docx:            { component: PersistentGenerationCard, mode: 'persistent' },
-  create_potomac_pptx:            { component: PersistentGenerationCard, mode: 'persistent' },
-  create_potomac_xlsx:            { component: PersistentGenerationCard, mode: 'persistent' },
-  // Datapack Builder (persistent — produces Excel)
-  datapack_builder:               { component: PersistentGenerationCard, mode: 'persistent' },
-  build_datapack:                 { component: PersistentGenerationCard, mode: 'persistent' },
+  // Potomac branded skills (document generation with progress)
+  potomac_docx:                   { component: DocumentGenerationCard, mode: 'document-generation' },
+  potomac_pptx:                   { component: DocumentGenerationCard, mode: 'document-generation' },
+  potomac_xlsx:                   { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_potomac_docx:            { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_potomac_pptx:            { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_potomac_xlsx:            { component: DocumentGenerationCard, mode: 'document-generation' },
+  // Datapack Builder (document generation — produces Excel)
+  datapack_builder:               { component: DocumentGenerationCard, mode: 'document-generation' },
+  build_datapack:                 { component: DocumentGenerationCard, mode: 'document-generation' },
   // AFL Developer skill
   amibroker_afl_developer:        { component: AFLGenerateCard, displayName: 'AFL Developer' },
   afl_developer:                  { component: AFLGenerateCard, displayName: 'AFL Developer' },
@@ -177,19 +178,27 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   ai_elements:                    { component: SkillResultCard, displayName: 'AI Elements' },
   artifacts_builder:              { component: SkillResultCard, displayName: 'Artifacts Builder' },
 
-  // ── Document Generation (persistent) ───────
-  create_word_document:     { component: PersistentGenerationCard, mode: 'persistent' },
-  create_pptx_with_skill:   { component: PersistentGenerationCard, mode: 'persistent' },
-  create_presentation:      { component: PersistentGenerationCard, mode: 'persistent' },
-  create_document:          { component: PersistentGenerationCard, mode: 'persistent' },
-  create_docx:              { component: PersistentGenerationCard, mode: 'persistent' },
-  generate_document:        { component: PersistentGenerationCard, mode: 'persistent' },
-  generate_docx:            { component: PersistentGenerationCard, mode: 'persistent' },
-  create_word_doc:          { component: PersistentGenerationCard, mode: 'persistent' },
-  create_pptx:              { component: PersistentGenerationCard, mode: 'persistent' },
-  generate_pptx:            { component: PersistentGenerationCard, mode: 'persistent' },
-  generate_presentation:    { component: PersistentGenerationCard, mode: 'persistent' },
-  create_powerpoint:        { component: PersistentGenerationCard, mode: 'persistent' },
+  // ── Document Generation (with real progress) ───────
+  create_word_document:     { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_pptx_with_skill:   { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_presentation:      { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_document:          { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_docx:              { component: DocumentGenerationCard, mode: 'document-generation' },
+  generate_document:        { component: DocumentGenerationCard, mode: 'document-generation' },
+  generate_docx:            { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_word_doc:          { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_pptx:              { component: DocumentGenerationCard, mode: 'document-generation' },
+  generate_pptx:            { component: DocumentGenerationCard, mode: 'document-generation' },
+  generate_presentation:    { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_powerpoint:        { component: DocumentGenerationCard, mode: 'document-generation' },
+  // Additional document skill aliases
+  create_xlsx:              { component: DocumentGenerationCard, mode: 'document-generation' },
+  generate_xlsx:            { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_spreadsheet:       { component: DocumentGenerationCard, mode: 'document-generation' },
+  generate_spreadsheet:     { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_excel:             { component: DocumentGenerationCard, mode: 'document-generation' },
+  create_pdf:               { component: DocumentGenerationCard, mode: 'document-generation' },
+  generate_pdf:             { component: DocumentGenerationCard, mode: 'document-generation' },
 };
 
 // ─── Error Component ─────────────────────────────────────────────────────────
@@ -248,10 +257,26 @@ export function renderToolPart(
     }
   }
 
-  // ── Registered persistent tool (document/presentation generation) ──────
+  // ── Registered persistent tool (legacy document generation) ────────────
   if (entry?.mode === 'persistent') {
     return (
       <PersistentGenerationCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={toolName}
+        input={part.input}
+        output={part.state === 'output-available' ? part.output : undefined}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
+  // ── Document generation with real progress (DOCX, PPTX, XLSX, etc.) ───
+  if (entry?.mode === 'document-generation') {
+    return (
+      <DocumentGenerationCard
         key={pIdx}
         toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
         toolName={toolName}
