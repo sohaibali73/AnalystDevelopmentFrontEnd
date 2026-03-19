@@ -449,7 +449,7 @@ export function ChatPage() {
         if (isActive && !trackedToolsRef.current.has(toolKey)) {
           const processId = addProcess({
             title: getToolTitle(toolName, part.input),
-            type: getProcessType(toolName),
+            type: getProcessType(toolName, part.input),
             status: 'running',
             progress: 0,
             message: `Running ${toolName.replace(/_/g, ' ')}...`,

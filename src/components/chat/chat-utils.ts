@@ -97,7 +97,15 @@ export function getFileChipColor(ext: string): string {
 /**
  * Map a tool name to a ProcessType for the Task Manager widget.
  */
-export function getProcessType(toolName: string): ProcessType {
+export function getProcessType(toolName: string, input?: Record<string, any>): ProcessType {
+  // For invoke_skill, derive type from the skill slug
+  if (toolName === 'invoke_skill' && input?.skill_slug) {
+    const slug = input.skill_slug;
+    if (/pptx|presentation|powerpoint|slide/.test(slug)) return 'slide';
+    if (/docx|word|document/.test(slug)) return 'document';
+    if (/xlsx|excel|spreadsheet/.test(slug)) return 'dashboard';
+    if (/afl|amibroker/.test(slug)) return 'afl';
+  }
   if (/pptx|presentation|powerpoint|slide/.test(toolName)) return 'slide';
   if (/document|docx|word/.test(toolName)) return 'document';
   if (/afl|code/.test(toolName)) return 'afl';
@@ -109,8 +117,25 @@ export function getProcessType(toolName: string): ProcessType {
 /**
  * Get a readable title from a tool name and its input.
  */
+const SKILL_SLUG_LABELS: Record<string, string> = {
+  'potomac-pptx':        'Creating PowerPoint',
+  'potomac-pptx-skill':  'Creating PowerPoint',
+  'potomac-docx-skill':  'Creating Word Document',
+  'potomac-xlsx':        'Creating Excel Spreadsheet',
+  'dcf-model':           'Building DCF Model',
+  'doc-interpreter':     'Reading Document',
+  'amibroker-afl-developer': 'Generating AFL Code',
+  'backtest-expert':     'Backtest Analysis',
+  'quant-analyst':       'Quant Analysis',
+  'us-market-bubble-detector': 'Bubble Detection',
+};
+
 export function getToolTitle(toolName: string, input?: Record<string, any>): string {
   const readable = toolName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  // For invoke_skill, use the slug to get a human-readable label
+  if (toolName === 'invoke_skill' && input?.skill_slug) {
+    return SKILL_SLUG_LABELS[input.skill_slug] || input.skill_slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+  }
   if (input?.title) return input.title;
   if (input?.symbol) return `${readable} (${input.symbol})`;
   if (input?.topic) return String(input.topic).slice(0, 40);
