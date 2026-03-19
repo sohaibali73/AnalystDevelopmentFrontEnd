@@ -213,6 +213,7 @@ export function ChatPage() {
   const [kbPanelOpen, setKbPanelOpen] = useState(false);
   const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
   const [backendAvailable, setBackendAvailable] = useState(true);
+  const [skillStatus, setSkillStatus] = useState<{ label: string; slug: string } | null>(null);
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { status: connStatus, check: recheckConnection } = useConnectionStatus({ interval: 60000 });
@@ -292,6 +293,9 @@ export function ChatPage() {
   }, []);
 
   // ── AI SDK useChat ─────────────────────────────────────────────────────────
+  const [thinkingMode, setThinkingMode] = useState<string | undefined>(undefined);
+  const [thinkingBudget, setThinkingBudget] = useState<number | undefined>(undefined);
+
   const {
     messages: streamMessages, sendMessage, status, stop,
     error: chatError, setMessages, regenerate,
@@ -302,9 +306,42 @@ export function ChatPage() {
         const token = getAuthToken();
         return { Authorization: token ? `Bearer ${token}` : '' };
       },
-      body: () => ({ conversationId: conversationIdRef.current }),
+      body: () => ({
+        conversationId: conversationIdRef.current,
+        thinking_mode: thinkingMode,
+        thinking_budget: thinkingBudget,
+      }),
     }),
+    onData: (dataPart: any) => {
+      // AI SDK now passes a single data part — the payload is in dataPart.data
+      // Our backend wraps items in an array: 2:[{...}]
+      const items: any[] = Array.isArray(dataPart?.data)
+        ? dataPart.data
+        : Array.isArray(dataPart)
+          ? dataPart
+          : [dataPart];
+
+      for (const item of items) {
+        if (!item) continue;
+        // Skill status — show what skill is running during the wait
+        if (item.skill_status) {
+          setSkillStatus({ label: item.skill_status, slug: item.skill_slug ?? '' });
+        }
+        // File download — toast so user knows file is ready
+        if (item.type === 'file_download' && item.filename) {
+          toast.success(`${item.filename} is ready`, {
+            description: 'Click to download',
+            action: {
+              label: 'Download',
+              onClick: () => window.open(item.download_url, '_blank'),
+            },
+            duration: 10000,
+          });
+        }
+      }
+    },
     onFinish: ({ message }) => {
+      setSkillStatus(null); // Clear skill status when response completes
       const convId = conversationIdRef.current;
       justFinishedStreamRef.current = convId;
       setTimeout(() => {
@@ -320,6 +357,7 @@ export function ChatPage() {
       }
     },
     onError: (error) => {
+      setSkillStatus(null); // Clear skill status on error
       const msg = error.message || 'An error occurred';
       setPageError(msg);
       
@@ -751,7 +789,11 @@ export function ChatPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 700, color: T.text, letterSpacing: '-0.01em' }}>Yang</span>
             {timeStr && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: T.dim, letterSpacing: '0.06em' }}>{timeStr}</span>}
-            {msgIsStreaming && <Shimmer duration={1.5}>Streaming…</Shimmer>}
+            {msgIsStreaming && (
+              <Shimmer duration={1.5}>
+                {skillStatus ? skillStatus.label : 'Streaming…'}
+              </Shimmer>
+            )}
           </div>
 
           {/* Sources */}
@@ -1049,7 +1091,7 @@ export function ChatPage() {
                   {/* Orphaned generation cards */}
                   {(() => {
                     try {
-                      const raw = localStorage.getItem('gen_cards');
+                      const raw = (() => { try { return localStorage.getItem('gen_cards'); } catch { return null; } })();
                       if (!raw) return null;
                       const jobs = JSON.parse(raw) as Record<string, any>;
                       const convId = conversationIdRef.current;

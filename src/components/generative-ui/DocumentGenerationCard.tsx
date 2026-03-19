@@ -3,17 +3,102 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DocumentGenerationCard — Real progress GenUI card for file-producing skills
-// Supports: DOCX, PPTX, XLSX, PDF, AFL, Datapacks, and generic files
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── SVG Icon Components ──────────────────────────────────────────────────────
 
-// ── File Type Definitions ────────────────────────────────────────────────────
+const IconWord = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="2" width="13" height="17" rx="2" fill={color} opacity="0.15" stroke={color} strokeWidth="1.5"/>
+    <path d="M7 7h6M7 10h6M7 13h4" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M14 15l2 5 2-4 2 4 2-5" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const IconPPTX = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="18" height="14" rx="2" fill={color} opacity="0.12" stroke={color} strokeWidth="1.5"/>
+    <path d="M8 10h3a1.5 1.5 0 0 1 0 3H8V7h3a1.5 1.5 0 0 1 0 3" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+    <path d="M7 20h10" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M12 17v3" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconXLSX = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="18" height="18" rx="2" fill={color} opacity="0.12" stroke={color} strokeWidth="1.5"/>
+    <path d="M3 9h18M3 15h18M9 3v18M15 3v18" stroke={color} strokeWidth="1.2" opacity="0.6"/>
+    <path d="M6 6l3 3m0-3L6 9" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconPDF = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill={color} opacity="0.12" stroke={color} strokeWidth="1.5"/>
+    <path d="M14 2v6h6" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M8 13h2a1 1 0 1 1 0 2H8v-4h2a1 1 0 1 1 0 2" stroke={color} strokeWidth="1.3" strokeLinecap="round"/>
+    <path d="M14 11v4m0-4h1a1.5 1.5 0 0 1 0 3h-1" stroke={color} strokeWidth="1.3" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconAFL = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const IconDatapack = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" fill={color} opacity="0.12" stroke={color} strokeWidth="1.5"/>
+    <path d="M3 8l9 5 9-5M12 13v8" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconGeneric = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill={color} opacity="0.12" stroke={color} strokeWidth="1.5"/>
+    <path d="M14 2v6h6M8 13h8M8 17h5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconDownload = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const IconCopy = ({ size = 13, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect x="9" y="9" width="13" height="13" rx="2" stroke={color} strokeWidth="2"/>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke={color} strokeWidth="2"/>
+  </svg>
+);
+
+const IconCheck = ({ size = 13, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <polyline points="20 6 9 17 4 12" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const IconAlert = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke={color} strokeWidth="1.8"/>
+    <line x1="12" y1="9" x2="12" y2="13" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+    <line x1="12" y1="17" x2="12.01" y2="17" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconClock = ({ size = 12, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2"/>
+    <polyline points="12 6 12 12 16 14" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+// ─── File Type Definitions ───────────────────────────────────────────────────
 
 type FileType = 'docx' | 'pptx' | 'xlsx' | 'pdf' | 'afl' | 'datapack' | 'generic';
 
 interface FileTypeMeta {
-  icon: string;
+  IconComponent: React.ComponentType<{ size?: number; color?: string }>;
   label: string;
   color: string;
   gradient: string;
@@ -24,120 +109,120 @@ interface FileTypeMeta {
 
 const FILE_TYPES: Record<FileType, FileTypeMeta> = {
   docx: {
-    icon: '📄',
+    IconComponent: IconWord,
     label: 'Word Document',
     color: '#2B579A',
     gradient: 'linear-gradient(135deg, #2B579A 0%, #3B7DD8 100%)',
     bgLight: 'rgba(43,87,154,0.08)',
     bgDark: 'rgba(43,87,154,0.15)',
     phases: [
-      'Analyzing content requirements...',
-      'Structuring document outline...',
-      'Writing document content...',
-      'Applying formatting & styles...',
-      'Generating DOCX file...',
-      'Finalizing document...',
+      'Analysing content requirements',
+      'Structuring document outline',
+      'Writing document content',
+      'Applying formatting and styles',
+      'Generating DOCX file',
+      'Finalising document',
     ],
   },
   pptx: {
-    icon: '📊',
+    IconComponent: IconPPTX,
     label: 'PowerPoint Presentation',
     color: '#D24726',
     gradient: 'linear-gradient(135deg, #D24726 0%, #FF6B47 100%)',
     bgLight: 'rgba(210,71,38,0.08)',
     bgDark: 'rgba(210,71,38,0.15)',
     phases: [
-      'Analyzing presentation topic...',
-      'Designing slide structure...',
-      'Creating slide content...',
-      'Applying themes & layouts...',
-      'Generating visual elements...',
-      'Building PPTX file...',
+      'Analysing presentation topic',
+      'Designing slide structure',
+      'Creating slide content',
+      'Applying themes and layouts',
+      'Generating visual elements',
+      'Building PPTX file',
     ],
   },
   xlsx: {
-    icon: '📈',
+    IconComponent: IconXLSX,
     label: 'Excel Spreadsheet',
     color: '#217346',
     gradient: 'linear-gradient(135deg, #217346 0%, #33A06F 100%)',
     bgLight: 'rgba(33,115,70,0.08)',
     bgDark: 'rgba(33,115,70,0.15)',
     phases: [
-      'Analyzing data requirements...',
-      'Structuring worksheets...',
-      'Populating cells & formulas...',
-      'Formatting tables & charts...',
-      'Generating XLSX file...',
-      'Finalizing spreadsheet...',
+      'Analysing data requirements',
+      'Structuring worksheets',
+      'Populating cells and formulas',
+      'Formatting tables and charts',
+      'Generating XLSX file',
+      'Finalising spreadsheet',
     ],
   },
   pdf: {
-    icon: '📕',
+    IconComponent: IconPDF,
     label: 'PDF Document',
     color: '#B30B00',
     gradient: 'linear-gradient(135deg, #B30B00 0%, #E8453C 100%)',
     bgLight: 'rgba(179,11,0,0.08)',
     bgDark: 'rgba(179,11,0,0.15)',
     phases: [
-      'Analyzing content...',
-      'Structuring layout...',
-      'Rendering pages...',
-      'Applying typography...',
-      'Generating PDF...',
-      'Finalizing document...',
+      'Analysing content',
+      'Structuring layout',
+      'Rendering pages',
+      'Applying typography',
+      'Generating PDF',
+      'Finalising document',
     ],
   },
   afl: {
-    icon: '⚡',
+    IconComponent: IconAFL,
     label: 'AFL Code',
     color: '#6366F1',
     gradient: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
     bgLight: 'rgba(99,102,241,0.08)',
     bgDark: 'rgba(99,102,241,0.15)',
     phases: [
-      'Analyzing strategy requirements...',
-      'Designing signal logic...',
-      'Writing AFL code...',
-      'Adding risk management...',
-      'Validating syntax...',
-      'Finalizing code...',
+      'Analysing strategy requirements',
+      'Designing signal logic',
+      'Writing AFL code',
+      'Adding risk management',
+      'Validating syntax',
+      'Finalising code',
     ],
   },
   datapack: {
-    icon: '📦',
+    IconComponent: IconDatapack,
     label: 'Data Pack',
     color: '#0EA5E9',
     gradient: 'linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)',
     bgLight: 'rgba(14,165,233,0.08)',
     bgDark: 'rgba(14,165,233,0.15)',
     phases: [
-      'Gathering data sources...',
-      'Processing financial data...',
-      'Building data tables...',
-      'Formatting output sheets...',
-      'Generating data pack...',
-      'Packaging files...',
+      'Gathering data sources',
+      'Processing financial data',
+      'Building data tables',
+      'Formatting output sheets',
+      'Generating data pack',
+      'Packaging files',
     ],
   },
   generic: {
-    icon: '📁',
+    IconComponent: IconGeneric,
     label: 'File',
     color: '#6B7280',
     gradient: 'linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%)',
     bgLight: 'rgba(107,114,128,0.08)',
     bgDark: 'rgba(107,114,128,0.15)',
     phases: [
-      'Analyzing request...',
-      'Processing content...',
-      'Generating output...',
-      'Formatting file...',
-      'Building file...',
-      'Finalizing...',
+      'Analysing request',
+      'Processing content',
+      'Generating output',
+      'Formatting file',
+      'Building file',
+      'Finalising',
     ],
   },
 };
 
-// ── Props ────────────────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface DocumentGenerationCardProps {
   toolCallId: string;
@@ -149,37 +234,25 @@ interface DocumentGenerationCardProps {
   conversationId?: string;
 }
 
-// ── Helper: detect file type from tool name ──────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function detectFileType(toolName: string, input?: any): FileType {
   const name = (toolName || '').toLowerCase();
   const inputStr = JSON.stringify(input || {}).toLowerCase();
-
-  if (name.includes('docx') || name.includes('word') || name.includes('document'))
-    return 'docx';
-  if (name.includes('pptx') || name.includes('powerpoint') || name.includes('presentation') || name.includes('slide') || name.includes('deck'))
-    return 'pptx';
-  if (name.includes('xlsx') || name.includes('excel') || name.includes('spreadsheet'))
-    return 'xlsx';
-  if (name.includes('pdf'))
-    return 'pdf';
-  if (name.includes('afl') || name.includes('amibroker'))
-    return 'afl';
-  if (name.includes('datapack') || name.includes('data_pack'))
-    return 'datapack';
-
-  // Fallback: check input for hints
+  if (name.includes('docx') || name.includes('word') || name.includes('document')) return 'docx';
+  if (name.includes('pptx') || name.includes('powerpoint') || name.includes('presentation') || name.includes('slide') || name.includes('deck')) return 'pptx';
+  if (name.includes('xlsx') || name.includes('excel') || name.includes('spreadsheet')) return 'xlsx';
+  if (name.includes('pdf')) return 'pdf';
+  if (name.includes('afl') || name.includes('amibroker')) return 'afl';
+  if (name.includes('datapack') || name.includes('data_pack')) return 'datapack';
   if (inputStr.includes('.docx') || inputStr.includes('word')) return 'docx';
   if (inputStr.includes('.pptx') || inputStr.includes('powerpoint')) return 'pptx';
   if (inputStr.includes('.xlsx') || inputStr.includes('excel')) return 'xlsx';
-
   return 'generic';
 }
 
-// ── Helper: extract title from input ─────────────────────────────────────────
-
 function extractTitle(input: any, toolName: string): string {
-  if (!input) return 'Generating file...';
+  if (!input) return 'Generating file';
   return (
     input.title ||
     input.topic ||
@@ -188,13 +261,11 @@ function extractTitle(input: any, toolName: string): string {
     input.subject ||
     input.prompt?.slice(0, 60) ||
     input.message?.slice(0, 60) ||
-    `${toolName.replace(/_/g, ' ')}`
+    toolName.replace(/_/g, ' ')
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Component
-// ══════════════════════════════════════════════════════════════════════════════
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   toolCallId,
@@ -208,14 +279,13 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   const fileType = detectFileType(toolName, input);
   const meta = FILE_TYPES[fileType];
   const title = extractTitle(input, toolName);
+  const FileIcon = meta.IconComponent;
 
-  // ── State ────────────────────────────────────────────────────────────────
   const [progress, setProgress] = useState(0);
   const [currentPhase, setCurrentPhase] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const [isError, setIsError] = useState(false);
-  const [downloadReady, setDownloadReady] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [fileId, setFileId] = useState<string | null>(null);
   const [outputData, setOutputData] = useState<any>(null);
@@ -224,13 +294,14 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   const startTimeRef = useRef<number>(Date.now());
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isDark = typeof window !== 'undefined' &&
-    document.documentElement.getAttribute('data-theme') === 'dark' ||
-    (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
 
-  // ── Progress simulation with realistic phases ────────────────────────────
+  const isDark =
+    typeof window !== 'undefined' &&
+    (document.documentElement.getAttribute('data-theme') === 'dark' ||
+      window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+
+  // ── Progress simulation ────────────────────────────────────────────────────
   const startProgressSimulation = useCallback(() => {
-    // Clear any existing intervals
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
@@ -241,40 +312,22 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     setIsComplete(false);
     setIsError(false);
 
-    // Timer: update elapsed time every second
     timerIntervalRef.current = setInterval(() => {
       setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
 
-    // Progress: advance through phases with realistic timing
-    // Each phase takes ~5-15 seconds, total ~30-60s
-    // Progress advances in small increments with slight randomization
     let currentProgress = 0;
     const totalPhases = meta.phases.length;
-    const phaseWeight = 85 / totalPhases; // Reserve 85% for phases, 15% for final
 
     progressIntervalRef.current = setInterval(() => {
-      // Add small random increment (0.3-1.5%)
       const increment = 0.3 + Math.random() * 1.2;
       currentProgress = Math.min(currentProgress + increment, 88);
-
-      // Determine which phase we're in
-      const phaseIndex = Math.min(
-        Math.floor((currentProgress / 85) * totalPhases),
-        totalPhases - 1
-      );
-
+      const phaseIndex = Math.min(Math.floor((currentProgress / 85) * totalPhases), totalPhases - 1);
       setProgress(Math.round(currentProgress * 10) / 10);
       setCurrentPhase(phaseIndex);
-
-      // Slow down as we approach the cap (simulates harder work)
-      if (currentProgress > 70) {
-        // Reduce speed for last stretch
-      }
     }, 800 + Math.random() * 400);
   }, [meta.phases.length]);
 
-  // ── Handle state transitions ─────────────────────────────────────────────
   useEffect(() => {
     if (state === 'input-streaming' || state === 'input-available') {
       startProgressSimulation();
@@ -283,11 +336,9 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
 
   useEffect(() => {
     if (state === 'output-available' && output) {
-      // Stop simulation and snap to 100%
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-      // Animate to 100% over 600ms
       const snapStart = progress;
       const snapDuration = 600;
       const snapStartTime = Date.now();
@@ -295,25 +346,19 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
       const snapInterval = setInterval(() => {
         const elapsed = Date.now() - snapStartTime;
         const t = Math.min(elapsed / snapDuration, 1);
-        // Ease-out cubic
         const eased = 1 - Math.pow(1 - t, 3);
         setProgress(Math.round((snapStart + (100 - snapStart) * eased) * 10) / 10);
-
         if (t >= 1) {
           clearInterval(snapInterval);
           setProgress(100);
           setCurrentPhase(meta.phases.length - 1);
           setIsComplete(true);
-          setDownloadReady(true);
         }
       }, 16);
 
-      // Extract download info
       setOutputData(output);
       setDownloadUrl(output.download_url || output.downloadUrl || output.file_url || null);
       setFileId(output.file_id || output.fileId || output.document_id || output.presentation_id || null);
-
-      // Final elapsed time
       setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }
   }, [state, output, meta.phases.length]);
@@ -327,7 +372,6 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     }
   }, [state]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
@@ -335,31 +379,21 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     };
   }, []);
 
-  // ── Download handler ─────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleDownload = async () => {
-    const url = downloadUrl;
-    const id = fileId;
-
-    if (!url && !id) {
-      toast.error('No download available');
-      return;
-    }
-
+    if (!downloadUrl && !fileId) { toast.error('No download available'); return; }
     try {
       let response: Response;
-
-      if (url) {
-        response = await fetch(url);
+      if (downloadUrl) {
+        response = await fetch(downloadUrl);
       } else {
-        const token = localStorage.getItem('auth_token');
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-        response = await fetch(`${apiUrl}/upload/files/${id}/download`, {
+        response = await fetch(`${apiUrl}/files/${fileId}/download`, {
           headers: { Authorization: token ? `Bearer ${token}` : '' },
         });
       }
-
       if (!response.ok) throw new Error('Download failed');
-
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -369,69 +403,57 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
-      toast.success('File downloaded!');
-    } catch (err) {
-      toast.error('Download failed. Please try again.');
-      console.error('Download error:', err);
+      toast.success('File downloaded');
+    } catch {
+      toast.error('Download failed — please try again');
     }
   };
 
-  // ── Copy content (for text-based outputs like AFL) ───────────────────────
   const handleCopy = () => {
     const text = outputData?.code || outputData?.content || outputData?.text || '';
     if (text) {
       navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success('Copied to clipboard!');
+      toast.success('Copied to clipboard');
     }
   };
 
-  // ── Format time ──────────────────────────────────────────────────────────
-  const formatTime = (seconds: number) => {
-    if (seconds < 60) return `${seconds}s`;
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}m ${s}s`;
-  };
+  const formatTime = (s: number) => s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
 
-  // ── Format file size ─────────────────────────────────────────────────────
   const formatSize = () => {
     if (!outputData) return null;
     const kb = outputData.file_size_kb || outputData.fileSizeKb || outputData.size_kb;
     if (kb) return `${kb} KB`;
     const bytes = outputData.file_size || outputData.size;
-    if (bytes) return bytes > 1024 * 1024
-      ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-      : `${Math.round(bytes / 1024)} KB`;
+    if (bytes) return bytes > 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
     return null;
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Render
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Theme tokens ───────────────────────────────────────────────────────────
+  const cardBg    = isDark ? '#111114' : '#FAFAFA';
+  const borderCol = isDark ? `${meta.color}28` : `${meta.color}1A`;
+  const textColor = isDark ? '#F0F0F0' : '#111111';
+  const mutedCol  = isDark ? '#7A7A88' : '#6B7280';
+  const trackCol  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const metaBg    = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)';
+  const metaBdr   = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
 
-  const bgColor = isDark ? meta.bgDark : meta.bgLight;
-  const borderColor = isDark ? `${meta.color}30` : `${meta.color}20`;
-  const textColor = isDark ? '#FFFFFF' : '#111111';
-  const mutedColor = isDark ? '#9CA3AF' : '#6B7280';
-  const cardBg = isDark ? '#141414' : '#FAFAFA';
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{
       marginTop: '12px',
-      borderRadius: '16px',
-      border: `1px solid ${borderColor}`,
+      borderRadius: '14px',
+      border: `1px solid ${borderCol}`,
       backgroundColor: cardBg,
       overflow: 'hidden',
       fontFamily: "'Instrument Sans', sans-serif",
-      boxShadow: isDark
-        ? `0 4px 20px ${meta.color}15`
-        : `0 4px 20px ${meta.color}10`,
+      boxShadow: isDark ? `0 4px 20px ${meta.color}12` : `0 4px 20px ${meta.color}0A`,
     }}>
-      {/* ── Header with gradient accent bar ─────────────────────────────── */}
+
+      {/* Accent bar */}
       <div style={{
-        height: '4px',
+        height: '3px',
         background: isError
           ? 'linear-gradient(90deg, #EF4444, #F97316)'
           : isComplete
@@ -440,39 +462,34 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         transition: 'background 0.5s ease',
       }} />
 
-      <div style={{ padding: '16px 20px' }}>
-        {/* ── Title Row ──────────────────────────────────────────────────── */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px',
-        }}>
+      <div style={{ padding: '16px 18px' }}>
+
+        {/* ── Title row ─────────────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-            {/* File type icon badge */}
+
+            {/* Icon badge */}
             <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              background: bgColor,
-              border: `1px solid ${borderColor}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '22px',
+              width: '42px', height: '42px',
+              borderRadius: '11px',
+              background: isDark ? meta.bgDark : meta.bgLight,
+              border: `1px solid ${borderCol}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
-              transition: 'all 0.3s ease',
-              boxShadow: isComplete ? `0 4px 12px ${meta.color}25` : 'none',
+              transition: 'box-shadow 0.3s ease',
+              boxShadow: isComplete ? `0 4px 12px ${meta.color}20` : 'none',
             }}>
-              {meta.icon}
+              <FileIcon size={20} color={meta.color} />
             </div>
+
+            {/* Title + label */}
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{
                 fontFamily: "'Syne', sans-serif",
                 fontWeight: 700,
-                fontSize: '14px',
+                fontSize: '13.5px',
                 color: textColor,
-                letterSpacing: '0.5px',
+                letterSpacing: '0.2px',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -480,24 +497,25 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                 {title}
               </div>
               <div style={{
-                fontSize: '12px',
-                color: mutedColor,
-                marginTop: '2px',
+                fontSize: '11.5px',
+                color: mutedCol,
+                marginTop: '3px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
               }}>
                 <span>{meta.label}</span>
-                <span style={{ opacity: 0.4 }}>•</span>
+                <span style={{ opacity: 0.35 }}>·</span>
                 <span style={{
-                  fontSize: '10px',
+                  fontSize: '9.5px',
                   fontWeight: 700,
-                  padding: '1px 6px',
+                  padding: '1px 5px',
                   borderRadius: '4px',
-                  backgroundColor: `${meta.color}15`,
+                  backgroundColor: `${meta.color}14`,
                   color: meta.color,
-                  letterSpacing: '0.5px',
+                  letterSpacing: '0.6px',
                   textTransform: 'uppercase',
+                  fontFamily: "'DM Mono', monospace",
                 }}>
                   SKILL
                 </span>
@@ -505,48 +523,36 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
             </div>
           </div>
 
-          {/* Status badge */}
+          {/* Status pill */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '5px 12px',
+            gap: '5px',
+            padding: '4px 10px',
             borderRadius: '20px',
-            fontSize: '11px',
+            fontSize: '10.5px',
             fontWeight: 700,
             letterSpacing: '0.5px',
+            fontFamily: "'DM Mono', monospace",
             flexShrink: 0,
             ...(isError
-              ? {
-                  backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)',
-                  color: '#EF4444',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                }
+              ? { backgroundColor: isDark ? 'rgba(239,68,68,0.14)' : 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)' }
               : isComplete
-                ? {
-                    backgroundColor: isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)',
-                    color: '#10B981',
-                    border: '1px solid rgba(16,185,129,0.2)',
-                  }
-                : {
-                    backgroundColor: `${meta.color}15`,
-                    color: meta.color,
-                    border: `1px solid ${meta.color}20`,
-                  }),
+                ? { backgroundColor: isDark ? 'rgba(16,185,129,0.14)' : 'rgba(16,185,129,0.08)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)' }
+                : { backgroundColor: `${meta.color}12`, color: meta.color, border: `1px solid ${meta.color}20` }),
           }}>
             {isError ? (
-              <>❌ ERROR</>
+              <><IconAlert size={11} color="#EF4444" /> ERROR</>
             ) : isComplete ? (
-              <>✅ COMPLETE</>
+              <><IconCheck size={11} color="#10B981" /> COMPLETE</>
             ) : (
               <>
                 <span style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
+                  width: '7px', height: '7px',
                   borderRadius: '50%',
                   backgroundColor: meta.color,
                   animation: 'docGenPulse 1.5s ease-in-out infinite',
+                  display: 'inline-block',
                 }} />
                 GENERATING
               </>
@@ -554,54 +560,46 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           </div>
         </div>
 
-        {/* ── Progress Section ────────────────────────────────────────────── */}
+        {/* ── Progress section ──────────────────────────────────────────────── */}
         {!isError && (
-          <div style={{ marginBottom: '14px' }}>
-            {/* Progress bar */}
+          <div style={{ marginBottom: '12px' }}>
+
+            {/* Track */}
             <div style={{
-              width: '100%',
-              height: '8px',
-              borderRadius: '4px',
-              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-              overflow: 'hidden',
-              position: 'relative',
+              width: '100%', height: '6px',
+              borderRadius: '3px',
+              backgroundColor: trackCol,
+              overflow: 'hidden', position: 'relative',
             }}>
               <div style={{
                 height: '100%',
-                borderRadius: '4px',
-                background: isComplete
-                  ? `linear-gradient(90deg, ${meta.color}, #10B981)`
-                  : meta.gradient,
+                borderRadius: '3px',
+                background: isComplete ? `linear-gradient(90deg, ${meta.color}, #10B981)` : meta.gradient,
                 width: `${progress}%`,
-                transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)',
                 position: 'relative',
                 overflow: 'hidden',
               }}>
-                {/* Shimmer effect while generating */}
                 {!isComplete && progress > 0 && (
                   <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: '-100%',
-                    width: '100%',
-                    height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                    position: 'absolute', top: 0, left: '-100%',
+                    width: '100%', height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent)',
                     animation: 'docGenShimmer 2s linear infinite',
                   }} />
                 )}
               </div>
             </div>
 
-            {/* Progress info row */}
+            {/* Phase + time row */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               marginTop: '8px',
             }}>
-              {/* Current phase */}
               <div style={{
-                fontSize: '12px',
+                fontSize: '11.5px',
                 color: isComplete ? '#10B981' : meta.color,
                 fontWeight: 600,
                 display: 'flex',
@@ -615,34 +613,32 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                 {!isComplete && (
                   <span style={{
                     display: 'inline-block',
-                    width: '12px',
-                    height: '12px',
-                    border: `2px solid ${meta.color}`,
+                    width: '11px', height: '11px',
+                    border: `1.8px solid ${meta.color}`,
                     borderTopColor: 'transparent',
                     borderRadius: '50%',
                     animation: 'docGenSpin 0.8s linear infinite',
                     flexShrink: 0,
                   }} />
                 )}
-                {isComplete
-                  ? '✓ Generation complete'
-                  : meta.phases[currentPhase] || 'Processing...'}
+                {isComplete ? 'Generation complete' : meta.phases[currentPhase] || 'Processing'}
               </div>
 
-              {/* Progress % and time */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
+                gap: '8px',
                 fontSize: '11px',
-                color: mutedColor,
-                fontWeight: 600,
+                color: mutedCol,
+                fontFamily: "'DM Mono', monospace",
               }}>
-                <span>⏱ {formatTime(elapsedTime)}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <IconClock size={11} color={mutedCol} />
+                  {formatTime(elapsedTime)}
+                </span>
                 <span style={{
-                  fontFamily: "'Syne', sans-serif",
                   fontWeight: 800,
-                  fontSize: '13px',
+                  fontSize: '12.5px',
                   color: isComplete ? '#10B981' : meta.color,
                 }}>
                   {Math.round(progress)}%
@@ -650,182 +646,180 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
               </div>
             </div>
 
-            {/* Phase steps indicator */}
+            {/* Phase step dots */}
             {!isComplete && (
-              <div style={{
-                display: 'flex',
-                gap: '3px',
-                marginTop: '10px',
-              }}>
+              <div style={{ display: 'flex', gap: '3px', marginTop: '9px' }}>
                 {meta.phases.map((_, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      flex: 1,
-                      height: '3px',
-                      borderRadius: '2px',
-                      backgroundColor: idx < currentPhase
-                        ? meta.color
-                        : idx === currentPhase
-                          ? `${meta.color}80`
-                          : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-                      transition: 'background-color 0.5s ease',
-                    }}
-                  />
+                  <div key={idx} style={{
+                    flex: 1, height: '2px', borderRadius: '2px',
+                    backgroundColor: idx < currentPhase
+                      ? meta.color
+                      : idx === currentPhase
+                        ? `${meta.color}70`
+                        : trackCol,
+                    transition: 'background-color 0.4s ease',
+                  }} />
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {/* ── Error Section ───────────────────────────────────────────────── */}
+        {/* ── Error section ─────────────────────────────────────────────────── */}
         {isError && (
           <div style={{
-            padding: '12px 14px',
-            borderRadius: '10px',
-            backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2',
-            border: '1px solid rgba(239,68,68,0.2)',
-            marginBottom: '14px',
+            padding: '11px 13px',
+            borderRadius: '9px',
+            backgroundColor: isDark ? 'rgba(239,68,68,0.09)' : '#FEF2F2',
+            border: '1px solid rgba(239,68,68,0.18)',
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px',
           }}>
-            <div style={{
-              fontSize: '13px',
-              color: isDark ? '#FCA5A5' : '#DC2626',
-              lineHeight: 1.5,
-            }}>
-              ⚠️ {errorText || 'Generation failed. Please try again.'}
-            </div>
+            <IconAlert size={15} color={isDark ? '#FCA5A5' : '#DC2626'} />
+            <span style={{ fontSize: '12.5px', color: isDark ? '#FCA5A5' : '#DC2626', lineHeight: 1.5 }}>
+              {errorText || 'Generation failed — please try again.'}
+            </span>
           </div>
         )}
 
-        {/* ── Completed: File Info + Actions ──────────────────────────────── */}
+        {/* ── Complete: file info + actions ─────────────────────────────────── */}
         {isComplete && outputData && (
           <div>
-            {/* File metadata row */}
+            {/* Metadata row */}
             <div style={{
               display: 'flex',
-              gap: '12px',
+              gap: '16px',
               flexWrap: 'wrap',
-              marginBottom: '14px',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+              marginBottom: '12px',
+              padding: '9px 12px',
+              borderRadius: '9px',
+              backgroundColor: metaBg,
+              border: `1px solid ${metaBdr}`,
             }}>
               {outputData.filename && (
-                <div style={{ fontSize: '12px', color: mutedColor }}>
-                  <span style={{ fontWeight: 700, color: textColor }}>File: </span>
+                <div style={{ fontSize: '11.5px', color: mutedCol }}>
+                  <span style={{ fontWeight: 700, color: textColor }}>File </span>
                   {outputData.filename}
                 </div>
               )}
               {formatSize() && (
-                <div style={{ fontSize: '12px', color: mutedColor }}>
-                  <span style={{ fontWeight: 700, color: textColor }}>Size: </span>
+                <div style={{ fontSize: '11.5px', color: mutedCol }}>
+                  <span style={{ fontWeight: 700, color: textColor }}>Size </span>
                   {formatSize()}
                 </div>
               )}
-              {(outputData.pages || outputData.page_count || outputData.slides || outputData.slide_count) && (
-                <div style={{ fontSize: '12px', color: mutedColor }}>
+              {(outputData.slides || outputData.slide_count || outputData.pages || outputData.page_count) && (
+                <div style={{ fontSize: '11.5px', color: mutedCol }}>
                   <span style={{ fontWeight: 700, color: textColor }}>
-                    {outputData.slides || outputData.slide_count ? 'Slides' : 'Pages'}:{' '}
+                    {outputData.slides || outputData.slide_count ? 'Slides ' : 'Pages '}
                   </span>
-                  {outputData.pages || outputData.page_count || outputData.slides || outputData.slide_count}
+                  {outputData.slides || outputData.slide_count || outputData.pages || outputData.page_count}
                 </div>
               )}
               {(outputData.sheets || outputData.sheet_count) && (
-                <div style={{ fontSize: '12px', color: mutedColor }}>
-                  <span style={{ fontWeight: 700, color: textColor }}>Sheets: </span>
+                <div style={{ fontSize: '11.5px', color: mutedCol }}>
+                  <span style={{ fontWeight: 700, color: textColor }}>Sheets </span>
                   {outputData.sheets || outputData.sheet_count}
                 </div>
               )}
-              <div style={{ fontSize: '12px', color: mutedColor }}>
-                <span style={{ fontWeight: 700, color: textColor }}>Time: </span>
+              <div style={{ fontSize: '11.5px', color: mutedCol, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ fontWeight: 700, color: textColor }}>Time </span>
                 {formatTime(elapsedTime)}
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
               {(downloadUrl || fileId) && (
                 <button
                   onClick={handleDownload}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 20px',
-                    borderRadius: '10px',
+                    gap: '7px',
+                    padding: '9px 18px',
+                    borderRadius: '9px',
                     border: 'none',
                     background: meta.gradient,
                     color: '#FFFFFF',
                     fontWeight: 700,
-                    fontSize: '13px',
+                    fontSize: '12.5px',
                     cursor: 'pointer',
                     fontFamily: "'Syne', sans-serif",
-                    letterSpacing: '0.5px',
-                    boxShadow: `0 4px 12px ${meta.color}30`,
-                    transition: 'all 0.2s ease',
+                    letterSpacing: '0.4px',
+                    boxShadow: `0 3px 10px ${meta.color}28`,
+                    transition: 'all 0.18s ease',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = `0 6px 16px ${meta.color}40`;
+                    e.currentTarget.style.boxShadow = `0 5px 14px ${meta.color}38`;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = `0 4px 12px ${meta.color}30`;
+                    e.currentTarget.style.boxShadow = `0 3px 10px ${meta.color}28`;
                   }}
                 >
-                  ⬇️ DOWNLOAD {fileType.toUpperCase()}
+                  <IconDownload size={13} color="#fff" />
+                  DOWNLOAD {fileType.toUpperCase()}
                 </button>
               )}
 
-              {(outputData.code || outputData.content || outputData.text) && (
+              {(outputData?.code || outputData?.content || outputData?.text) && (
                 <button
                   onClick={handleCopy}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '10px 16px',
-                    borderRadius: '10px',
-                    border: `1px solid ${borderColor}`,
+                    padding: '9px 14px',
+                    borderRadius: '9px',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
                     background: 'transparent',
-                    color: mutedColor,
+                    color: mutedCol,
                     fontWeight: 600,
                     fontSize: '12px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.18s ease',
+                    fontFamily: "'Instrument Sans', sans-serif",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = meta.color;
+                    e.currentTarget.style.color = meta.color;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+                    e.currentTarget.style.color = mutedCol;
                   }}
                 >
-                  {copied ? '✅ Copied!' : '📋 Copy Content'}
+                  {copied ? <><IconCheck size={12} color="#10B981" /> Copied</> : <><IconCopy size={12} /> Copy</>}
                 </button>
               )}
             </div>
           </div>
         )}
 
-        {/* ── Generating: show estimated remaining time ───────────────────── */}
+        {/* ── Estimated time hint ───────────────────────────────────────────── */}
         {!isComplete && !isError && progress > 5 && (
           <div style={{
-            fontSize: '11px',
-            color: mutedColor,
+            fontSize: '10.5px',
+            color: mutedCol,
             textAlign: 'center',
-            marginTop: '4px',
-            opacity: 0.7,
+            marginTop: '6px',
+            opacity: 0.65,
+            fontFamily: "'DM Mono', monospace",
+            letterSpacing: '0.04em',
           }}>
-            {progress < 50
-              ? 'Estimated: 30–60 seconds remaining'
-              : progress < 80
-                ? 'Almost there...'
-                : 'Wrapping up...'}
+            {progress < 50 ? '30–60 seconds remaining' : progress < 80 ? 'Almost there' : 'Wrapping up'}
           </div>
         )}
       </div>
 
-      {/* ── CSS Animations ────────────────────────────────────────────────── */}
       <style>{`
         @keyframes docGenPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(0.85); }
+          50% { opacity: 0.45; transform: scale(0.82); }
         }
         @keyframes docGenSpin {
           0% { transform: rotate(0deg); }

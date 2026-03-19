@@ -159,7 +159,11 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   read_document:                  { component: DocInterpreterCard, displayName: 'Document Interpreter' },
   // Quant / Backtest skills (generic card)
   quant_analyst:                  { component: SkillResultCard, displayName: 'Quant Analyst' },
+  run_quant_analysis:             { component: SkillResultCard, displayName: 'Quant Analyst' },
   backtest_expert:                { component: SkillResultCard, displayName: 'Backtest Expert' },
+  run_backtest_analysis:          { component: SkillResultCard, displayName: 'Backtest Analysis' },
+  run_bubble_detection:           { component: BubbleDetectorCard, displayName: 'Bubble Detector' },
+  run_financial_deep_research:    { component: FinancialResearchCard, displayName: 'Financial Research' },
   backtesting_frameworks:         { component: SkillResultCard, displayName: 'Backtesting Frameworks' },
   // Potomac branded skills (document generation with progress)
   potomac_docx:                   { component: DocumentGenerationCard, mode: 'document-generation' },
@@ -177,6 +181,9 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   // AI Elements / Artifacts Builder (generic)
   ai_elements:                    { component: SkillResultCard, displayName: 'AI Elements' },
   artifacts_builder:              { component: SkillResultCard, displayName: 'Artifacts Builder' },
+
+  // ── invoke_skill (primary skill dispatcher) ────────
+  invoke_skill:             { component: DocumentGenerationCard, mode: 'document-generation' },
 
   // ── Document Generation (with real progress) ───────
   create_word_document:     { component: DocumentGenerationCard, mode: 'document-generation' },

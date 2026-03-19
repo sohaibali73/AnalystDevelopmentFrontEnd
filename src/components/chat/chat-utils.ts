@@ -21,6 +21,7 @@ export const API_BASE_URL_CHAT = (
 
 export function getAuthToken(): string {
   try {
+    if (typeof window === 'undefined') return '';
     return localStorage.getItem('auth_token') || '';
   } catch {
     return '';

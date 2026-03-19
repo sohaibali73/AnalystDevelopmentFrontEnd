@@ -48,7 +48,7 @@ async function fetchFileBlob(file: ChatPreviewFile): Promise<Blob | null> {
     return fetch(file.url).then((r) => r.blob());
   }
   if (file.fileId) {
-    const resp = await fetch(`${API_BASE_URL_CHAT}/upload/files/${file.fileId}/download`, {
+    const resp = await fetch(`${API_BASE_URL_CHAT}/files/${file.fileId}/download`, {
       headers: { Authorization: `Bearer ${getAuthToken()}` },
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

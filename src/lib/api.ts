@@ -182,9 +182,9 @@ class APIClient {
   logout() {
     this.token = null;
     try {
-      localStorage.removeItem('auth_token');
+      storage.removeItem('auth_token');
     } catch (e) {
-      // Silently fail if localStorage is not available
+      // Silently fail if storage is not available
     }
   }
 
@@ -430,10 +430,14 @@ class APIClient {
     conversationId?: string,
     options?: {
       signal?: AbortSignal;
+      thinking_mode?: string;
+      thinking_budget?: number;
       onText?: (text: string) => void;
       onToolCall?: (toolCallId: string, toolName: string, args: any) => void;
       onToolResult?: (toolCallId: string, result: any) => void;
       onData?: (data: any) => void;
+      onFileDownload?: (fileId: string, filename: string, downloadUrl: string, fileType: string, sizeKb: number) => void;
+      onSkillStatus?: (label: string, slug: string) => void;
       onError?: (error: string) => void;
       onFinish?: (finishReason: string, usage: any) => void;
     }
@@ -449,7 +453,7 @@ class APIClient {
 
     try {
       // CRITICAL FIX: Use correct streaming endpoint
-      const url = `${API_BASE_URL}/chat/stream`;
+      const url = `${API_BASE_URL}/chat/v6`;
       console.log(`Streaming Request: POST ${url}`);
 
       const response = await fetch(url, {
@@ -461,6 +465,8 @@ class APIClient {
         body: JSON.stringify({
           content,
           conversation_id: conversationId,
+          thinking_mode: options?.thinking_mode,
+          thinking_budget: options?.thinking_budget,
         }),
       });
 
@@ -471,7 +477,6 @@ class APIClient {
         throw new Error(error.detail || error.message || `HTTP ${response.status}`);
       }
 
-      // FIXED: Extract conversation ID from response headers
       const newConversationId = response.headers.get('X-Conversation-Id') || conversationId || '';
 
       if (!response.body) {
@@ -520,8 +525,19 @@ class APIClient {
                   }
                   break;
 
-                case '2': // Data Part (Artifacts) - THIS IS THE KEY ONE
-                  options?.onData?.(parsed);
+                case '2': // Data Part — route by subtype
+                  if (Array.isArray(parsed)) {
+                    const item = parsed[0];
+                    if (item?.type === 'file_download') {
+                      options?.onFileDownload?.(item.file_id, item.filename, item.download_url, item.file_type, item.size_kb ?? 0);
+                    } else if (item?.skill_status) {
+                      options?.onSkillStatus?.(item.skill_status, item.skill_slug ?? '');
+                    } else {
+                      options?.onData?.(parsed);
+                    }
+                  } else {
+                    options?.onData?.(parsed);
+                  }
                   break;
 
                 case '3': // Error Part
@@ -629,7 +645,7 @@ class APIClient {
    * Get the streaming endpoint URL for direct use
    */
   getStreamEndpoint(): string {
-    return `${API_BASE_URL}/chat/stream`;
+    return `${API_BASE_URL}/chat/v6`;
   }
 
   /**
@@ -648,10 +664,14 @@ class APIClient {
     conversationId?: string,
     options?: {
       signal?: AbortSignal;
+      thinking_mode?: string;
+      thinking_budget?: number;
       onText?: (text: string) => void;
       onToolCall?: (toolCallId: string, toolName: string, args: any) => void;
       onToolResult?: (toolCallId: string, result: any) => void;
       onData?: (data: any) => void;
+      onFileDownload?: (fileId: string, filename: string, downloadUrl: string, fileType: string, sizeKb: number) => void;
+      onSkillStatus?: (label: string, slug: string) => void;
       onError?: (error: string) => void;
       onFinish?: (finishReason: string, usage: any) => void;
     }
@@ -679,6 +699,8 @@ class APIClient {
         body: JSON.stringify({
           content,
           conversation_id: conversationId,
+          thinking_mode: options?.thinking_mode,
+          thinking_budget: options?.thinking_budget,
         }),
       });
 
@@ -689,7 +711,6 @@ class APIClient {
         throw new Error(error.detail || error.message || `HTTP ${response.status}`);
       }
 
-      // Extract conversation ID from response headers
       const newConversationId = response.headers.get('X-Conversation-Id') || conversationId || '';
 
       if (!response.body) {
@@ -738,8 +759,19 @@ class APIClient {
                   }
                   break;
 
-                case '2': // Data Part (Artifacts)
-                  options?.onData?.(parsed);
+                case '2': // Data Part — route by subtype
+                  if (Array.isArray(parsed)) {
+                    const item = parsed[0];
+                    if (item?.type === 'file_download') {
+                      options?.onFileDownload?.(item.file_id, item.filename, item.download_url, item.file_type, item.size_kb ?? 0);
+                    } else if (item?.skill_status) {
+                      options?.onSkillStatus?.(item.skill_status, item.skill_slug ?? '');
+                    } else {
+                      options?.onData?.(parsed);
+                    }
+                  } else {
+                    options?.onData?.(parsed);
+                  }
                   break;
 
                 case '3': // Error Part
@@ -814,6 +846,57 @@ class APIClient {
     return this.request<{ tools: any[]; count: number }>('/chat/tools');
   }
 
+
+
+
+  // ==================== FILES ENDPOINTS ====================
+
+  async downloadFile(fileId: string): Promise<Blob> {
+    const token = this.getToken();
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE_URL}/files/${fileId}/download`, {
+      headers,
+      mode: 'cors',
+      credentials: 'omit',
+    });
+    if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+    return response.blob();
+  }
+
+  // ==================== TASKS ENDPOINTS ====================
+
+  async submitTask(request: {
+    task_type: string;
+    title: string;
+    message: string;
+    conversation_id?: string;
+    skill_slug?: string;
+    params?: Record<string, any>;
+  }) {
+    return this.request<{ success: boolean; task_id: string; task: any }>('/tasks', 'POST', request);
+  }
+
+  async listTasks() {
+    return this.request<{ tasks: any[]; active_count: number; total_count: number }>('/tasks');
+  }
+
+  async getTask(taskId: string) {
+    return this.request<{ success: boolean; task: any }>(`/tasks/${taskId}`);
+  }
+
+  async cancelTask(taskId: string) {
+    return this.request<{ success: boolean; message: string }>(`/tasks/${taskId}/cancel`, 'POST');
+  }
+
+  async dismissTask(taskId: string) {
+    return this.request<{ success: boolean; message: string }>(`/tasks/${taskId}`, 'DELETE');
+  }
+
+  async clearCompletedTasks() {
+    return this.request<{ success: boolean; removed: number }>('/tasks', 'DELETE');
+  }
   // ==================== BRAIN/KNOWLEDGE BASE ENDPOINTS ====================
 
   async uploadDocument(file: File, title?: string, category: string = 'general') {
@@ -1522,6 +1605,17 @@ export const api = {
     list: () => apiClient.listPresentations(),
     download: (id: string) => apiClient.downloadPresentation(id),
     delete: (id: string) => apiClient.deletePresentation(id),
+  },
+  tasks: {
+    submit: (request: any) => apiClient.submitTask(request),
+    list: () => apiClient.listTasks(),
+    get: (taskId: string) => apiClient.getTask(taskId),
+    cancel: (taskId: string) => apiClient.cancelTask(taskId),
+    dismiss: (taskId: string) => apiClient.dismissTask(taskId),
+    clearCompleted: () => apiClient.clearCompletedTasks(),
+  },
+  files: {
+    download: (fileId: string) => apiClient.downloadFile(fileId),
   },
   skills: {
     list: (category?: string, includeBuiltins?: boolean) => apiClient.getSkills(category, includeBuiltins),
