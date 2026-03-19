@@ -87,7 +87,6 @@ import { Sources, SourcesTrigger, SourcesContent, Source } from '@/components/ai
 import {
   Artifact, ArtifactHeader, ArtifactTitle, ArtifactContent,
 } from '@/components/ai-elements/artifact';
-import { DocumentGenerator } from '@/components/ai-elements/document-generator';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { ChainOfThought, ChainOfThoughtHeader, ChainOfThoughtContent, ChainOfThoughtStep } from '@/components/ai-elements/chain-of-thought';
 import { SpeechInput } from '@/components/ai-elements/speech-input';
@@ -578,11 +577,6 @@ export function ChatPage() {
     navigator.clipboard.writeText(text).then(() => toast.success('Copied!')).catch(() => toast.error('Copy failed'));
   }, []);
 
-  const handleDocumentGenerated = useCallback((artifact: any) => {
-    const convId = conversationIdRef.current;
-    if (convId) setArtifactsByConv((prev) => ({ ...prev, [convId]: [...(prev[convId] || []), artifact] }));
-    toast.success('Document generated!');
-  }, []);
 
   const allMessages = useMemo(() => streamMessages, [streamMessages]);
   const lastIdx = allMessages.length - 1;
@@ -828,12 +822,6 @@ export function ChatPage() {
             </MessageContent>
           </div>
 
-          {/* Document generator */}
-          {!msgIsStreaming && fullText && /\b(document|proposal|report|memo|letter|policy|guide|plan|summary|brief|outline)\b/i.test(fullText) && (
-            <div style={{ marginTop: 4 }}>
-              <DocumentGenerator title="Generated Document" content={fullText} onDocumentGenerated={handleDocumentGenerated} />
-            </div>
-          )}
 
           {/* Action toolbar */}
           {!msgIsStreaming && fullText && (
