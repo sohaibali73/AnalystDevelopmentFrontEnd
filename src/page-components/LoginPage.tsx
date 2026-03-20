@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Eye, 
@@ -16,7 +15,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export function LoginPage() {
-  const router = useRouter();
   const { login } = useAuth();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -27,16 +25,16 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [isSmallMobile, setIsSmallMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const handleResize = () => {
       setIsMobile(window.innerWidth < 1024);
       setIsSmallMobile(window.innerWidth < 768);
     };
 
-    // Initial check
     handleResize();
-
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
     return () => {
@@ -57,7 +55,6 @@ export function LoginPage() {
 
     try {
       await login(email, password);
-      // Note: AuthContext.login() already handles navigation to /dashboard
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
@@ -74,119 +71,7 @@ export function LoginPage() {
       flexDirection: isMobile ? 'column' : 'row',
       WebkitUserSelect: 'none',
       WebkitTouchCallout: 'none',
-      paddingTop: '36px', // offset for the fixed DEV banner
     }}>
-      {/* ── DEV ENVIRONMENT TOP BANNER ── */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        height: '36px',
-        background: 'repeating-linear-gradient(90deg, var(--accent) 0px, var(--accent) 60px, var(--bg) 60px, var(--bg) 120px)',
-        backgroundSize: '120px 100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-        animation: 'devBannerScroll 6s linear infinite',
-        borderBottom: '2px solid rgba(96,165,250,0.6)',
-        boxShadow: '0 2px 20px rgba(96,165,250,0.25)',
-      }}>
-        {/* Frosted label sits on top of the moving stripes */}
-        <div style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          backgroundColor: 'rgba(10,10,11,0.82)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
-          padding: '0 20px',
-          borderRadius: '4px',
-          height: '26px',
-          border: '1px solid rgba(96,165,250,0.35)',
-        }}>
-          {/* Blinking dot */}
-          <span style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--accent)',
-            display: 'inline-block',
-            animation: 'devDotBlink 1.2s ease-in-out infinite',
-            flexShrink: 0,
-          }} />
-          <span style={{
-            fontFamily: "'Syne', sans-serif",
-            fontSize: '12px',
-            fontWeight: 700,
-            letterSpacing: '3px',
-            color: 'var(--accent)',
-          }}>
-            DEVELOPMENT ENVIRONMENT — NOT FOR PRODUCTION USE
-          </span>
-          <span style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--accent)',
-            display: 'inline-block',
-            animation: 'devDotBlink 1.2s ease-in-out infinite 0.6s',
-            flexShrink: 0,
-          }} />
-        </div>
-      </div>
-
-      {/* ── DEV CORNER BADGE ── */}
-      <div style={{
-        position: 'fixed',
-        bottom: '52px', // sits just above the copyright footer
-        right: '16px',
-        zIndex: 9998,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        backgroundColor: isDark ? 'rgba(10,10,11,0.9)' : 'rgba(255,255,255,0.9)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        border: '1px solid rgba(96,165,250,0.5)',
-        borderRadius: '8px',
-        padding: '6px 12px',
-        boxShadow: '0 0 0 0 rgba(96,165,250,0.4)',
-        animation: 'devBadgePulse 2.5s ease-in-out infinite',
-      }}>
-        <span style={{
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          backgroundColor: 'var(--accent)',
-          display: 'inline-block',
-          animation: 'devDotBlink 1.2s ease-in-out infinite',
-          flexShrink: 0,
-        }} />
-        <span style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: '11px',
-          fontWeight: 700,
-          letterSpacing: '2px',
-          color: 'var(--accent)',
-        }}>
-          DEV
-        </span>
-        <span style={{
-          fontFamily: "'Instrument Sans', sans-serif",
-          fontSize: '11px',
-          fontWeight: 600,
-          color: isDark ? '#757575' : '#999999',
-          letterSpacing: '0.5px',
-        }}>
-          localhost
-        </span>
-      </div>
-
       {/* Left Side - Branding */}
       <div style={{
         flex: isMobile ? undefined : 1,
@@ -232,7 +117,7 @@ export function LoginPage() {
           pointerEvents: 'none',
         }} />
 
-        {/* Floating particles - using fixed values to avoid hydration mismatch */}
+        {/* Floating particles */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -242,7 +127,7 @@ export function LoginPage() {
           overflow: 'hidden',
           pointerEvents: 'none',
         }}>
-          {[
+          {mounted && [
             { size: 4, opacity: 0.35, left: 15, top: 20, duration: 8 },
             { size: 3, opacity: 0.4, left: 85, top: 15, duration: 6 },
             { size: 5, opacity: 0.3, left: 45, top: 80, duration: 9 },
@@ -472,6 +357,7 @@ export function LoginPage() {
               borderRadius: '12px',
               marginBottom: '28px',
               boxShadow: '0 4px 16px rgba(239, 68, 68, 0.1)',
+              animation: 'fadeInUp 0.3s ease-out',
             }}>
               <AlertCircle size={20} color="#EF4444" />
               <p style={{ color: '#EF4444', fontSize: '13px', margin: 0, fontFamily: "'Instrument Sans', sans-serif" }}>{error}</p>
@@ -792,29 +678,32 @@ export function LoginPage() {
         </p>
       </div>
 
-      {/* Enhanced CSS Animations */}
+      {/* CSS Animations */}
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes devBannerScroll {
-          from { background-position: 0 0; }
-          to   { background-position: 120px 0; }
+        @keyframes float {
+          0% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(180deg); }
+          100% { transform: translateY(0px) rotate(360deg); }
         }
-        @keyframes devDotBlink {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50%       { opacity: 0.3; transform: scale(0.7); }
-        }
-        @keyframes devBadgePulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); }
-          50%       { box-shadow: 0 0 0 4px rgba(96,165,250,0.15); }
+        @keyframes fadeInUp {
+          from { 
+            opacity: 0; 
+            transform: translateY(16px); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0); 
+          }
         }
         @keyframes taglinePulse {
           0%, 100% {
             text-shadow:
-              0 0 10px  var(--accent),
-              0 0 20px  var(--accent),
+              0 0 10px  #60A5FA,
+              0 0 20px  #60A5FA,
               0 0 40px  rgba(96,165,250,0.85),
               0 0 70px  rgba(96,165,250,0.65),
               0 0 110px rgba(96,165,250,0.45),
@@ -823,19 +712,14 @@ export function LoginPage() {
           }
           50% {
             text-shadow:
-              0 0 15px  var(--accent),
-              0 0 30px  var(--accent),
+              0 0 15px  #60A5FA,
+              0 0 30px  #60A5FA,
               0 0 60px  rgba(96,165,250,1),
               0 0 100px rgba(96,165,250,0.9),
               0 0 150px rgba(96,165,250,0.7),
               0 0 200px rgba(96,165,250,0.4);
             opacity: 1;
           }
-        }
-        @keyframes float {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
-          100% { transform: translateY(0px) rotate(360deg); }
         }
         .tagline-glow {
           animation: taglinePulse 3.5s ease-in-out infinite;
