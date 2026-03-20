@@ -232,7 +232,7 @@ export function LoginPage() {
           pointerEvents: 'none',
         }} />
 
-        {/* Floating particles */}
+        {/* Floating particles - using fixed values to avoid hydration mismatch */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -242,17 +242,26 @@ export function LoginPage() {
           overflow: 'hidden',
           pointerEvents: 'none',
         }}>
-          {[...Array(8)].map((_, i) => (
+          {[
+            { size: 4, opacity: 0.35, left: 15, top: 20, duration: 8 },
+            { size: 3, opacity: 0.4, left: 85, top: 15, duration: 6 },
+            { size: 5, opacity: 0.3, left: 45, top: 80, duration: 9 },
+            { size: 3.5, opacity: 0.45, left: 70, top: 55, duration: 7 },
+            { size: 4.5, opacity: 0.35, left: 25, top: 65, duration: 10 },
+            { size: 3, opacity: 0.5, left: 90, top: 40, duration: 6.5 },
+            { size: 4, opacity: 0.4, left: 10, top: 85, duration: 8.5 },
+            { size: 3.5, opacity: 0.35, left: 55, top: 10, duration: 7.5 },
+          ].map((particle, i) => (
             <div key={i} style={{
               position: 'absolute',
-              width: `${Math.random() * 4 + 2}px`,
-              height: `${Math.random() * 4 + 2}px`,
+              width: `${particle.size}px`,
+              height: `${particle.size}px`,
               borderRadius: '50%',
-              background: `rgba(96,165,250,${Math.random() * 0.3 + 0.1})`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${Math.random() * 6 + 4}s linear infinite`,
-              opacity: Math.random() * 0.5 + 0.3,
+              background: `rgba(96,165,250,${particle.opacity})`,
+              left: `${particle.left}%`,
+              top: `${particle.top}%`,
+              animation: `float ${particle.duration}s linear infinite`,
+              opacity: particle.opacity + 0.2,
             }} />
           ))}
         </div>

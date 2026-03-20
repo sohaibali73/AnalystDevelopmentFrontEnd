@@ -108,8 +108,8 @@ export function ForgotPasswordPage() {
           right: 0,
           bottom: 0,
           backgroundImage: `
-            radial-gradient(circle at 20% 50%, rgba(254, 192, 15, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(254, 192, 15, 0.05) 0%, transparent 40%)
+            radial-gradient(circle at 20% 50%, rgba(96, 165, 250, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(96, 165, 250, 0.05) 0%, transparent 40%)
           `,
           pointerEvents: 'none',
         }} />
@@ -122,8 +122,8 @@ export function ForgotPasswordPage() {
           right: 0,
           bottom: 0,
           backgroundImage: `
-            linear-gradient(rgba(254, 192, 15, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(254, 192, 15, 0.03) 1px, transparent 1px)
+            linear-gradient(rgba(96, 165, 250, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(96, 165, 250, 0.03) 1px, transparent 1px)
           `,
           backgroundSize: '50px 50px',
           pointerEvents: 'none',
@@ -167,7 +167,7 @@ export function ForgotPasswordPage() {
             fontFamily: "'Rajdhani', sans-serif",
             fontSize: '16px',
             fontWeight: 500,
-            color: '#FEC00F',
+            color: '#60A5FA',
             letterSpacing: '8px',
             marginBottom: '24px',
           }}>
@@ -189,11 +189,11 @@ export function ForgotPasswordPage() {
             alignItems: 'center',
             gap: '16px',
             padding: '20px 24px',
-            backgroundColor: 'rgba(254, 192, 15, 0.05)',
-            border: '1px solid rgba(254, 192, 15, 0.1)',
+            backgroundColor: 'rgba(96, 165, 250, 0.05)',
+            border: '1px solid rgba(96, 165, 250, 0.1)',
             borderRadius: '12px',
           }}>
-            <Key size={28} color="#FEC00F" />
+            <Key size={28} color="#60A5FA" />
             <div style={{ textAlign: 'left' }}>
               <p style={{ color: isDark ? '#E0E0E0' : '#333333', fontSize: '14px', fontWeight: 600, margin: 0 }}>
                 Secure Password Reset
@@ -237,7 +237,7 @@ export function ForgotPasswordPage() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              color: '#FEC00F',
+              color: '#60A5FA',
               fontSize: '14px',
               fontWeight: 600,
               textDecoration: 'none',
@@ -326,8 +326,8 @@ export function ForgotPasswordPage() {
                         appearance: 'none',
                       }}
                       onFocus={(e) => {
-                        e.target.style.borderColor = '#FEC00F';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(254, 192, 15, 0.1)';
+                        e.target.style.borderColor = '#60A5FA';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(96, 165, 250, 0.1)';
                       }}
                       onBlur={(e) => {
                         e.target.style.borderColor = '#2A2A2A';
@@ -355,7 +355,7 @@ export function ForgotPasswordPage() {
                   style={{
                     width: '100%',
                     height: '52px',
-                    backgroundColor: loading ? '#424242' : '#FEC00F',
+                    backgroundColor: loading ? '#424242' : '#60A5FA',
                     border: 'none',
                     borderRadius: '10px',
                     color: loading ? '#757575' : '#0A0A0B',
@@ -369,7 +369,7 @@ export function ForgotPasswordPage() {
                     justifyContent: 'center',
                     gap: '10px',
                     transition: 'all 0.2s',
-                    boxShadow: loading ? 'none' : '0 4px 20px rgba(254, 192, 15, 0.3)',
+                    boxShadow: loading ? 'none' : '0 4px 20px rgba(96, 165, 250, 0.3)',
                   }}
                 >
                   {loading ? (
@@ -427,14 +427,14 @@ export function ForgotPasswordPage() {
                   marginBottom: '32px',
                 }}>
                   We've sent a password reset link to<br />
-                  <span style={{ color: '#FEC00F', fontWeight: 600 }}>{email}</span>
+                  <span style={{ color: '#60A5FA', fontWeight: 600 }}>{email}</span>
                 </p>
 
                 <div style={{
                   width: '100%',
                   padding: '16px',
-                  backgroundColor: 'rgba(254, 192, 15, 0.05)',
-                  border: '1px solid rgba(254, 192, 15, 0.1)',
+                  backgroundColor: 'rgba(96, 165, 250, 0.05)',
+                  border: '1px solid rgba(96, 165, 250, 0.1)',
                   borderRadius: '10px',
                   marginBottom: '32px',
                 }}>
@@ -451,7 +451,7 @@ export function ForgotPasswordPage() {
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#FEC00F',
+                        color: '#60A5FA',
                         fontWeight: 600,
                         cursor: 'pointer',
                         textDecoration: 'underline',
@@ -484,8 +484,8 @@ export function ForgotPasswordPage() {
                     transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#FEC00F';
-                    e.currentTarget.style.backgroundColor = 'rgba(254, 192, 15, 0.05)';
+                    e.currentTarget.style.borderColor = '#60A5FA';
+                    e.currentTarget.style.backgroundColor = 'rgba(96, 165, 250, 0.05)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = '#2A2A2A';
@@ -504,8 +504,8 @@ export function ForgotPasswordPage() {
             <div style={{
               marginTop: '32px',
               padding: '16px',
-              backgroundColor: 'rgba(254, 192, 15, 0.05)',
-              border: '1px solid rgba(254, 192, 15, 0.1)',
+              backgroundColor: 'rgba(96, 165, 250, 0.05)',
+              border: '1px solid rgba(96, 165, 250, 0.1)',
               borderRadius: '10px',
             }}>
               <p style={{
@@ -519,7 +519,7 @@ export function ForgotPasswordPage() {
                 <a
                   href="mailto:support@potomac.com"
                   style={{
-                    color: '#FEC00F',
+                    color: '#60A5FA',
                     textDecoration: 'none',
                   }}
                 >

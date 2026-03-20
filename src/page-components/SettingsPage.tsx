@@ -105,7 +105,7 @@ const STYLES = `
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgba(254,192,15,0.04) 0%, transparent 60%);
+    background: linear-gradient(135deg, rgba(96,165,250,0.06) 0%, transparent 60%);
     opacity: 0;
     transition: opacity .28s ease;
     pointer-events: none;
@@ -115,7 +115,7 @@ const STYLES = `
   .settings-card .shimmer-layer {
     position: absolute;
     top: 0; left: -100%; width: 60%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(254,192,15,0.04), transparent);
+    background: linear-gradient(90deg, transparent, rgba(96,165,250,0.06), transparent);
     pointer-events: none;
   }
   .settings-card:hover .shimmer-layer {
@@ -123,7 +123,7 @@ const STYLES = `
   }
 
   .stat-num-glow {
-    text-shadow: 0 0 40px rgba(254,192,15,0.35);
+    text-shadow: 0 0 40px rgba(96,165,250,0.35);
   }
 `;
 
@@ -133,7 +133,7 @@ function SectionHead({ label }: { label: string }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
       <div style={{
         width: '3px', height: '16px',
-        background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))',
+        background: 'linear-gradient(to bottom, #60A5FA, rgba(96,165,250,0.2))',
         borderRadius: '3px', flexShrink: 0,
       }} />
       <span style={{
@@ -166,7 +166,7 @@ export function SettingsPage() {
   const [settings, setSettings] = useState<SettingsData>({
     profile: { name: '', email: '', nickname: '' },
     apiKeys: { claudeApiKey: '', tavilyApiKey: '' },
-    appearance: { theme: 'dark', accentColor: '#FEC00F', fontSize: 'medium' },
+    appearance: { theme: 'dark', accentColor: '#60A5FA', fontSize: 'medium' },
     notifications: { emailNotifications: true, codeGenComplete: true, backtestComplete: true, weeklyDigest: false },
   });
 
@@ -203,19 +203,19 @@ export function SettingsPage() {
 
   /* ── Dashboard-style CSS vars ── */
   const cssVars: React.CSSProperties = {
-    ['--accent' as any]: '#FEC00F',
-    ['--accent-dim' as any]: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.07)',
-    ['--bg' as any]: isDark ? '#080809' : '#F5F5F6',
-    ['--bg-card' as any]: isDark ? '#0D0D10' : '#FFFFFF',
-    ['--bg-card-hover' as any]: isDark ? '#121216' : '#F9F9FA',
-    ['--bg-raised' as any]: isDark ? '#111115' : '#FAFAFA',
-    ['--border' as any]: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-    ['--text' as any]: isDark ? '#EFEFEF' : '#0A0A0B',
-    ['--text-muted' as any]: isDark ? '#606068' : '#808088',
-    ['--text-dim' as any]: isDark ? '#2E2E36' : '#D8D8DC',
+    ['--accent' as any]: '#60A5FA',
+    ['--accent-dim' as any]: isDark ? 'rgba(96,165,250,0.12)' : 'rgba(96,165,250,0.08)',
+    ['--bg' as any]: isDark ? '#0A0A0A' : '#FFFFFF',
+    ['--bg-card' as any]: isDark ? '#141414' : '#FFFFFF',
+    ['--bg-card-hover' as any]: isDark ? '#1A1A1A' : '#F8FAFC',
+    ['--bg-raised' as any]: isDark ? '#1E1E1E' : '#F8FAFC',
+    ['--border' as any]: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.1)',
+    ['--text' as any]: isDark ? '#FFFFFF' : '#0F172A',
+    ['--text-muted' as any]: isDark ? '#94A3B8' : '#64748B',
+    ['--text-dim' as any]: isDark ? '#64748B' : '#94A3B8',
     ['--shadow-card' as any]: isDark
-      ? '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)'
-      : '0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.06)',
+      ? '0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(96,165,250,0.1)'
+      : '0 4px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(96,165,250,0.08)',
   };
 
   const handleSave = async () => {
