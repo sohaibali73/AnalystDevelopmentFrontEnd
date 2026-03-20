@@ -27,6 +27,11 @@ import apiClient from '@/lib/api';
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
+  /* Smooth scrolling for the entire page */
+  html {
+    scroll-behavior: smooth;
+  }
+
   @keyframes dash-fadeUp {
     from { opacity: 0; transform: translateY(22px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -60,6 +65,7 @@ const STYLES = `
     position: relative;
     overflow: hidden;
     transition: transform .28s cubic-bezier(.22,.68,0,1.2), box-shadow .28s ease;
+    will-change: transform;
   }
   .dash-feat-card::before {
     content: '';
@@ -105,6 +111,7 @@ const STYLES = `
   /* Quick action button */
   .dash-quick-btn {
     transition: border-color .2s ease, background .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
+    will-change: transform;
   }
   .dash-quick-btn:hover { transform: translateY(-2px); }
 
@@ -113,6 +120,7 @@ const STYLES = `
     position: relative;
     overflow: hidden;
     transition: transform .2s ease, box-shadow .2s ease;
+    will-change: transform;
   }
   .dash-cta-btn:hover { transform: translateY(-2px); }
   .dash-cta-btn:active { transform: translateY(0); }
@@ -131,11 +139,61 @@ const STYLES = `
   }
   .ticker-inner:hover { animation-play-state: paused; }
 
-  /* Scrollbar */
-  * { scrollbar-width: thin; scrollbar-color: rgba(96,165,250,0.25) transparent; }
-  *::-webkit-scrollbar { width: 4px; height: 4px; }
+  /* Enhanced Scrollbar */
+  * { scrollbar-width: thin; scrollbar-color: rgba(254,192,15,0.3) transparent; }
+  *::-webkit-scrollbar { width: 6px; height: 6px; }
   *::-webkit-scrollbar-track { background: transparent; }
-  *::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.25); border-radius: 4px; }
+  *::-webkit-scrollbar-thumb { 
+    background: linear-gradient(180deg, rgba(254,192,15,0.4), rgba(254,192,15,0.2)); 
+    border-radius: 6px;
+    transition: background 0.2s ease;
+  }
+  *::-webkit-scrollbar-thumb:hover { 
+    background: linear-gradient(180deg, rgba(254,192,15,0.6), rgba(254,192,15,0.4)); 
+  }
+
+  /* Scroll container for horizontal scrolling sections */
+  .dash-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .dash-scroll-container::-webkit-scrollbar {
+    display: none;
+  }
+  .dash-scroll-item {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  /* Scroll reveal animation */
+  .dash-scroll-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s cubic-bezier(.22,.68,0,1.15), transform 0.6s cubic-bezier(.22,.68,0,1.15);
+  }
+  .dash-scroll-reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    .da0, .da1, .da2, .da3, .da4, .da5,
+    .dash-feat-card, .dash-quick-btn, .dash-cta-btn,
+    .dash-scroll-reveal {
+      animation: none !important;
+      transition: none !important;
+    }
+    .ticker-inner {
+      animation: none;
+    }
+  }
 `;
 
 /* ─────────────────────────────────────────────

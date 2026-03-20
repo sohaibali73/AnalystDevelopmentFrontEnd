@@ -67,6 +67,11 @@ const sectionsList = [
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
+  /* Smooth scrolling for the entire page */
+  html {
+    scroll-behavior: smooth;
+  }
+
   @keyframes settings-fadeUp {
     from { opacity: 0; transform: translateY(22px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -79,6 +84,10 @@ const STYLES = `
     0%   { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
   }
+  @keyframes settings-sectionFade {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
   .sa0 { animation: settings-fadeUp .6s cubic-bezier(.22,.68,0,1.15) both; animation-delay: 0ms; }
   .sa1 { animation: settings-fadeUp .6s cubic-bezier(.22,.68,0,1.15) both; animation-delay: 80ms; }
@@ -87,6 +96,7 @@ const STYLES = `
 
   .settings-nav-btn {
     transition: all .22s cubic-bezier(.22,.68,0,1.2);
+    will-change: transform;
   }
   .settings-nav-btn:hover {
     transform: translateY(-2px);
@@ -96,6 +106,7 @@ const STYLES = `
     position: relative;
     overflow: hidden;
     transition: transform .28s cubic-bezier(.22,.68,0,1.2), box-shadow .28s ease, border-color .28s ease;
+    will-change: transform;
   }
   .settings-card:hover {
     transform: translateY(-3px);
@@ -124,6 +135,53 @@ const STYLES = `
 
   .stat-num-glow {
     text-shadow: 0 0 40px rgba(96,165,250,0.35);
+  }
+
+  /* Section content transition */
+  .settings-section-content {
+    animation: settings-sectionFade 0.4s cubic-bezier(.22,.68,0,1.15) both;
+  }
+
+  /* Enhanced Scrollbar */
+  * { scrollbar-width: thin; scrollbar-color: rgba(254,192,15,0.3) transparent; }
+  *::-webkit-scrollbar { width: 6px; height: 6px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { 
+    background: linear-gradient(180deg, rgba(254,192,15,0.4), rgba(254,192,15,0.2)); 
+    border-radius: 6px;
+    transition: background 0.2s ease;
+  }
+  *::-webkit-scrollbar-thumb:hover { 
+    background: linear-gradient(180deg, rgba(254,192,15,0.6), rgba(254,192,15,0.4)); 
+  }
+
+  /* Navigation tabs horizontal scroll on mobile */
+  .settings-nav-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .settings-nav-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  .settings-nav-scroll .settings-nav-btn {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    .sa0, .sa1, .sa2, .sa3,
+    .settings-nav-btn, .settings-card,
+    .settings-section-content {
+      animation: none !important;
+      transition: none !important;
+    }
   }
 `;
 
@@ -320,8 +378,8 @@ export function SettingsPage() {
 
         {/* ── Navigation Tabs ── */}
         <div className="sa1" style={{ padding: isMobile ? '0 20px' : '0 52px', maxWidth: '1360px', margin: '0 auto 32px' }}>
-          <div style={{
-            display: 'flex', gap: '10px', flexWrap: 'wrap',
+          <div className={isMobile ? 'settings-nav-scroll' : ''} style={{
+            display: 'flex', gap: '10px', flexWrap: isMobile ? 'nowrap' : 'wrap',
             borderBottom: '1px solid var(--border)', paddingBottom: '16px',
           }}>
             {sectionsList.map(({ id, label, icon: Icon, color }) => {
@@ -361,7 +419,7 @@ export function SettingsPage() {
 
           {/* ═══ PROFILE ═══ */}
           {activeSection === 'profile' && (
-            <div>
+            <div className="settings-section-content">
               <SectionHead label="Profile Settings" />
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '320px 1fr', gap: '20px' }}>
 
@@ -430,7 +488,7 @@ export function SettingsPage() {
 
           {/* ═══ API KEYS ═══ */}
           {activeSection === 'api-keys' && (
-            <div>
+            <div className="settings-section-content">
               <SectionHead label="API Key Management" />
 
               {/* Security notice */}
@@ -509,7 +567,7 @@ export function SettingsPage() {
 
           {/* ═══ APPEARANCE ═══ */}
           {activeSection === 'appearance' && (
-            <div>
+            <div className="settings-section-content">
               <SectionHead label="Appearance & Theme" />
 
               {/* Theme Picker */}
@@ -612,7 +670,7 @@ export function SettingsPage() {
 
           {/* ═══ NOTIFICATIONS ═══ */}
           {activeSection === 'notifications' && (
-            <div>
+            <div className="settings-section-content">
               <SectionHead label="Notification Preferences" />
               <div style={{ display: 'grid', gap: '12px' }}>
                 {[
@@ -664,7 +722,7 @@ export function SettingsPage() {
 
           {/* ═══ SECURITY ═══ */}
           {activeSection === 'security' && (
-            <div>
+            <div className="settings-section-content">
               <SectionHead label="Security & Access" />
 
               {/* Change Password */}
@@ -742,7 +800,7 @@ export function SettingsPage() {
 
           {/* ═══ ABOUT ═══ */}
           {activeSection === 'about' && (
-            <div>
+            <div className="settings-section-content">
               <SectionHead label="About the Platform" />
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>

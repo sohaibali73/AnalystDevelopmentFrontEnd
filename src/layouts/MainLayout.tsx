@@ -651,7 +651,10 @@ export function MainLayout({ children }: MainLayoutProps) {
         marginTop: isMobile ? '64px' : 0,
         width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
         transition: 'margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        overflow: 'hidden',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        scrollBehavior: 'smooth',
+        WebkitOverflowScrolling: 'touch',
       }}>
         {children}
       </main>
@@ -669,6 +672,42 @@ export function MainLayout({ children }: MainLayoutProps) {
         @keyframes slideOutToLeft {
           from { transform: translateX(0); }
           to   { transform: translateX(-100%); }
+        }
+        
+        /* Smooth scrolling for main content */
+        main {
+          scroll-behavior: smooth;
+        }
+        
+        /* Enhanced scrollbar for main content */
+        main::-webkit-scrollbar {
+          width: 8px;
+        }
+        main::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        main::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(254,192,15,0.4), rgba(254,192,15,0.2));
+          border-radius: 8px;
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+        main::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, rgba(254,192,15,0.6), rgba(254,192,15,0.4));
+          background-clip: padding-box;
+        }
+        
+        /* Firefox scrollbar */
+        main {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(254,192,15,0.35) transparent;
+        }
+        
+        /* Reduce motion for accessibility */
+        @media (prefers-reduced-motion: reduce) {
+          main {
+            scroll-behavior: auto;
+          }
         }
       `}</style>
     </div>
