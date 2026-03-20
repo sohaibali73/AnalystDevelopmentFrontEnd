@@ -349,7 +349,7 @@ export function BacktestPage() {
             {selectedBacktest && (
               <Badge
                 className="ml-1 h-4 px-1 text-[10px]"
-                style={{ backgroundColor: '#FEC00F', color: '#212121' }}
+                style={{ backgroundColor: '#60A5FA', color: '#212121' }}
               >
                 1
               </Badge>
@@ -412,7 +412,7 @@ export function BacktestPage() {
                 className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 text-center transition-all duration-200 md:p-14"
                 style={{
                   borderColor: dragActive
-                    ? '#FEC00F'
+                    ? '#60A5FA'
                     : isDark
                     ? '#424242'
                     : '#D0D0D0',
@@ -432,7 +432,7 @@ export function BacktestPage() {
                     <Loader2
                       size={36}
                       className="animate-spin"
-                      style={{ color: '#FEC00F' }}
+                      style={{ color: '#60A5FA' }}
                     />
                     <p
                       className="text-sm font-medium"
@@ -475,8 +475,8 @@ export function BacktestPage() {
                     onClick={loadDemoData}
                     className="flex items-center gap-2"
                     style={{
-                      borderColor: '#FEC00F',
-                      color: '#FEC00F',
+                      borderColor: '#60A5FA',
+                      color: '#60A5FA',
                     }}
                   >
                     <FileText size={14} />
@@ -510,7 +510,7 @@ export function BacktestPage() {
                 value={stats.avgSharpe.toFixed(2)}
                 sub={stats.avgSharpe >= 1 ? 'Good risk-adjusted' : 'Below threshold'}
                 icon={<BarChart3 size={20} />}
-                color="#FEC00F"
+                color="#60A5FA"
                 isDark={isDark}
               />
               <StatCard

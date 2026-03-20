@@ -1119,7 +1119,7 @@ export function AFLGeneratorPage() {
                   setCompositeMode(checked);
                   if (checked && !codePanelOpen && !isMobile) setCodePanelOpen(true);
                 }}
-                className="data-[state=checked]:bg-[#FEC00F]"
+                className="data-[state=checked]:bg-[#60A5FA]"
                 style={{ 
                   width: '32px', 
                   height: '18px',

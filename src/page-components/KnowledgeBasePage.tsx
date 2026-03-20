@@ -76,17 +76,17 @@ export function KnowledgeBasePage() {
   // ─── Theme tokens (matches dashboard/chat) ─────────────────
   const colors = useMemo(
     () => ({
-      background: isDark ? '#080809' : '#F5F5F6',
-      cardBg:     isDark ? '#0D0D10' : '#FFFFFF',
-      inputBg:    isDark ? '#111115' : '#F8F8F9',
-      border:     isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-      text:       isDark ? '#EFEFEF' : '#0A0A0B',
-      textMuted:  isDark ? '#606068' : '#808088',
-      hoverBg:    isDark ? '#121216' : '#F4F4F5',
-      accent:     '#FEC00F',
+      background: isDark ? '#0A0A0A' : '#FFFFFF',
+      cardBg:     isDark ? '#141414' : '#FFFFFF',
+      inputBg:    isDark ? '#1E1E1E' : '#F8FAFC',
+      border:     isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.1)',
+      text:       isDark ? '#FFFFFF' : '#0F172A',
+      textMuted:  isDark ? '#94A3B8' : '#64748B',
+      hoverBg:    isDark ? '#1A1A1A' : '#F8FAFC',
+      accent:     '#60A5FA',
       shadow:     isDark
-        ? '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)'
-        : '0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.06)',
+        ? '0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(96,165,250,0.1)'
+        : '0 4px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(96,165,250,0.08)',
     }),
     [isDark]
   );

@@ -66,7 +66,7 @@ const STYLES = `
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgba(254,192,15,0.06) 0%, transparent 60%);
+    background: linear-gradient(135deg, rgba(96,165,250,0.08) 0%, transparent 60%);
     opacity: 0;
     transition: opacity .28s ease;
     pointer-events: none;
@@ -78,7 +78,7 @@ const STYLES = `
   .dash-feat-card .shimmer-layer {
     position: absolute;
     top: 0; left: -100%; width: 60%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(254,192,15,0.04), transparent);
+    background: linear-gradient(90deg, transparent, rgba(96,165,250,0.06), transparent);
     pointer-events: none;
   }
   .dash-feat-card:hover .shimmer-layer {
@@ -95,7 +95,7 @@ const STYLES = `
     position: absolute;
     left: 0; top: 8px; bottom: 8px;
     width: 2px;
-    background: linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2));
+    background: linear-gradient(to bottom, #60A5FA, rgba(96,165,250,0.2));
     border-radius: 2px;
     opacity: 0;
     transition: opacity .15s ease;
@@ -119,7 +119,7 @@ const STYLES = `
 
   /* Stat card number glow */
   .stat-num-glow {
-    text-shadow: 0 0 40px rgba(254,192,15,0.35);
+    text-shadow: 0 0 40px rgba(96,165,250,0.35);
   }
 
   /* Ticker */
@@ -132,10 +132,10 @@ const STYLES = `
   .ticker-inner:hover { animation-play-state: paused; }
 
   /* Scrollbar */
-  * { scrollbar-width: thin; scrollbar-color: rgba(254,192,15,0.25) transparent; }
+  * { scrollbar-width: thin; scrollbar-color: rgba(96,165,250,0.25) transparent; }
   *::-webkit-scrollbar { width: 4px; height: 4px; }
   *::-webkit-scrollbar-track { background: transparent; }
-  *::-webkit-scrollbar-thumb { background: rgba(254,192,15,0.25); border-radius: 4px; }
+  *::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.25); border-radius: 4px; }
 `;
 
 /* ─────────────────────────────────────────────
@@ -173,7 +173,7 @@ function SectionHead({ label, action, onAction }: { label: string; action?: stri
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px' }}>
       <div style={{
         width: '3px', height: '16px',
-        background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))',
+        background: 'linear-gradient(to bottom, #60A5FA, rgba(96,165,250,0.2))',
         borderRadius: '3px', flexShrink: 0,
       }} />
       <span style={{
