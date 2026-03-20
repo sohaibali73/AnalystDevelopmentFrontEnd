@@ -14,8 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  FlaskConical,
-  BarChart3,
+  Smartphone,
+  Monitor,
+  Rocket,
+  Presentation,
+  Star,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -28,24 +31,21 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   badge?: string;
-  group?: 'main' | 'tools' | 'system';
 }
 
 const navItems: NavItem[] = [
-  // Main
-  { name: 'Home', href: '/dashboard', icon: LayoutDashboard, group: 'main' },
-  { name: 'Chat', href: '/chat', icon: MessageCircle, group: 'main' },
-  
-  // Tools
-  { name: 'Code Studio', href: '/afl', icon: Code2, group: 'tools' },
-  { name: 'Backtest', href: '/backtest', icon: BarChart3, group: 'tools' },
-  { name: 'Analyzer', href: '/reverse-engineer', icon: FlaskConical, group: 'tools' },
-  
-  // Resources
-  { name: 'Skills', href: '/skills', icon: Sparkles, badge: 'New', group: 'system' },
-  { name: 'Knowledge', href: '/knowledge', icon: Database, group: 'system' },
-  { name: 'Settings', href: '/settings', icon: Settings, group: 'system' },
+  { name: 'DASHBOARD', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'AFL GENERATOR', href: '/afl', icon: Code2 },
+  { name: 'CHAT', href: '/chat', icon: MessageCircle },
+  { name: 'SKILLS', href: '/skills', icon: Sparkles, badge: 'NEW' },
+  { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
+  { name: 'BACKTEST', href: '/backtest', icon: TrendingUp },
+  { name: 'REVERSE ENGINEER', href: '/reverse-engineer', icon: Zap },
+  { name: 'SETTINGS', href: '/settings', icon: Settings },
 ];
+
+// Hidden pages - accessible via URL but not shown in navigation
+// developer, non-apple-developer, autopilot, deck-generator
 
 interface MainLayoutProps {
   children: React.ReactNode;
