@@ -14,11 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  Smartphone,
-  Monitor,
-  Rocket,
-  Presentation,
-  Star,
+  FlaskConical,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -31,21 +28,24 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   badge?: string;
+  group?: 'main' | 'tools' | 'system';
 }
 
 const navItems: NavItem[] = [
-  { name: 'DASHBOARD', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'AFL GENERATOR', href: '/afl', icon: Code2 },
-  { name: 'CHAT', href: '/chat', icon: MessageCircle },
-  { name: 'SKILLS', href: '/skills', icon: Sparkles, badge: 'NEW' },
-  { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
-  { name: 'BACKTEST', href: '/backtest', icon: TrendingUp },
-  { name: 'REVERSE ENGINEER', href: '/reverse-engineer', icon: Zap },
-  { name: 'SETTINGS', href: '/settings', icon: Settings },
+  // Main
+  { name: 'Home', href: '/dashboard', icon: LayoutDashboard, group: 'main' },
+  { name: 'Chat', href: '/chat', icon: MessageCircle, group: 'main' },
+  
+  // Tools
+  { name: 'Code Studio', href: '/afl', icon: Code2, group: 'tools' },
+  { name: 'Backtest', href: '/backtest', icon: BarChart3, group: 'tools' },
+  { name: 'Analyzer', href: '/reverse-engineer', icon: FlaskConical, group: 'tools' },
+  
+  // Resources
+  { name: 'Skills', href: '/skills', icon: Sparkles, badge: 'New', group: 'system' },
+  { name: 'Knowledge', href: '/knowledge', icon: Database, group: 'system' },
+  { name: 'Settings', href: '/settings', icon: Settings, group: 'system' },
 ];
-
-// Hidden pages - accessible via URL but not shown in navigation
-// developer, non-apple-developer, autopilot, deck-generator
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -390,132 +390,115 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         )}
 
-        {/* Enhanced Navigation */}
+        {/* Modern Navigation */}
         <nav style={{
           flex: 1,
-          padding: isMobile ? '24px 16px' : (collapsed ? '20px 8px' : '24px 16px'),
+          padding: isMobile ? '20px 12px' : (collapsed ? '16px 8px' : '20px 12px'),
           overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
         }}>
-          {navItems.map((item, index) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
+          {/* Group items by category */}
+          {(['main', 'tools', 'system'] as const).map((group, groupIndex) => {
+            const groupItems = navItems.filter(item => item.group === group);
+            if (groupItems.length === 0) return null;
+            
             return (
-              <button
-                key={item.href}
-                onClick={() => handleNavClick(item.href)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  padding: isMobile ? '16px 20px' : (collapsed ? '14px 8px' : '16px 16px'),
-                  marginBottom: '8px',
-                  border: 'none',
-                  borderRadius: '14px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  fontFamily: "'Syne', sans-serif",
-                  fontSize: isMobile ? '15px' : '13px',
-                  fontWeight: 700,
-                  letterSpacing: '0.5px',
-                  color: active ? colors.accentText : colors.textMuted,
-                  justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
-                  minHeight: isMobile ? '52px' : '52px',
-                  position: 'relative',
-                  transform: 'translateZ(0)',
-                  boxShadow: active 
-                    ? isDark 
-                      ? '0 8px 24px rgba(96,165,250,0.35), inset 0 0 20px rgba(96,165,250,0.2)'
-                      : '0 8px 24px rgba(96,165,250,0.25), inset 0 0 20px rgba(96,165,250,0.15)'
-                    : 'none',
-                  background: active 
-                    ? 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)'
-                    : 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.transform = 'translateX(6px) translateZ(0)';
-                    e.currentTarget.style.color = colors.text;
-                    e.currentTarget.style.background = colors.hoverBg;
-                    e.currentTarget.style.boxShadow = isDark 
-                      ? '0 8px 24px rgba(96,165,250,0.2)'
-                      : '0 8px 24px rgba(96,165,250,0.12)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.transform = 'translateX(0) translateZ(0)';
-                    e.currentTarget.style.color = colors.textMuted;
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }
-                }}
-                title={collapsed && !isMobile ? item.name : undefined}
-              >
-                {/* Enhanced icon container */}
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: active 
-                    ? 'rgba(255,255,255,0.2)'
-                    : isDark 
-                      ? 'rgba(96,165,250,0.1)'
-                      : 'rgba(96,165,250,0.08)',
-                  border: active 
-                    ? '1px solid rgba(255,255,255,0.3)'
-                    : `1px solid ${colors.border}`,
-                  boxShadow: active 
-                    ? '0 4px 16px rgba(96,165,250,0.4)'
-                    : 'none',
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  flexShrink: 0,
-                }}>
-                  <Icon size={isMobile ? 20 : 18} color={active ? '#ffffff' : '#60A5FA'} />
-                </div>
+              <div key={group}>
+                {/* Group separator - only show between groups, not before first */}
+                {groupIndex > 0 && (
+                  <div style={{
+                    height: '1px',
+                    background: `linear-gradient(90deg, transparent, ${colors.border}, transparent)`,
+                    margin: collapsed && !isMobile ? '12px 4px' : '12px 8px',
+                  }} />
+                )}
                 
-                {(!collapsed || isMobile) && (
-                  <>
-                    <span style={{
-                      position: 'relative',
-                      zIndex: 1,
-                    }}>
-                      {item.name}
-                    </span>
-                    {'badge' in item && item.badge && (
-                      <span style={{
-                        marginLeft: 'auto',
-                        fontSize: '9px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '6px',
+                {groupItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <button
+                      key={item.href}
+                      onClick={() => handleNavClick(item.href)}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: isMobile ? '12px 16px' : (collapsed ? '12px 8px' : '12px 14px'),
+                        marginBottom: '2px',
+                        border: 'none',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.2s ease',
+                        fontFamily: "'Instrument Sans', sans-serif",
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        letterSpacing: '0.01em',
+                        color: active ? '#ffffff' : (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.65)'),
+                        justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
+                        minHeight: '44px',
+                        position: 'relative',
                         background: active 
-                          ? 'rgba(255,255,255,0.2)'
-                          : isDark 
-                            ? 'rgba(96,165,250,0.2)'
-                            : 'rgba(96,165,250,0.15)',
-                        color: active ? '#ffffff' : '#60A5FA',
-                        letterSpacing: '0.5px',
-                        lineHeight: 1.4,
-                        border: active 
-                          ? '1px solid rgba(255,255,255,0.3)'
-                          : `1px solid ${colors.border}`,
+                          ? 'linear-gradient(135deg, #60A5FA 0%, #818CF8 100%)'
+                          : 'transparent',
                         boxShadow: active 
                           ? '0 4px 12px rgba(96,165,250,0.3)'
                           : 'none',
-                        flexShrink: 0,
-                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                      }}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-              </button>
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.background = isDark 
+                            ? 'rgba(255,255,255,0.06)'
+                            : 'rgba(0,0,0,0.04)';
+                          e.currentTarget.style.color = isDark ? '#ffffff' : '#000000';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.65)';
+                        }
+                      }}
+                      title={collapsed && !isMobile ? item.name : undefined}
+                    >
+                      <Icon 
+                        size={20} 
+                        style={{
+                          flexShrink: 0,
+                          opacity: active ? 1 : 0.8,
+                        }}
+                      />
+                      
+                      {(!collapsed || isMobile) && (
+                        <>
+                          <span>{item.name}</span>
+                          {item.badge && (
+                            <span style={{
+                              marginLeft: 'auto',
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: active 
+                                ? 'rgba(255,255,255,0.2)'
+                                : 'linear-gradient(135deg, #60A5FA 0%, #818CF8 100%)',
+                              color: '#ffffff',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.03em',
+                            }}>
+                              {item.badge}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
