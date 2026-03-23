@@ -283,6 +283,10 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   const title = extractTitle(input, toolName);
   const FileIcon = meta.IconComponent;
 
+  // Resolve relative backend paths to full Railway URLs
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
+  const resolveUrl = (url: string) => url.startsWith('/') ? `${apiBase}${url}` : url;
+
   const [progress, setProgress] = useState(0);
   const [currentPhase, setCurrentPhase] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -422,12 +426,13 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     if (!downloadUrl && !fileId) { toast.error('No download available'); return; }
     try {
       let response: Response;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       if (downloadUrl) {
-        response = await fetch(downloadUrl);
+        response = await fetch(resolveUrl(downloadUrl), {
+          headers: { Authorization: token ? `Bearer ${token}` : '' },
+        });
       } else {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-        response = await fetch(`${apiUrl}/files/${fileId}/download`, {
+        response = await fetch(`${apiBase}/files/${fileId}/download`, {
           headers: { Authorization: token ? `Bearer ${token}` : '' },
         });
       }
@@ -933,7 +938,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
             <div style={{ position: 'relative', width: '100%', height: '400px' }}>
               {(fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx') ? (
                 <iframe
-                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(downloadUrl)}`}
+                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resolveUrl(downloadUrl))}`}
                   width="100%"
                   height="400"
                   frameBorder="0"
@@ -1029,7 +1034,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
           <div style={{ marginTop: '8px', display: 'flex', gap: '7px' }}>
             <button
-              onClick={() => window.open(downloadUrl, '_blank')}
+              onClick={() => window.open(resolveUrl(downloadUrl), '_blank')}
               style={{
                 display: 'flex', alignItems: 'center', gap: '5px',
                 padding: '6px 12px', borderRadius: '7px',
@@ -1047,7 +1052,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
             </button>
             <button
               onClick={() => {
-                navigator.clipboard.writeText(downloadUrl);
+                navigator.clipboard.writeText(resolveUrl(downloadUrl));
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
                 toast.success('URL copied');
