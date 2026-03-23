@@ -23,10 +23,11 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowUpFromLine, ChevronRight, RefreshCw,
+  PaperclipIcon, ChevronRight, RefreshCw,
   CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye, Volume2,
   FileText as FileTextIcon, FileCode as FileCodeIcon,
   FileSpreadsheet as FileSpreadsheetIcon, File as FileIconLucide,
+  CheckIcon, XIcon, ImageIcon, Music2Icon, VideoIcon,
 } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChat } from '@ai-sdk/react';
@@ -112,6 +113,18 @@ const CHAT_STYLES = `
     0%, 100% { opacity: 1; transform: scale(1); }
     50%       { opacity: 0.3; transform: scale(0.55); }
   }
+  @keyframes chat-spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes chat-fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes chat-checkmark {
+    0%   { opacity: 0; transform: scale(0.5); }
+    50%  { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0; transform: scale(1); }
+  }
 
   /* Message entrance */
   .chat-msg-enter { animation: chat-fadeUp .25s cubic-bezier(.22,.68,0,1.2) both; }
@@ -125,13 +138,42 @@ const CHAT_STYLES = `
   [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.18); border-radius: 4px; }
   [data-scroll-container]::-webkit-scrollbar-thumb:hover { background: rgba(96,165,250,0.35); }
 
-  /* Dot-grid background — applied on root, works with the radial gradient */
+  /* Dot-grid background */
   .chat-root {
     background-color: var(--chat-bg);
     background-image:
       radial-gradient(ellipse 130% 55% at 65% -8%, rgba(96,165,250,0.045) 0%, transparent 55%),
       radial-gradient(var(--chat-dot) 1px, transparent 1px);
     background-size: auto, 24px 24px;
+  }
+
+  /* Upload file card */
+  .upload-file-card {
+    animation: chat-fadeIn 0.3s ease-out;
+    transition: all 0.15s ease;
+  }
+  .upload-file-card:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Upload spinner */
+  .upload-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(96,165,250,0.15);
+    border-top-color: #60A5FA;
+    border-radius: 50%;
+    animation: chat-spin 1s linear infinite;
+  }
+
+  /* Checkmark flash */
+  .upload-checkmark {
+    animation: chat-checkmark 0.6s ease-out forwards;
+  }
+
+  /* Drag-and-drop overlay */
+  .drag-drop-overlay {
+    animation: chat-fadeIn 0.2s ease-out;
   }
 `;
 
@@ -159,19 +201,198 @@ async function fetchWithTimeout(
 
 // ─── Local attachment display sub-components ─────────────────────────────────
 
-function AttachmentsDisplay() {
+function getFileTypeIcon(filename: string | undefined) {
+  const ext = getFileExtension(filename || '');
+  if (['pdf','doc','docx','rtf'].includes(ext)) return FileTextIcon;
+  if (['xls','xlsx','csv'].includes(ext)) return FileSpreadsheetIcon;
+  if (['json','xml','html','md','txt','afl'].includes(ext)) return FileCodeIcon;
+  if (['png','jpg','jpeg','gif','webp','svg','bmp'].includes(ext)) return ImageIcon;
+  if (['mp3','wav','m4a','ogg','flac'].includes(ext)) return Music2Icon;
+  if (['mp4','avi','mov','mkv','webm'].includes(ext)) return VideoIcon;
+  return FileIconLucide;
+}
+
+function AttachmentsDisplay({
+  isDark,
+  uploadStates,
+  onRemoveFile,
+  onRemoveUpload,
+}: {
+  isDark: boolean;
+  uploadStates: Record<string, { filename: string; size: number; mediaType: string; status: 'uploading' | 'complete' | 'error'; showCheckmark: boolean }>;
+  onRemoveFile: (id: string) => void;
+  onRemoveUpload: (filename: string) => void;
+}) {
   const attachments = usePromptInputAttachments();
-  if (attachments.files.length === 0) return null;
+  const hasFiles = attachments.files.length > 0 || Object.keys(uploadStates).length > 0;
+
+  if (!hasFiles) return null;
+
+  const colors = {
+    text: isDark ? '#EFEFEF' : '#0A0A0B',
+    muted: isDark ? '#606068' : '#808088',
+    border: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    bg: isDark ? '#0D0D10' : '#F5F5F5',
+  };
+
   return (
     <PromptInputHeader>
-      <Attachments variant="grid">
-        {attachments.files.map((file) => (
-          <Attachment key={file.id} data={file} onRemove={() => attachments.remove(file.id)}>
-            <AttachmentPreview />
-            <AttachmentRemove />
-          </Attachment>
-        ))}
-      </Attachments>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {attachments.files.map((file) => {
+          const fname = file.filename || 'file';
+          const ext = getFileExtension(fname) || '';
+          const cc = getFileChipColor(ext);
+          const Icon = getFileTypeIcon(fname);
+
+          return (
+            <div
+              key={file.id}
+              className="upload-file-card"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${colors.border}`,
+                background: colors.bg,
+                maxWidth: '240px',
+              }}
+            >
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '6px',
+                background: `${cc}18`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <Icon size={14} color={cc} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{
+                  margin: 0,
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: colors.text,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>{file.filename}</p>
+                <p style={{ margin: 0, fontSize: '10px', color: colors.muted }}>Ready to upload</p>
+              </div>
+              <button
+                onClick={() => onRemoveFile(file.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '4px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: colors.muted,
+                  flexShrink: 0,
+                  transition: 'color .15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = colors.muted; }}
+              >
+                <XIcon size={14} />
+              </button>
+            </div>
+          );
+        })}
+
+        {Object.entries(uploadStates).map(([filename, state]) => {
+          const ext = getFileExtension(filename) || '';
+          const cc = getFileChipColor(ext);
+          const Icon = getFileTypeIcon(filename);
+
+          return (
+            <div
+              key={filename}
+              className="upload-file-card"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${state.status === 'error' ? 'rgba(239,68,68,0.3)' : colors.border}`,
+                background: state.status === 'error'
+                  ? (isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)')
+                  : colors.bg,
+                maxWidth: '240px',
+              }}
+            >
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '6px',
+                background: `${cc}18`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                {state.showCheckmark ? (
+                  <div className="upload-checkmark">
+                    <CheckIcon size={14} color="#22C55E" />
+                  </div>
+                ) : state.status === 'uploading' ? (
+                  <div className="upload-spinner" />
+                ) : state.status === 'error' ? (
+                  <XIcon size={14} color="#EF4444" />
+                ) : (
+                  <Icon size={14} color={cc} />
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{
+                  margin: 0,
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: colors.text,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>{filename}</p>
+                <p style={{ margin: 0, fontSize: '10px', color: colors.muted }}>
+                  {state.status === 'uploading' ? 'Uploading...' : state.status === 'error' ? 'Upload failed' : formatChatFileSize(state.size)}
+                </p>
+              </div>
+              {state.status !== 'uploading' && (
+                <button
+                  onClick={() => onRemoveUpload(filename)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '4px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: colors.muted,
+                    flexShrink: 0,
+                    transition: 'color .15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = colors.muted; }}
+                >
+                  <XIcon size={14} />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </PromptInputHeader>
   );
 }
@@ -184,7 +405,7 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
       disabled={disabled}
       tooltip="Attach files (PDF, CSV, JSON, Images, Docs, etc.)"
     >
-      <ArrowUpFromLine className="size-4" />
+      <PaperclipIcon className="size-4" />
     </PromptInputButton>
   );
 }
@@ -213,6 +434,14 @@ export function ChatPage() {
   const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
   const [backendAvailable, setBackendAvailable] = useState(true);
   const [skillStatus, setSkillStatus] = useState<{ label: string; slug: string } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadStates, setUploadStates] = useState<Record<string, {
+    filename: string;
+    size: number;
+    mediaType: string;
+    status: 'uploading' | 'complete' | 'error';
+    showCheckmark: boolean;
+  }>>({});
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { status: connStatus, check: recheckConnection } = useConnectionStatus({ interval: 60000 });
@@ -870,7 +1099,23 @@ export function ChatPage() {
         overflow: 'hidden',
         position: 'relative',
         fontFamily: "'Instrument Sans', 'Quicksand', sans-serif",
-      }}>
+      }}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('Files')) {
+          e.preventDefault();
+          setIsDragOver(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget === e.target) {
+          setIsDragOver(false);
+        }
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+      }}
+    >
 
       {/* ── Backend unavailable banner (removed) ── */}
       {false && !backendAvailable && (
@@ -911,6 +1156,78 @@ export function ChatPage() {
           >
             Retry
           </button>
+        </div>
+      )}
+
+      {/* ── Drag-and-drop overlay ──────────────────────────────────────────── */}
+      {isDragOver && (
+        <div
+          className="drag-drop-overlay"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+            background: isDark
+              ? 'rgba(8,8,9,0.85)'
+              : 'rgba(245,245,246,0.85)',
+            backdropFilter: 'blur(8px)',
+          }}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragOver(false);
+          }}
+        >
+          <div style={{
+            width: '80%',
+            maxWidth: '500px',
+            padding: '48px',
+            borderRadius: '16px',
+            border: `2px dashed ${isDark ? 'rgba(96,165,250,0.5)' : 'rgba(96,165,250,0.6)'}`,
+            background: isDark
+              ? 'rgba(96,165,250,0.06)'
+              : 'rgba(96,165,250,0.08)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+          }}>
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: '12px',
+              background: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.12)',
+              border: '1px solid rgba(96,165,250,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <PaperclipIcon size={24} color="#60A5FA" />
+            </div>
+            <span style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: '18px',
+              fontWeight: 700,
+              color: isDark ? '#EFEFEF' : '#0A0A0B',
+              letterSpacing: '-0.01em',
+            }}>
+              Drop files to upload
+            </span>
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: '11px',
+              letterSpacing: '0.06em',
+              color: isDark ? '#606068' : '#808088',
+            }}>
+              PDF, CSV, JSON, Images, Documents, and more
+            </span>
+          </div>
         </div>
       )}
 
@@ -1203,6 +1520,22 @@ export function ChatPage() {
                   if (files.length > 0) {
                     const token = getAuthToken();
                     const uploaded: string[] = [];
+
+                    // Initialize upload states for all files
+                    for (const file of files) {
+                      const fileName = file.filename || 'upload';
+                      setUploadStates(prev => ({
+                        ...prev,
+                        [fileName]: {
+                          filename: fileName,
+                          size: 0,
+                          mediaType: file.mediaType || 'application/octet-stream',
+                          status: 'uploading',
+                          showCheckmark: false,
+                        },
+                      }));
+                    }
+
                     for (const file of files) {
                       const fileName = file.filename || 'upload';
                       try {
@@ -1215,9 +1548,14 @@ export function ChatPage() {
                           const resp = await fetch(file.url);
                           const blob = await resp.blob();
                           actualFile = new File([blob], fileName, { type: file.mediaType || blob.type || 'application/octet-stream' });
-                        } else { toast.error(`Cannot upload ${fileName}: No file data`); continue; }
+                        } else { 
+                          setUploadStates(prev => ({
+                            ...prev,
+                            [fileName]: { ...prev[fileName], status: 'error' },
+                          }));
+                          continue;
+                        }
 
-                        const toastId = toast.loading(`📤 Uploading ${fileName}...`, { duration: 10000 });
                         const formData = new FormData();
                         formData.append('file', actualFile);
 
@@ -1235,20 +1573,39 @@ export function ChatPage() {
                           const respData = await resp.json();
                           uploaded.push(fileName);
                           fileBlobCacheRef.current.set(fileName, { url: file.url || undefined, fileId: respData.file_id || respData.id, filename: fileName, mediaType: file.mediaType, size: actualFile.size });
+
+                          // Show checkmark briefly then clear
+                          setUploadStates(prev => ({
+                            ...prev,
+                            [fileName]: { ...prev[fileName], status: 'complete', size: actualFile.size, showCheckmark: true },
+                          }));
+                          setTimeout(() => {
+                            setUploadStates(prev => {
+                              const next = { ...prev };
+                              delete next[fileName];
+                              return next;
+                            });
+                          }, 600);
+
                           if (respData.is_template && respData.template_id) {
-                            toast.success(`✅ ${fileName} registered as template`, { id: toastId, duration: 6000 });
-                          } else {
-                            toast.success(`✅ Uploaded ${fileName}`, { id: toastId });
+                            toast.success(`${fileName} registered as template`, { duration: 4000 });
                           }
                         } catch (err) {
                           const msg = err instanceof Error ? err.message : 'Unknown error';
-                          toast.error(`❌ Failed to upload ${fileName}: ${msg}`, { id: toastId });
-                          // Check for backend unavailability
+                          setUploadStates(prev => ({
+                            ...prev,
+                            [fileName]: { ...prev[fileName], status: 'error' },
+                          }));
                           if (msg.includes('fetch') || msg.includes('network') || msg.includes('aborted')) {
                             setBackendAvailable(false);
                           }
                         }
-                      } catch { /* outer guard */ }
+                      } catch { 
+                        setUploadStates(prev => ({
+                          ...prev,
+                          [fileName]: { ...prev[fileName], status: 'error' },
+                        }));
+                      }
                     }
                     if (uploaded.length > 0) {
                       const fileList = uploaded.map((f) => `[file: ${f}]`).join('\n');
@@ -1264,7 +1621,18 @@ export function ChatPage() {
                   sendMessage({ text: messageText }, { body: { conversationId: convId } });
                 }}
               >
-                <AttachmentsDisplay />
+                <AttachmentsDisplay 
+                  isDark={isDark} 
+                  uploadStates={uploadStates} 
+                  onRemoveFile={(id) => {}} 
+                  onRemoveUpload={(filename) => {
+                    setUploadStates(prev => {
+                      const next = { ...prev };
+                      delete next[filename];
+                      return next;
+                    });
+                  }}
+                />
                 <PromptInputTextarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
