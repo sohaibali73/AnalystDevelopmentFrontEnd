@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+import { parseFileForPreview, ParsedDocument } from '@/lib/filePreview';
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
 
@@ -298,6 +299,8 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   const [copied, setCopied] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(true);
   const [safetyTimeout, setSafetyTimeout] = useState(false);
+  const [parsedDoc, setParsedDoc] = useState<ParsedDocument | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const startTimeRef = useRef<number>(Date.now());
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -472,6 +475,37 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     if (bytes) return bytes > 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
     return null;
   };
+
+  // ── Fetch and parse file for preview ─────────────────────────────────────
+  const loadPreview = useCallback(async () => {
+    if (!downloadUrl || !isComplete) return;
+    const supportedTypes = ['docx', 'xlsx', 'pdf'];
+    if (!supportedTypes.includes(fileType)) return;
+
+    setPreviewLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const response = await fetch(resolveUrl(downloadUrl), {
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+      });
+      if (!response.ok) throw new Error('Failed to fetch file');
+      const blob = await response.blob();
+      const filename = outputData?.filename || `file.${fileType}`;
+      const parsed = await parseFileForPreview(blob, filename);
+      setParsedDoc(parsed);
+    } catch (err) {
+      console.error('Preview failed:', err);
+      setParsedDoc({ type: 'unsupported', content: 'Preview could not be loaded.' });
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [downloadUrl, isComplete, fileType, outputData]);
+
+  useEffect(() => {
+    if (previewOpen && isComplete && downloadUrl && (fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf')) {
+      loadPreview();
+    }
+  }, [previewOpen, isComplete, downloadUrl, fileType, loadPreview]);
 
   // ── Theme tokens ───────────────────────────────────────────────────────────
   const cardBg    = isDark ? '#111114' : '#FAFAFA';
@@ -885,7 +919,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           </div>
         )}
 
-        {/* ── Inline live preview panel ──────────────────────────────────────── */}
+        {/* ── Inline live preview panel (JS library-based) ────────────────────── */}
         {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
           <div style={{
             marginTop: '12px',
@@ -934,26 +968,196 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                 ▲ Hide Preview
               </button>
             </div>
-            {/* Preview iframe */}
-            <div style={{ position: 'relative', width: '100%', height: '400px' }}>
-              {(fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx') ? (
-                <iframe
-                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resolveUrl(downloadUrl))}`}
-                  width="100%"
-                  height="400"
-                  frameBorder="0"
-                  style={{ display: 'block' }}
-                  title={`${meta.label} preview`}
-                />
+            {/* Preview content */}
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              maxHeight: '400px',
+              overflow: 'auto',
+              backgroundColor: isDark ? '#0D0D10' : '#FFFFFF',
+            }}>
+              {previewLoading ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '200px',
+                  gap: '8px',
+                  color: mutedCol,
+                  fontSize: '12px',
+                }}>
+                  <span style={{
+                    width: '14px', height: '14px',
+                    border: `2px solid ${meta.color}`,
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'docGenSpin 0.8s linear infinite',
+                    display: 'inline-block',
+                  }} />
+                  Loading preview…
+                </div>
+              ) : fileType === 'pptx' ? (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '200px',
+                  gap: '8px',
+                  color: mutedCol,
+                  fontSize: '12px',
+                }}>
+                  <FileIcon size={32} color={meta.color} />
+                  <span>PPTX preview is not available in-browser.</span>
+                  <span style={{ fontSize: '11px', opacity: 0.7 }}>Use the download button to open the file.</span>
+                </div>
+              ) : parsedDoc ? (
+                <div style={{ padding: '14px 16px' }}>
+                  {parsedDoc.type === 'html' && (
+                    <div
+                      style={{
+                        fontSize: '13px',
+                        lineHeight: 1.7,
+                        color: textColor,
+                        fontFamily: "'Instrument Sans', sans-serif",
+                      }}
+                      dangerouslySetInnerHTML={{ __html: parsedDoc.content }}
+                    />
+                  )}
+                  {parsedDoc.type === 'text' && (
+                    <pre style={{
+                      margin: 0,
+                      fontSize: '12px',
+                      lineHeight: 1.6,
+                      color: textColor,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      fontFamily: "'DM Mono', monospace",
+                    }}>
+                      {parsedDoc.content}
+                    </pre>
+                  )}
+                  {parsedDoc.type === 'table' && parsedDoc.tables && (
+                    <div>
+                      {parsedDoc.tables.map((table, tIdx) => (
+                        <div key={tIdx} style={{ marginBottom: tIdx < parsedDoc.tables!.length - 1 ? '20px' : 0 }}>
+                          {table.name && (
+                            <div style={{
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              color: meta.color,
+                              marginBottom: '8px',
+                              fontFamily: "'Syne', sans-serif",
+                            }}>
+                              {table.name}
+                            </div>
+                          )}
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{
+                              width: '100%',
+                              borderCollapse: 'collapse',
+                              fontSize: '11.5px',
+                              fontFamily: "'Instrument Sans', sans-serif",
+                            }}>
+                              <thead>
+                                <tr>
+                                  {table.headers.map((h, hIdx) => (
+                                    <th key={hIdx} style={{
+                                      padding: '6px 10px',
+                                      textAlign: 'left',
+                                      fontWeight: 700,
+                                      fontSize: '10.5px',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.5px',
+                                      color: mutedCol,
+                                      borderBottom: `1px solid ${metaBdr}`,
+                                      backgroundColor: metaBg,
+                                      whiteSpace: 'nowrap',
+                                    }}>
+                                      {h}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {table.rows.slice(0, 100).map((row, rIdx) => (
+                                  <tr key={rIdx} style={{
+                                    backgroundColor: rIdx % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)'),
+                                  }}>
+                                    {row.map((cell, cIdx) => (
+                                      <td key={cIdx} style={{
+                                        padding: '5px 10px',
+                                        borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
+                                        color: textColor,
+                                        whiteSpace: 'nowrap',
+                                        maxWidth: '200px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                      }}>
+                                        {cell}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {table.rows.length > 100 && (
+                            <div style={{
+                              fontSize: '10.5px',
+                              color: mutedCol,
+                              marginTop: '6px',
+                              fontStyle: 'italic',
+                            }}>
+                              Showing first 100 of {table.rows.length} rows
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {parsedDoc.type === 'unsupported' && (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '150px',
+                      gap: '6px',
+                      color: mutedCol,
+                      fontSize: '12px',
+                    }}>
+                      {parsedDoc.content}
+                    </div>
+                  )}
+                  {parsedDoc.metadata && (
+                    <div style={{
+                      marginTop: '12px',
+                      paddingTop: '8px',
+                      borderTop: `1px solid ${metaBdr}`,
+                      display: 'flex',
+                      gap: '14px',
+                      fontSize: '10.5px',
+                      color: mutedCol,
+                      fontFamily: "'DM Mono', monospace",
+                    }}>
+                      {parsedDoc.metadata.pages && <span>{parsedDoc.metadata.pages} pages</span>}
+                      {parsedDoc.metadata.wordCount && <span>{parsedDoc.metadata.wordCount.toLocaleString()} words</span>}
+                      {parsedDoc.metadata.lineCount && <span>{parsedDoc.metadata.lineCount} lines</span>}
+                    </div>
+                  )}
+                </div>
               ) : (
-                <iframe
-                  src={downloadUrl}
-                  width="100%"
-                  height="400"
-                  frameBorder="0"
-                  style={{ display: 'block' }}
-                  title="PDF preview"
-                />
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '150px',
+                  color: mutedCol,
+                  fontSize: '12px',
+                }}>
+                  No preview available
+                </div>
               )}
             </div>
           </div>
