@@ -576,6 +576,7 @@ export function ChatPage() {
   const [forcedSkillName, setForcedSkillName] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileDownloadEvents, setFileDownloadEvents] = useState<Record<string, any>>({});
+  const fileDownloadEventsRef = useRef<Record<string, any>>({});
   const [uploadStates, setUploadStates] = useState<Record<string, {
     filename: string;
     size: number;
@@ -704,9 +705,17 @@ export function ChatPage() {
         if (item.skill_status) {
           setSkillStatus({ label: item.skill_status, slug: item.skill_slug ?? '' });
         }
-        // File download — toast + store for card injection
+        // File download — toast + store for card injection + persist to localStorage
         if (item.type === 'file_download' && item.filename) {
-          setFileDownloadEvents(prev => ({ ...prev, [item.filename]: item }));
+          const convId = conversationIdRef.current;
+          setFileDownloadEvents(prev => {
+            const next = { ...prev, [item.filename]: item };
+            // Persist to localStorage so it survives page refreshes
+            if (convId) {
+              try { localStorage.setItem(`file_dl_${convId}`, JSON.stringify(next)); } catch {}
+            }
+            return next;
+          });
           toast.success(`${item.filename} is ready`, {
             description: 'Click to download',
             action: {
@@ -760,8 +769,22 @@ export function ChatPage() {
 
   // ── Sync conversationIdRef ─────────────────────────────────────────────────
   useEffect(() => {
-    conversationIdRef.current = selectedConversation?.id || null;
+    const newConvId = selectedConversation?.id || null;
+    conversationIdRef.current = newConvId;
+    // Load persisted file download events for this conversation
+    if (newConvId) {
+      try {
+        const stored = localStorage.getItem(`file_dl_${newConvId}`);
+        if (stored) setFileDownloadEvents(JSON.parse(stored));
+        else setFileDownloadEvents({});
+      } catch { setFileDownloadEvents({}); }
+    }
   }, [selectedConversation]);
+
+  // ── Sync fileDownloadEvents ref for stable onData closure ──────────────────
+  useEffect(() => {
+    fileDownloadEventsRef.current = fileDownloadEvents;
+  }, [fileDownloadEvents]);
 
   // ── Streaming conv tracking ────────────────────────────────────────────────
   useEffect(() => {
