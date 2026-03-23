@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 
 // ─── Static model list ──────────────────────────────────────────────────────
@@ -154,22 +155,24 @@ export function ChatModelSelector({
         />
       </button>
 
-      {/* Floating panel */}
-      {open && (
+      {/* Floating panel via portal */}
+      {open && typeof document !== 'undefined' && (() => {
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (!rect) return null;
+        return createPortal(
         <div
           ref={panelRef}
           style={{
-            position: 'absolute',
-            bottom: '100%',
-            right: 0,
-            marginBottom: '8px',
+            position: 'fixed',
+            bottom: window.innerHeight - rect.top + 8,
+            right: window.innerWidth - rect.right,
             width: '280px',
             borderRadius: '12px',
             border: `1px solid ${T.panelBorder}`,
             background: T.panelBg,
             boxShadow: T.panelShadow,
             overflow: 'hidden',
-            zIndex: 1000,
+            zIndex: 10000,
             animation: 'chat-fadeIn 0.15s ease-out',
           }}
         >
@@ -295,8 +298,10 @@ export function ChatModelSelector({
               );
             })}
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+        );
+      })()}
     </div>
   );
 }

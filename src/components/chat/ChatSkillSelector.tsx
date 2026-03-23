@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Zap, X, Search, Check } from 'lucide-react';
 import type { SkillDefinition, SkillCategory } from '@/types/skills';
 import { SKILL_CATEGORY_META } from '@/types/skills';
@@ -231,15 +232,17 @@ export function ChatSkillSelector({
         )}
       </button>
 
-      {/* Floating panel */}
-      {open && (
+      {/* Floating panel via portal */}
+      {open && typeof document !== 'undefined' && (() => {
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (!rect) return null;
+        return createPortal(
         <div
           ref={panelRef}
           style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            marginBottom: '8px',
+            position: 'fixed',
+            bottom: window.innerHeight - rect.top + 8,
+            left: rect.left,
             width: '360px',
             maxHeight: '420px',
             borderRadius: '12px',
@@ -247,7 +250,7 @@ export function ChatSkillSelector({
             background: T.panelBg,
             boxShadow: T.panelShadow,
             overflow: 'hidden',
-            zIndex: 1000,
+            zIndex: 10000,
             display: 'flex',
             flexDirection: 'column',
             animation: 'chat-fadeIn 0.15s ease-out',
@@ -535,8 +538,10 @@ export function ChatSkillSelector({
               })
             )}
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+        );
+      })()}
     </div>
   );
 }
