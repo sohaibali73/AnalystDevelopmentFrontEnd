@@ -62,6 +62,14 @@ import {
   getToolTitle,
   type ChatPreviewFile,
 } from '@/components/chat';
+import {
+  WeatherCard,
+  StockCard,
+  NewsHeadlines,
+  MarketOverview,
+  BacktestResults,
+  FileAnalysisCard,
+} from '@/components/generative-ui';
 
 // ── AI Elements ───────────────────────────────────────────────────────────────
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
@@ -408,6 +416,73 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
       <PaperclipIcon className="size-4" />
     </PromptInputButton>
   );
+}
+
+// ─── Card JSON Extraction Helpers ─────────────────────────────────────────
+
+interface CardSegment {
+  type: 'text';
+  text: string;
+}
+interface CardToken {
+  type: 'card';
+  cardType: string;
+  data: any;
+}
+type TextSegment = CardSegment | CardToken;
+
+// Matches {"card":"X","data":{...}} — handles 1 level of nesting
+const CARD_JSON_RE = /\{"card":"([^"]+)","data":\{(?:[^{}]|\{[^{}]*\})*\}\}/g;
+
+function splitTextWithCards(text: string): TextSegment[] {
+  const segments: TextSegment[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  CARD_JSON_RE.lastIndex = 0;
+
+  while ((match = CARD_JSON_RE.exec(text)) !== null) {
+    // Text before this card token
+    if (match.index > lastIndex) {
+      segments.push({ type: 'text', text: text.slice(lastIndex, match.index) });
+    }
+    // Parse the card token
+    try {
+      const parsed = JSON.parse(match[0]);
+      segments.push({ type: 'card', cardType: parsed.card, data: parsed.data });
+    } catch {
+      // Malformed JSON — treat as plain text
+      segments.push({ type: 'text', text: match[0] });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Remaining text after last match
+  if (lastIndex < text.length) {
+    segments.push({ type: 'text', text: text.slice(lastIndex) });
+  }
+
+  return segments;
+}
+
+function renderInlineCard(cardType: string, data: any, key: number): React.ReactNode {
+  switch (cardType) {
+    case 'weather':
+      return <WeatherCard key={key} {...data} />;
+    case 'file_analysis':
+      return <FileAnalysisCard key={key} {...data} />;
+    case 'stock':
+    case 'stock_data':
+      return <StockCard key={key} {...data} />;
+    case 'news':
+      return <NewsHeadlines key={key} {...data} />;
+    case 'market_overview':
+      return <MarketOverview key={key} {...data} />;
+    case 'backtest':
+      return <BacktestResults key={key} {...data} />;
+    default:
+      // Unknown card type — suppress the JSON, show nothing
+      return null;
+  }
 }
 
 // ─── Main ChatPage Component ──────────────────────────────────────────────────
@@ -871,6 +946,31 @@ export function ChatPage() {
           if (!part.text) return null;
           if (!isUser) {
             const stripped = !msgIsStreaming ? stripReactCodeBlocks(part.text) : part.text;
+
+            // Only attempt card extraction on complete (non-streaming) text
+            if (!msgIsStreaming) {
+              const segments = splitTextWithCards(stripped);
+              const hasCards = segments.some(s => s.type === 'card');
+
+              if (hasCards) {
+                return (
+                  <React.Fragment key={pIdx}>
+                    {segments.map((seg, i) => {
+                      if (seg.type === 'card') {
+                        return renderInlineCard(seg.cardType, seg.data, i);
+                      }
+                      const cleanText = seg.text.trim();
+                      return cleanText
+                        ? <MessageResponse key={i}>{cleanText}</MessageResponse>
+                        : null;
+                    })}
+                    <InlineReactPreview text={part.text} isDark={isDark} />
+                  </React.Fragment>
+                );
+              }
+            }
+
+            // Default path — no card tokens found (or still streaming)
             return (
               <React.Fragment key={pIdx}>
                 {stripped.trim() && <MessageResponse>{stripped}</MessageResponse>}

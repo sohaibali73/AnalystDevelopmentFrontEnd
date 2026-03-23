@@ -132,3 +132,6 @@ export { FinancialResearchCard } from './FinancialResearchCard';
 
 // Document Interpreter (doc-interpreter skill)
 export { DocInterpreterCard } from './DocInterpreterCard';
+
+// NEW: File Analysis Card (inline card JSON extraction)
+export { FileAnalysisCard } from './FileAnalysisCard';
