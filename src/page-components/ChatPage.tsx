@@ -486,36 +486,43 @@ interface CardToken {
 }
 type TextSegment = CardSegment | CardToken;
 
-// Matches {"card":"X","data":{...}} — handles 1 level of nesting
-const CARD_JSON_RE = /\{"card":"([^"]+)","data":\{(?:[^{}]|\{[^{}]*\})*\}\}/g;
-
 function splitTextWithCards(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
   let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  CARD_JSON_RE.lastIndex = 0;
+  let i = 0;
 
-  while ((match = CARD_JSON_RE.exec(text)) !== null) {
-    // Text before this card token
-    if (match.index > lastIndex) {
-      segments.push({ type: 'text', text: text.slice(lastIndex, match.index) });
+  while (i < text.length) {
+    // Look for {"card":"
+    const start = text.indexOf('{"card":"', i);
+    if (start === -1) break;
+
+    // Walk forward counting braces to find the matching closing }
+    let depth = 0;
+    let j = start;
+    let found = -1;
+    while (j < text.length) {
+      if (text[j] === '{') depth++;
+      else if (text[j] === '}') {
+        depth--;
+        if (depth === 0) { found = j; break; }
+      }
+      j++;
     }
-    // Parse the card token
+    if (found === -1) break;
+
+    const json = text.slice(start, found + 1);
     try {
-      const parsed = JSON.parse(match[0]);
-      segments.push({ type: 'card', cardType: parsed.card, data: parsed.data });
-    } catch {
-      // Malformed JSON — treat as plain text
-      segments.push({ type: 'text', text: match[0] });
-    }
-    lastIndex = match.index + match[0].length;
+      const parsed = JSON.parse(json);
+      if (parsed.card && parsed.data !== undefined) {
+        if (start > lastIndex) segments.push({ type: 'text', text: text.slice(lastIndex, start) });
+        segments.push({ type: 'card', cardType: parsed.card, data: parsed.data });
+        lastIndex = found + 1;
+      }
+    } catch { /* not valid JSON, skip */ }
+    i = found + 1;
   }
 
-  // Remaining text after last match
-  if (lastIndex < text.length) {
-    segments.push({ type: 'text', text: text.slice(lastIndex) });
-  }
-
+  if (lastIndex < text.length) segments.push({ type: 'text', text: text.slice(lastIndex) });
   return segments;
 }
 
