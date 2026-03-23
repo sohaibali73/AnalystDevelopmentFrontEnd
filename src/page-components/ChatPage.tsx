@@ -592,6 +592,12 @@ export function ChatPage() {
   const trackedToolsRef = useRef<Map<string, string>>(new Map());
   const initialLoadDoneRef = useRef(false);
   const healthCheckAbortControllerRef = useRef<AbortController | null>(null);
+  const selectedModelRef    = useRef(selectedModel);
+  const forcedSkillSlugRef  = useRef<string | null>(forcedSkillSlug);
+
+  // ── Sync refs for stable closures in transport body ────────────────────────
+  useEffect(() => { selectedModelRef.current = selectedModel; }, [selectedModel]);
+  useEffect(() => { forcedSkillSlugRef.current = forcedSkillSlug; }, [forcedSkillSlug]);
 
   const artifacts = selectedConversation ? (artifactsByConv[selectedConversation.id] || []) : [];
 
@@ -671,8 +677,8 @@ export function ChatPage() {
         conversationId: conversationIdRef.current,
         thinking_mode: thinkingMode,
         thinking_budget: thinkingBudget,
-        model: selectedModel,
-        skill_slug: forcedSkillSlug ?? undefined,
+        model: selectedModelRef.current,
+        skill_slug: forcedSkillSlugRef.current ?? undefined,
       }),
     }),
     onData: (dataPart: any) => {
@@ -1105,7 +1111,7 @@ export function ChatPage() {
           return null;
         }
         case 'data-file-download':
-          return part.data ? <DocumentDownloadCard key={pIdx} output={{ document_id: part.data.file_id || part.data.document_id, filename: part.data.filename, download_url: part.data.download_url, doc_type: part.data.file_type || part.data.doc_type, file_size_kb: part.data.size_kb || part.data.file_size_kb, tool: part.data.tool_name || part.data.tool, title: part.data.filename || part.data.title || 'Generated File', success: true }} /> : null;
+          return part.data ? <DocumentDownloadCard key={pIdx} output={{ document_id: part.data.file_id || part.data.document_id, filename: part.data.filename, download_url: part.data.download_url, doc_type: part.data.file_type || part.data.doc_type, file_size_kb: part.data.size_kb || part.data.file_size_kb, tool: part.data.tool_name || part.data.tool, title: part.data.filename || part.data.title || 'Generated File', success: true }} onPreview={(file) => setPreviewChatFile(file)} /> : null;
         default:
           if (part.type?.startsWith('data-') && part.data?.content && part.data?.artifactType) {
             const { artifactType: artType, content: artCode, language, title } = part.data;
@@ -1778,7 +1784,7 @@ export function ChatPage() {
                     setSelectedKbDocIds(new Set());
                   }
 
-                  sendMessage({ text: messageText }, { body: { conversationId: convId } });
+                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined } });
                 }}
               >
                 <AttachmentsDisplay 

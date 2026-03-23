@@ -20,7 +20,7 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const BINARY_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'docx', 'doc', 'xlsx', 'xls'];
+const BINARY_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'docx', 'doc', 'xlsx', 'xls', 'pptx'];
 const IMAGE_EXTENSIONS  = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 const HTML_EXTENSIONS   = ['html', 'htm'];
 const TEXT_EXTENSIONS   = [
@@ -31,6 +31,7 @@ const TEXT_EXTENSIONS   = [
 ];
 const DOCX_EXTENSIONS   = ['docx', 'doc'];
 const XLSX_EXTENSIONS   = ['xlsx', 'xls'];
+const PPTX_EXTENSIONS   = ['pptx'];
 
 // ─── Script Loader (deduplicated) ────────────────────────────────────────────
 // Keyed by src so concurrent callers share the same in-flight promise and
@@ -107,6 +108,9 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
   const [xlsxSheets,  setXlsxSheets]  = useState<string[]>([]);
   const [xlsxAllHtml, setXlsxAllHtml] = useState<string[]>([]);
   const [xlsxActive,  setXlsxActive]  = useState(0);
+  // PPTX
+  const [pptxSlides, setPptxSlides] = useState<string[]>([]);
+  const [pptxActive, setPptxActive] = useState(0);
   // Viewer.js (images)
   const imgRef    = useRef<HTMLImageElement>(null);
   const viewerRef = useRef<any>(null);
@@ -175,12 +179,49 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
             const wb   = XLSX.read(ab, { type: 'array' });
             if (controller.signal.aborted) return;
             const names: string[] = wb.SheetNames;
-            // Use a unique id per instance to prevent CSS collisions
             const pages = names.map((n: string) =>
               XLSX.utils.sheet_to_html(wb.Sheets[n], { id: xlsxTableId, editable: false }),
             );
             setXlsxSheets(names);
             setXlsxAllHtml(pages);
+          }
+
+          // PPTX
+          if (PPTX_EXTENSIONS.includes(ext)) {
+            await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/build/pptxjs.min.js');
+            if (controller.signal.aborted) return;
+            const ab = await blob.arrayBuffer();
+            try {
+              const pptx = (window as any).pptx;
+              if (pptx && pptx.slides2Html) {
+                const result = await pptx.slides2Html({ pptx: ab, slidesScale: 'fit' });
+                if (controller.signal.aborted) return;
+                if (Array.isArray(result)) {
+                  setPptxSlides(result.map((s: any) => typeof s === 'string' ? s : s.html || String(s)));
+                } else if (typeof result === 'string') {
+                  setPptxSlides([result]);
+                } else {
+                  setPptxSlides(['<p>PPTX loaded but could not parse slides</p>']);
+                }
+              } else {
+                await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
+                if (controller.signal.aborted) return;
+                const container = document.createElement('div');
+                container.style.display = 'none';
+                document.body.appendChild(container);
+                try {
+                  await (window as any).pptxjs?.renderPptx({ pptx: ab, container });
+                  const slides = Array.from(container.children).map(c => (c as HTMLElement).innerHTML);
+                  setPptxSlides(slides.length > 0 ? slides : ['<p>No slides found</p>']);
+                } finally {
+                  document.body.removeChild(container);
+                }
+              }
+            } catch (pptxErr) {
+              if (!controller.signal.aborted) {
+                setPptxSlides(['<p style="color:#ef4444">Failed to render PPTX: ' + (pptxErr instanceof Error ? pptxErr.message : 'Unknown error') + '</p>']);
+              }
+            }
           }
         } else if (isHtml || isText) {
           if (controller.signal.aborted) return;
@@ -408,6 +449,38 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
             #${xlsxTableId} td,#${xlsxTableId} th{border:1px solid ${isDark ? '#333' : '#ddd'};padding:4px 8px;color:${isDark ? '#e0e0e0' : '#212121'};white-space:nowrap}
             #${xlsxTableId} tr:first-child td{background:${isDark ? '#2a2a2a' : '#f5f5f5'};font-weight:600}
           `}</style>
+        </div>
+      );
+    }
+
+    // ── PPTX ───────────────────────────────────────────────────────────────
+    if (PPTX_EXTENSIONS.includes(ext)) {
+      if (!pptxSlides.length) {
+        return (
+          <div className="flex items-center justify-center flex-1 gap-2.5 p-10">
+            <Loader2 size={22} color={colors.accent} className="animate-spin" />
+            <span style={{ color: colors.textMuted, fontSize: '13px' }}>Rendering slides…</span>
+          </div>
+        );
+      }
+      return (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {pptxSlides.length > 1 && (
+            <div className="flex items-center justify-center gap-2 px-3.5 py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
+              <button onClick={() => setPptxActive(Math.max(0, pptxActive - 1))} disabled={pptxActive === 0}
+                style={{ padding: '3px 10px', borderRadius: '6px', border: `1px solid ${colors.border}`, background: 'transparent', color: pptxActive === 0 ? colors.textMuted : colors.accent, fontSize: '12px', cursor: pptxActive === 0 ? 'default' : 'pointer' }}>
+                ←
+              </button>
+              <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, minWidth: '60px', textAlign: 'center' }}>{pptxActive + 1}/{pptxSlides.length}</span>
+              <button onClick={() => setPptxActive(Math.min(pptxSlides.length - 1, pptxActive + 1))} disabled={pptxActive === pptxSlides.length - 1}
+                style={{ padding: '3px 10px', borderRadius: '6px', border: `1px solid ${colors.border}`, background: 'transparent', color: pptxActive === pptxSlides.length - 1 ? colors.textMuted : colors.accent, fontSize: '12px', cursor: pptxActive === pptxSlides.length - 1 ? 'default' : 'pointer' }}>
+                →
+              </button>
+            </div>
+          )}
+          <div className="flex-1 overflow-auto flex items-center justify-center p-4" style={{ backgroundColor: isDark ? '#111' : '#fff' }}>
+            <div dangerouslySetInnerHTML={{ __html: pptxSlides[pptxActive] ?? '' }} style={{ maxWidth: '100%' }} />
+          </div>
         </div>
       );
     }

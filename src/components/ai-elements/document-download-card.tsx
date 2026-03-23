@@ -1,9 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileText, Presentation, Download, CheckCircle, Loader2, FileIcon, ExternalLink } from 'lucide-react';
+import { FileText, Presentation, Download, CheckCircle, Loader2, FileIcon, ExternalLink, Eye } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { getApiUrl } from '@/lib/env';
+
+function getMimeType(ext: string): string {
+  const map: Record<string, string> = {
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    pdf:  'application/pdf',
+  };
+  return map[ext?.toLowerCase()] || 'application/octet-stream';
+}
 
 interface DocumentDownloadCardProps {
   output: {
@@ -24,9 +34,10 @@ interface DocumentDownloadCardProps {
     content_preview?: string;
     error?: string;
   };
+  onPreview?: (file: { url?: string; filename: string; mediaType?: string }) => void;
 }
 
-export default function DocumentDownloadCard({ output }: DocumentDownloadCardProps) {
+export default function DocumentDownloadCard({ output, onPreview }: DocumentDownloadCardProps) {
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
@@ -116,37 +127,52 @@ export default function DocumentDownloadCard({ output }: DocumentDownloadCardPro
           </div>
         </div>
         
-        {/* Download Button */}
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            downloaded
-              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-              : downloading
-              ? 'bg-zinc-700 text-zinc-400 cursor-wait'
-              : isDocx
-              ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-              : 'bg-amber-500 hover:bg-amber-600 text-black shadow-lg shadow-amber-500/25'
-          }`}
-        >
-          {downloaded ? (
-            <>
-              <CheckCircle className="h-4 w-4" />
-              Downloaded
-            </>
-          ) : downloading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Downloading...
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4" />
-              Download {extension}
-            </>
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {onPreview && output.download_url && (
+            <button
+              onClick={() => onPreview({
+                url: output.download_url,
+                filename: output.filename || `document${extension}`,
+                mediaType: getMimeType(isDocx ? 'docx' : 'pptx'),
+              })}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/50"
+            >
+              <Eye className="h-4 w-4" />
+              Preview
+            </button>
           )}
-        </button>
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              downloaded
+                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                : downloading
+                ? 'bg-zinc-700 text-zinc-400 cursor-wait'
+                : isDocx
+                ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                : 'bg-amber-500 hover:bg-amber-600 text-black shadow-lg shadow-amber-500/25'
+            }`}
+          >
+            {downloaded ? (
+              <>
+                <CheckCircle className="h-4 w-4" />
+                Downloaded
+              </>
+            ) : downloading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download {extension}
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Subtitle */}

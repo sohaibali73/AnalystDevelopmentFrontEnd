@@ -30,6 +30,7 @@ interface PersistentGenerationCardProps {
   state: 'input-streaming' | 'input-available' | 'output-available' | 'output-error';
   errorText?: string;
   conversationId?: string;
+  onPreview?: (file: { url?: string; fileId?: string; filename: string }) => void;
 }
 
 interface GenerationJob {
@@ -58,7 +59,8 @@ const PersistentGenerationCard: React.FC<PersistentGenerationCardProps> = ({
   output,
   state,
   errorText,
-  conversationId
+  conversationId,
+  onPreview
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -358,6 +360,19 @@ const PersistentGenerationCard: React.FC<PersistentGenerationCardProps> = ({
               </div>
             </div>
             <div className="flex space-x-2">
+              {onPreview && downloadUrl && (
+                <Button
+                  variant="outline"
+                  onClick={() => onPreview({
+                    url: downloadUrl,
+                    filename: output?.filename || output?.title || 'document',
+                  })}
+                  className="flex items-center space-x-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>Preview</span>
+                </Button>
+              )}
               <Button
                 onClick={handleDownload}
                 className="flex items-center space-x-2"
