@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { Document } from '@/types/api';
+import { getFileExtension } from '@/lib/filePreview';
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024) return bytes + ' B';
@@ -77,9 +78,17 @@ function estimateReadTime(content: string): string {
   return `${mins} min read`;
 }
 
+interface ParsedTable {
+  headers: string[];
+  rows: string[][];
+  name?: string;
+}
+
 interface KBArticlePreviewProps {
   doc: Document;
   content: string | null;
+  contentType?: 'html' | 'text' | 'table' | 'json' | 'unsupported';
+  tables?: ParsedTable[];
   loading: boolean;
   onClose: () => void;
   isDark: boolean;
@@ -91,6 +100,8 @@ interface KBArticlePreviewProps {
 export default function KBArticlePreview({
   doc,
   content,
+  contentType = 'text',
+  tables,
   loading,
   onClose,
   isDark,
@@ -101,7 +112,7 @@ export default function KBArticlePreview({
   const [copied, setCopied] = React.useState(false);
   const c = catColors[doc.category] || catColors.general;
   const { Icon: FIcon, color: fColor } = getFileIcon(doc.filename);
-  const ext = doc.filename.split('.').pop()?.toUpperCase() || 'FILE';
+  const ext = getFileExtension(doc.filename).toUpperCase() || 'FILE';
 
   const handleCopy = () => {
     if (content) {
@@ -458,26 +469,175 @@ export default function KBArticlePreview({
                 <span style={{ color: colors.textMuted, fontSize: '11px' }}>
                   Lines: {content.split('\n').length.toLocaleString()}
                 </span>
+                {contentType !== 'text' && (
+                  <span style={{ color: colors.textMuted, fontSize: '11px' }}>
+                    Format: {contentType.toUpperCase()}
+                  </span>
+                )}
               </div>
 
-              {/* Full Content */}
-              <pre
-                style={{
-                  fontFamily: "'Quicksand', 'Consolas', 'Monaco', monospace",
-                  fontSize: '13px',
-                  lineHeight: 1.7,
-                  color: colors.text,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  margin: 0,
-                  backgroundColor: isDark ? '#161616' : '#FAFAFA',
-                  borderRadius: '10px',
-                  padding: '20px',
-                  border: `1px solid ${colors.border}`,
-                }}
-              >
-                {content}
-              </pre>
+              {/* Format-Aware Content Rendering */}
+              {contentType === 'html' ? (
+                <div
+                  style={{
+                    fontFamily: "'Quicksand', 'Consolas', 'Monaco', monospace",
+                    fontSize: '13px',
+                    lineHeight: 1.7,
+                    color: colors.text,
+                    backgroundColor: isDark ? '#161616' : '#FAFAFA',
+                    borderRadius: '10px',
+                    padding: '20px',
+                    border: `1px solid ${colors.border}`,
+                    overflow: 'auto',
+                  }}
+                  dangerouslySetInnerHTML={{ __html: content }}
+                />
+              ) : contentType === 'json' ? (
+                <pre
+                  style={{
+                    fontFamily: "'Quicksand', 'Consolas', 'Monaco', monospace",
+                    fontSize: '13px',
+                    lineHeight: 1.7,
+                    color: '#22c55e',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    margin: 0,
+                    backgroundColor: isDark ? '#0a0a0a' : '#FAFAFA',
+                    borderRadius: '10px',
+                    padding: '20px',
+                    border: `1px solid ${colors.border}`,
+                  }}
+                >
+                  {content}
+                </pre>
+              ) : contentType === 'table' && tables && tables.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {tables.map((table, tIdx) => (
+                    <div key={tIdx}>
+                      {table.name && (
+                        <p
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            color: colors.accent,
+                            fontFamily: "'Rajdhani', sans-serif",
+                            letterSpacing: '0.5px',
+                            marginBottom: '8px',
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          Sheet: {table.name}
+                        </p>
+                      )}
+                      <div
+                        style={{
+                          overflow: 'auto',
+                          borderRadius: '10px',
+                          border: `1px solid ${colors.border}`,
+                          backgroundColor: isDark ? '#161616' : '#FAFAFA',
+                        }}
+                      >
+                        <table
+                          style={{
+                            width: '100%',
+                            borderCollapse: 'collapse',
+                            fontSize: '12px',
+                            fontFamily: "'Quicksand', sans-serif",
+                          }}
+                        >
+                          <thead>
+                            <tr>
+                              {table.headers.map((header, hIdx) => (
+                                <th
+                                  key={hIdx}
+                                  style={{
+                                    padding: '10px 14px',
+                                    textAlign: 'left',
+                                    fontWeight: 700,
+                                    color: colors.text,
+                                    borderBottom: `1px solid ${colors.border}`,
+                                    backgroundColor: isDark ? '#1a1a1a' : '#F5F5F5',
+                                    whiteSpace: 'nowrap',
+                                    position: 'sticky',
+                                    top: 0,
+                                    zIndex: 1,
+                                  }}
+                                >
+                                  {header}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {table.rows.slice(0, 100).map((row, rIdx) => (
+                              <tr
+                                key={rIdx}
+                                style={{
+                                  borderBottom: `1px solid ${colors.border}`,
+                                  transition: 'background-color 0.15s',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = isDark
+                                    ? 'rgba(255,255,255,0.03)'
+                                    : 'rgba(0,0,0,0.02)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                              >
+                                {row.map((cell, cIdx) => (
+                                  <td
+                                    key={cIdx}
+                                    style={{
+                                      padding: '8px 14px',
+                                      color: colors.text,
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {table.rows.length > 100 && (
+                          <p
+                            style={{
+                              padding: '10px 14px',
+                              fontSize: '11px',
+                              color: colors.textMuted,
+                              textAlign: 'center',
+                              borderTop: `1px solid ${colors.border}`,
+                              margin: 0,
+                            }}
+                          >
+                            Showing first 100 of {table.rows.length} rows
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <pre
+                  style={{
+                    fontFamily: "'Quicksand', 'Consolas', 'Monaco', monospace",
+                    fontSize: '13px',
+                    lineHeight: 1.7,
+                    color: colors.text,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    margin: 0,
+                    backgroundColor: isDark ? '#161616' : '#FAFAFA',
+                    borderRadius: '10px',
+                    padding: '20px',
+                    border: `1px solid ${colors.border}`,
+                  }}
+                >
+                  {content}
+                </pre>
+              )}
             </div>
           ) : (
             <div

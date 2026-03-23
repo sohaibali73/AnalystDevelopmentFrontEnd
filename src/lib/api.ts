@@ -944,6 +944,20 @@ class APIClient {
     return this.request<{ success: boolean }>(`/brain/documents/${documentId}`, 'DELETE');
   }
 
+  async getDocumentContent(documentId: string): Promise<Blob> {
+    const token = this.getToken();
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE_URL}/brain/documents/${documentId}/content`, {
+      headers,
+      mode: 'cors',
+      credentials: 'omit',
+    });
+    if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+    return response.blob();
+  }
+
   // ==================== BACKTEST ENDPOINTS ====================
 
   async uploadBacktest(file: File, strategyId?: string) {

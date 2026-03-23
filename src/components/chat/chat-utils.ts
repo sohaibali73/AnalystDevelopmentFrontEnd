@@ -62,6 +62,8 @@ const FILE_EXT_ICON_MAP: Record<string, FileIconComponent> = {
   html: FileCodeIcon,
   js: FileCodeIcon,
   ts: FileCodeIcon,
+  afl: FileCodeIcon,
+  py: FileCodeIcon,
 };
 
 export function getChatFileIcon(filename: string): FileIconComponent {

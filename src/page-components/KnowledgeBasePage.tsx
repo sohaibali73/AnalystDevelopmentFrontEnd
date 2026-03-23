@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import apiClient from '@/lib/api';
+import { parseFileForPreview, isSupportedForPreview, type ParsedDocument } from '@/lib/filePreview';
 import { Document, SearchResult, BrainStats } from '@/types/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -69,6 +70,8 @@ export function KnowledgeBasePage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [viewerDoc, setViewerDoc] = useState<Document | null>(null);
   const [viewerContent, setViewerContent] = useState<string | null>(null);
+  const [viewerContentType, setViewerContentType] = useState<'html' | 'text' | 'table' | 'json' | 'unsupported'>('text');
+  const [viewerTables, setViewerTables] = useState<{ headers: string[]; rows: string[][]; name?: string }[] | undefined>(undefined);
   const [viewerLoading, setViewerLoading] = useState(false);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [showFeedback, setShowFeedback] = useState(false);
@@ -169,18 +172,40 @@ export function KnowledgeBasePage() {
     setViewerDoc(doc);
     setViewerLoading(true);
     setViewerContent(null);
+    setViewerContentType('text');
+    setViewerTables(undefined);
+
+    // Safe size parsing — backend may return null, undefined, or string
+    const safeSize = typeof doc.size === 'number' ? doc.size : parseInt(String(doc.size), 10) || 0;
+
     try {
+      // Try to fetch the actual file blob and parse it client-side
+      if (isSupportedForPreview(doc.filename)) {
+        try {
+          const blob = await apiClient.getDocumentContent(doc.id);
+          const parsed = await parseFileForPreview(blob, doc.filename);
+          setViewerContent(parsed.content);
+          setViewerContentType(parsed.type as 'html' | 'text' | 'table' | 'json' | 'unsupported');
+          setViewerTables(parsed.tables);
+          setViewerLoading(false);
+          return;
+        } catch {
+          // Blob endpoint may not exist — fall through to search approach
+        }
+      }
+
+      // Fallback: use search API to get snippets
       const results = await apiClient.searchKnowledge(doc.filename, undefined, 1);
       if (results && results.length > 0) {
         setViewerContent(results[0].content);
       } else {
         setViewerContent(
-          `Document: ${doc.filename}\nCategory: ${doc.category}\nSize: ${formatFileSize(doc.size)}\nUploaded: ${new Date(doc.created_at).toLocaleString()}\n\n---\n\nContent preview is not available for this document type. You can search the knowledge base to find relevant excerpts from this document.`
+          `Document: ${doc.filename}\nCategory: ${doc.category}\nSize: ${formatFileSize(safeSize)}\nUploaded: ${new Date(doc.created_at).toLocaleString()}\n\n---\n\nContent preview is not available for this document type. You can search the knowledge base to find relevant excerpts from this document.`
         );
       }
     } catch {
       setViewerContent(
-        `Document: ${doc.filename}\nCategory: ${doc.category}\nSize: ${formatFileSize(doc.size)}\nUploaded: ${new Date(doc.created_at).toLocaleString()}\n\n---\n\nUnable to retrieve document content at this time.`
+        `Document: ${doc.filename}\nCategory: ${doc.category}\nSize: ${formatFileSize(safeSize)}\nUploaded: ${new Date(doc.created_at).toLocaleString()}\n\n---\n\nUnable to retrieve document content at this time.`
       );
     } finally {
       setViewerLoading(false);
@@ -668,8 +693,10 @@ export function KnowledgeBasePage() {
         <KBArticlePreview
           doc={viewerDoc}
           content={viewerContent}
+          contentType={viewerContentType}
+          tables={viewerTables}
           loading={viewerLoading}
-          onClose={() => { setViewerDoc(null); setViewerContent(null); }}
+          onClose={() => { setViewerDoc(null); setViewerContent(null); setViewerContentType('text'); setViewerTables(undefined); }}
           isDark={isDark}
           colors={colors}
           isBookmarked={bookmarkedIds.has(viewerDoc.id)}

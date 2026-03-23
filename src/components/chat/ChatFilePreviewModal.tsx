@@ -27,6 +27,7 @@ const TEXT_EXTENSIONS   = [
   'txt', 'md', 'csv', 'json', 'xml', 'log', 'sql',
   'py', 'js', 'ts', 'jsx', 'tsx', 'css', 'scss',
   'sh', 'bash', 'yaml', 'yml', 'toml', 'ini', 'env',
+  'afl', 'r', 'rb', 'go', 'rs', 'c', 'cpp', 'h', 'hpp', 'java',
 ];
 const DOCX_EXTENSIONS   = ['docx', 'doc'];
 const XLSX_EXTENSIONS   = ['xlsx', 'xls'];
