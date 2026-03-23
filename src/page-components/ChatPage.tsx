@@ -60,6 +60,8 @@ import {
   getChatColors,
   getProcessType,
   getToolTitle,
+  ChatModelSelector,
+  ChatSkillSelector,
   type ChatPreviewFile,
 } from '@/components/chat';
 import {
@@ -225,16 +227,24 @@ function AttachmentsDisplay({
   uploadStates,
   onRemoveFile,
   onRemoveUpload,
+  forcedSkillSlug,
+  forcedSkillName,
+  onClearSkill,
 }: {
   isDark: boolean;
   uploadStates: Record<string, { filename: string; size: number; mediaType: string; status: 'uploading' | 'complete' | 'error'; showCheckmark: boolean }>;
   onRemoveFile: (id: string) => void;
   onRemoveUpload: (filename: string) => void;
+  forcedSkillSlug: string | null;
+  forcedSkillName: string | null;
+  onClearSkill: () => void;
 }) {
   const attachments = usePromptInputAttachments();
   const hasFiles = attachments.files.length > 0 || Object.keys(uploadStates).length > 0;
 
-  if (!hasFiles) return null;
+  const hasSkillBadge = forcedSkillSlug !== null;
+
+  if (!hasFiles && !hasSkillBadge) return null;
 
   const colors = {
     text: isDark ? '#EFEFEF' : '#0A0A0B',
@@ -246,6 +256,51 @@ function AttachmentsDisplay({
   return (
     <PromptInputHeader>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {/* Active skill badge */}
+        {hasSkillBadge && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 10px',
+              borderRadius: '100px',
+              border: '1px solid rgba(96,165,250,0.35)',
+              background: isDark ? 'rgba(96,165,250,0.1)' : 'rgba(96,165,250,0.08)',
+              fontFamily: "'DM Mono', monospace",
+              fontSize: '11px',
+              fontWeight: 500,
+              color: '#60A5FA',
+              letterSpacing: '0.02em',
+            }}
+          >
+            <span style={{ opacity: 0.7 }}>Skill:</span>
+            <span style={{ fontWeight: 600 }}>{forcedSkillName}</span>
+            <button
+              onClick={onClearSkill}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                background: 'rgba(96,165,250,0.15)',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#60A5FA',
+                fontSize: '10px',
+                lineHeight: 1,
+                padding: 0,
+                transition: 'background .15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.15)'; }}
+            >
+              <XIcon size={10} />
+            </button>
+          </div>
+        )}
         {attachments.files.map((file) => {
           const fname = file.filename || 'file';
           const ext = getFileExtension(fname) || '';
@@ -509,6 +564,9 @@ export function ChatPage() {
   const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
   const [backendAvailable, setBackendAvailable] = useState(true);
   const [skillStatus, setSkillStatus] = useState<{ label: string; slug: string } | null>(null);
+  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-6');
+  const [forcedSkillSlug, setForcedSkillSlug] = useState<string | null>(null);
+  const [forcedSkillName, setForcedSkillName] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadStates, setUploadStates] = useState<Record<string, {
     filename: string;
@@ -613,6 +671,8 @@ export function ChatPage() {
         conversationId: conversationIdRef.current,
         thinking_mode: thinkingMode,
         thinking_budget: thinkingBudget,
+        model: selectedModel,
+        skill_slug: forcedSkillSlug ?? undefined,
       }),
     }),
     onData: (dataPart: any) => {
@@ -1732,6 +1792,9 @@ export function ChatPage() {
                       return next;
                     });
                   }}
+                  forcedSkillSlug={forcedSkillSlug}
+                  forcedSkillName={forcedSkillName}
+                  onClearSkill={() => { setForcedSkillSlug(null); setForcedSkillName(null); }}
                 />
                 <PromptInputTextarea
                   value={input}
@@ -1783,6 +1846,19 @@ export function ChatPage() {
                         return '';
                       }}
                       lang="en-US" disabled={isStreaming}
+                    />
+                    <ChatSkillSelector
+                      forcedSkillSlug={forcedSkillSlug}
+                      forcedSkillName={forcedSkillName}
+                      onSkillChange={(slug, name) => { setForcedSkillSlug(slug); setForcedSkillName(name); }}
+                      isDark={isDark}
+                      disabled={isStreaming}
+                    />
+                    <ChatModelSelector
+                      selectedModel={selectedModel}
+                      onModelChange={setSelectedModel}
+                      isDark={isDark}
+                      disabled={isStreaming}
                     />
                   </PromptInputTools>
                   <PromptInputSubmit status={status} onStop={() => stop()} disabled={!input.trim() && !isStreaming} />

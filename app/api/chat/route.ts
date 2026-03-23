@@ -92,6 +92,8 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           content: enhancedMessage,
           conversation_id: conversationId,
+          model: data.model ?? null,
+          skill_slug: data.skill_slug ?? null,
         }),
         signal: controller.signal,
       });

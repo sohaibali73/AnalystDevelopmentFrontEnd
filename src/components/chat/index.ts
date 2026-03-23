@@ -6,6 +6,8 @@ export { ChatSidebar } from './ChatSidebar';
 export { ChatFilePreviewModal } from './ChatFilePreviewModal';
 export { KnowledgeBasePanel } from './KnowledgeBasePanel';
 export { renderToolPart, isToolPart } from './tool-registry';
+export { ChatModelSelector } from './ChatModelSelector';
+export { ChatSkillSelector } from './ChatSkillSelector';
 export {
   // Utilities
   getAuthToken,
