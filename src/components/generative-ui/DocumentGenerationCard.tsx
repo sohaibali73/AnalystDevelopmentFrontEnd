@@ -229,6 +229,7 @@ interface DocumentGenerationCardProps {
   toolName: string;
   input: any;
   output?: any;
+  externalOutput?: any; // injected by ChatPage from file_download events
   state: 'input-streaming' | 'input-available' | 'output-available' | 'output-error';
   errorText?: string;
   conversationId?: string;
@@ -272,6 +273,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   toolName,
   input,
   output,
+  externalOutput,
   state,
   errorText,
   conversationId,
@@ -290,6 +292,8 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   const [fileId, setFileId] = useState<string | null>(null);
   const [outputData, setOutputData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(true);
+  const [safetyTimeout, setSafetyTimeout] = useState(false);
 
   const startTimeRef = useRef<number>(Date.now());
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -334,8 +338,39 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     }
   }, [state, startProgressSimulation]);
 
+  // ── Safety timeout: if stuck at ~88% for 2 minutes, show a warning ────────
   useEffect(() => {
-    if (state === 'output-available' && output) {
+    if (state !== 'input-streaming' && state !== 'input-available') return;
+    const timeout = setTimeout(() => {
+      if (!isComplete && !isError) {
+        setSafetyTimeout(true);
+      }
+    }, 120000); // 2 minutes
+    return () => clearTimeout(timeout);
+  }, [state, isComplete, isError]);
+
+  // ── Wire externalOutput (file_download events) into the card ───────────────
+  useEffect(() => {
+    if (!externalOutput) return;
+    const data = externalOutput;
+    setOutputData((prev: any) => ({ ...prev, ...data }));
+    setDownloadUrl(data.download_url || data.downloadUrl || data.file_url || downloadUrl);
+    setFileId(data.file_id || data.fileId || data.document_id || data.presentation_id || fileId);
+    // If we were still generating, snap to complete now
+    if (!isComplete && !isError) {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      setProgress(100);
+      setCurrentPhase(meta.phases.length - 1);
+      setIsComplete(true);
+      setSafetyTimeout(false);
+      setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }
+  }, [externalOutput]);
+
+  // ── Fix 1: snap to 100% when state === 'output-available' (no && output guard) ──
+  useEffect(() => {
+    if (state === 'output-available') {
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
@@ -353,12 +388,15 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           setProgress(100);
           setCurrentPhase(meta.phases.length - 1);
           setIsComplete(true);
+          setSafetyTimeout(false);
         }
       }, 16);
 
-      setOutputData(output);
-      setDownloadUrl(output.download_url || output.downloadUrl || output.file_url || null);
-      setFileId(output.file_id || output.fileId || output.document_id || output.presentation_id || null);
+      if (output) {
+        setOutputData(output);
+        setDownloadUrl(output.download_url || output.downloadUrl || output.file_url || null);
+        setFileId(output.file_id || output.fileId || output.document_id || output.presentation_id || null);
+      }
       setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }
   }, [state, output, meta.phases.length]);
@@ -797,6 +835,237 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── Safety timeout warning ──────────────────────────────────────────── */}
+        {safetyTimeout && !isComplete && !isError && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '10px 14px',
+            borderRadius: '9px',
+            backgroundColor: isDark ? 'rgba(251,191,36,0.08)' : '#FFFBEB',
+            border: '1px solid rgba(251,191,36,0.2)',
+            marginBottom: '12px',
+          }}>
+            <IconAlert size={14} color="#F59E0B" />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: '#F59E0B' }}>
+                Taking longer than expected
+              </div>
+              <div style={{ fontSize: '10.5px', color: mutedCol, marginTop: '2px' }}>
+                The backend may still be processing. You can wait or check manually.
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '6px',
+                border: '1px solid rgba(251,191,36,0.3)',
+                background: 'rgba(251,191,36,0.1)',
+                color: '#F59E0B',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: "'DM Mono', monospace",
+                letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Refresh
+            </button>
+          </div>
+        )}
+
+        {/* ── Inline live preview panel ──────────────────────────────────────── */}
+        {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+          <div style={{
+            marginTop: '12px',
+            borderRadius: '10px',
+            overflow: 'hidden',
+            border: `1px solid ${metaBdr}`,
+          }}>
+            {/* Preview header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 12px',
+              backgroundColor: metaBg,
+              borderBottom: `1px solid ${metaBdr}`,
+            }}>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: textColor,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <FileIcon size={13} color={meta.color} />
+                Preview
+              </span>
+              <button
+                onClick={() => setPreviewOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: mutedCol,
+                  fontSize: '10px',
+                  fontFamily: "'DM Mono', monospace",
+                  letterSpacing: '0.04em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = textColor; }}
+                onMouseLeave={e => { e.currentTarget.style.color = mutedCol; }}
+              >
+                ▲ Hide Preview
+              </button>
+            </div>
+            {/* Preview iframe */}
+            <div style={{ position: 'relative', width: '100%', height: '400px' }}>
+              {(fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx') ? (
+                <iframe
+                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(downloadUrl)}`}
+                  width="100%"
+                  height="400"
+                  frameBorder="0"
+                  style={{ display: 'block' }}
+                  title={`${meta.label} preview`}
+                />
+              ) : (
+                <iframe
+                  src={downloadUrl}
+                  width="100%"
+                  height="400"
+                  frameBorder="0"
+                  style={{ display: 'block' }}
+                  title="PDF preview"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── AFL code preview ──────────────────────────────────────────────── */}
+        {isComplete && fileType === 'afl' && outputData?.code && (
+          <div style={{
+            marginTop: '12px',
+            borderRadius: '10px',
+            overflow: 'hidden',
+            border: `1px solid ${metaBdr}`,
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 12px',
+              backgroundColor: metaBg,
+              borderBottom: `1px solid ${metaBdr}`,
+            }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: textColor, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FileIcon size={13} color={meta.color} />
+                AFL Code
+              </span>
+              <button
+                onClick={() => setPreviewOpen(!previewOpen)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: mutedCol, fontSize: '10px',
+                  fontFamily: "'DM Mono', monospace",
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {previewOpen ? '▲ Hide' : '▼ Show'}
+              </button>
+            </div>
+            {previewOpen && (
+              <pre style={{
+                margin: 0,
+                padding: '14px 16px',
+                fontSize: '12px',
+                lineHeight: 1.6,
+                color: textColor,
+                backgroundColor: isDark ? '#0D0D10' : '#FAFAFA',
+                overflow: 'auto',
+                maxHeight: '300px',
+                fontFamily: "'DM Mono', monospace",
+              }}>
+                {outputData.code}
+              </pre>
+            )}
+          </div>
+        )}
+
+        {/* ── Collapsed preview toggle ──────────────────────────────────────── */}
+        {isComplete && downloadUrl && !previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+          <div style={{ marginTop: '10px' }}>
+            <button
+              onClick={() => setPreviewOpen(true)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: mutedCol, fontSize: '10.5px', fontWeight: 600,
+                fontFamily: "'DM Mono', monospace",
+                letterSpacing: '0.04em',
+                display: 'flex', alignItems: 'center', gap: '4px',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = meta.color; }}
+              onMouseLeave={e => { e.currentTarget.style.color = mutedCol; }}
+            >
+              ▼ Show Preview
+            </button>
+          </div>
+        )}
+
+        {/* ── Open in new tab button (when preview is shown) ────────────────── */}
+        {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+          <div style={{ marginTop: '8px', display: 'flex', gap: '7px' }}>
+            <button
+              onClick={() => window.open(downloadUrl, '_blank')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                padding: '6px 12px', borderRadius: '7px',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                background: 'transparent', color: mutedCol,
+                fontWeight: 600, fontSize: '11px', cursor: 'pointer',
+                transition: 'all 0.15s',
+                fontFamily: "'Instrument Sans', sans-serif",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = mutedCol; }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open in new tab
+            </button>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(downloadUrl);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+                toast.success('URL copied');
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                padding: '6px 12px', borderRadius: '7px',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                background: 'transparent', color: mutedCol,
+                fontWeight: 600, fontSize: '11px', cursor: 'pointer',
+                transition: 'all 0.15s',
+                fontFamily: "'Instrument Sans', sans-serif",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.color = meta.color; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = mutedCol; }}
+            >
+              {copied ? <><IconCheck size={11} color="#10B981" /> Copied</> : <><IconCopy size={11} /> Copy URL</>}
+            </button>
           </div>
         )}
 

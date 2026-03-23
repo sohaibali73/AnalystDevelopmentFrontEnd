@@ -575,6 +575,7 @@ export function ChatPage() {
   const [forcedSkillSlug, setForcedSkillSlug] = useState<string | null>(null);
   const [forcedSkillName, setForcedSkillName] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [fileDownloadEvents, setFileDownloadEvents] = useState<Record<string, any>>({});
   const [uploadStates, setUploadStates] = useState<Record<string, {
     filename: string;
     size: number;
@@ -703,8 +704,9 @@ export function ChatPage() {
         if (item.skill_status) {
           setSkillStatus({ label: item.skill_status, slug: item.skill_slug ?? '' });
         }
-        // File download — toast so user knows file is ready
+        // File download — toast + store for card injection
         if (item.type === 'file_download' && item.filename) {
+          setFileDownloadEvents(prev => ({ ...prev, [item.filename]: item }));
           toast.success(`${item.filename} is ready`, {
             description: 'Click to download',
             action: {
@@ -1012,7 +1014,15 @@ export function ChatPage() {
 
     // ── Content renderer (same logic, just extracted) ──────────────────────
     const renderParts = () => parts.map((part: any, pIdx: number) => {
-      if (isToolPart(part.type)) return renderToolPart(part, pIdx, message.id, conversationIdRef.current);
+      if (isToolPart(part.type)) {
+        // Find matching file_download event for externalOutput injection
+        const toolInput = part.input || {};
+        const toolFilename = toolInput.filename || toolInput.name || '';
+        const extOut = toolFilename && fileDownloadEvents[toolFilename]
+          ? fileDownloadEvents[toolFilename]
+          : undefined;
+        return renderToolPart(part, pIdx, message.id, conversationIdRef.current, extOut);
+      }
 
       switch (part.type) {
         case 'text': {

@@ -284,6 +284,7 @@ function renderInvokeSkill(
   pIdx: number,
   messageId: string,
   conversationId?: string | null,
+  externalOutput?: any,
 ): React.ReactNode {
   // Normalise slug: lowercase, hyphens → underscores
   const rawSlug = part.input?.skill_slug || '';
@@ -307,6 +308,7 @@ function renderInvokeSkill(
         toolName={slug || 'invoke_skill'}
         input={part.input}
         output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
         state={part.state as any}
         errorText={part.errorText}
         conversationId={conversationId || undefined}
@@ -349,6 +351,7 @@ export function renderToolPart(
   pIdx: number,
   messageId: string,
   conversationId?: string | null,
+  externalOutput?: any,
 ): React.ReactNode {
   const toolName = part.type === 'dynamic-tool'
     ? (part.toolName || 'unknown')
@@ -356,7 +359,7 @@ export function renderToolPart(
 
   // ── invoke_skill: dynamic routing by skill_slug ────────────────────────────
   if (toolName === 'invoke_skill') {
-    return renderInvokeSkill(part, pIdx, messageId, conversationId);
+    return renderInvokeSkill(part, pIdx, messageId, conversationId, externalOutput);
   }
 
   const entry = TOOL_REGISTRY[toolName];
@@ -393,6 +396,7 @@ export function renderToolPart(
         toolName={toolName}
         input={part.input}
         output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
         state={part.state as any}
         errorText={part.errorText}
         conversationId={conversationId || undefined}
