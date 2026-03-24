@@ -14,8 +14,10 @@
 
 import { NextRequest } from 'next/server';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 
-  'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:8080'
+    : 'https://developer-potomaac.up.railway.app')).replace(/\/+$/, '');
 
 // UI Message Stream headers required by AI SDK v5
 const UI_MESSAGE_STREAM_HEADERS = {
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
       const formattingInstruction = '\n\n[FORMATTING: Do not use any emojis whatsoever in your response. Use clear, professional formatting with proper markdown headings, bullet points, and structured sections. Keep responses concise and data-driven.]';
       const enhancedMessage = messageText + formattingInstruction;
 
-      backendResponse = await fetch(`${API_BASE_URL}/chat/v6`, {
+      backendResponse = await fetch(`${API_BASE_URL}/chat/agent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,6 +96,12 @@ export async function POST(req: NextRequest) {
           conversation_id: conversationId,
           model: data.model ?? null,
           skill_slug: data.skill_slug ?? null,
+          thinking_mode: data.thinking_mode ?? null,
+          thinking_budget: data.thinking_budget ?? null,
+          thinking_effort: data.thinking_effort ?? null,
+          use_prompt_caching: data.use_prompt_caching ?? true,
+          max_iterations: data.max_iterations ?? 5,
+          pin_model_version: data.pin_model_version ?? false,
         }),
         signal: controller.signal,
       });

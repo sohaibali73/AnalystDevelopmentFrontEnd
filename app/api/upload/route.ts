@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL ||
-  'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:8080'
+    : 'https://developer-potomaac.up.railway.app')).replace(/\/+$/, '');
 
 /**
  * Proxy route for File Upload

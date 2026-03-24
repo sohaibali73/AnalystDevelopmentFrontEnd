@@ -353,9 +353,20 @@ export function renderToolPart(
   conversationId?: string | null,
   externalOutput?: any,
 ): React.ReactNode {
-  const toolName = part.type === 'dynamic-tool'
-    ? (part.toolName || 'unknown')
-    : (part.type?.replace('tool-', '') || 'unknown');
+  // Handle new backend format: "tool-invocation" with separate toolName field
+  // Also handle legacy format: "tool-{tool_name}" in type field
+  let toolName: string;
+  if (part.type === 'dynamic-tool') {
+    toolName = part.toolName || 'unknown';
+  } else if (part.type === 'tool-invocation') {
+    // New backend format: type="tool-invocation", toolName="actual_tool_name"
+    toolName = part.toolName || 'unknown';
+  } else if (part.type?.startsWith('tool-')) {
+    // Legacy format: type="tool-get_stock_data"
+    toolName = part.type.replace('tool-', '');
+  } else {
+    toolName = 'unknown';
+  }
 
   // ── invoke_skill: dynamic routing by skill_slug ────────────────────────────
   if (toolName === 'invoke_skill') {
@@ -503,5 +514,5 @@ function renderDynamicTool(
 // ─── isToolPart ───────────────────────────────────────────────────────────────
 
 export function isToolPart(partType: string): boolean {
-  return partType?.startsWith('tool-') || partType === 'dynamic-tool';
+  return partType?.startsWith('tool-') || partType === 'dynamic-tool' || partType === 'tool-invocation';
 }

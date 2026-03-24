@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
     const formattingInstruction = '\n\n[FORMATTING: Do not use any emojis whatsoever in your response. Use clear, professional formatting with proper markdown headings, bullet points, and structured sections. Keep responses concise and data-driven.]';
     const enhancedMessage = messageText + formattingInstruction;
 
-    // Forward directly to backend's new v6 endpoint (no protocol translation)
-    const backendResponse = await fetch(`${API_BASE_URL}/chat/v6`, {
+    // Forward directly to backend's agent endpoint (no protocol translation)
+    const backendResponse = await fetch(`${API_BASE_URL}/chat/agent`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,6 +76,14 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         content: enhancedMessage,
         conversation_id: conversationId,
+        model: data.model ?? null,
+        skill_slug: data.skill_slug ?? null,
+        thinking_mode: data.thinking_mode ?? null,
+        thinking_budget: data.thinking_budget ?? null,
+        thinking_effort: data.thinking_effort ?? null,
+        use_prompt_caching: data.use_prompt_caching ?? true,
+        max_iterations: data.max_iterations ?? 5,
+        pin_model_version: data.pin_model_version ?? false,
       }),
     });
 
