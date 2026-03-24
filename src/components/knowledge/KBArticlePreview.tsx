@@ -21,10 +21,12 @@ import {
 import { Document } from '@/types/api';
 import { getFileExtension } from '@/lib/filePreview';
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+function formatFileSize(bytes: number | undefined | null) {
+  // Guard against undefined / null / NaN coming from the backend
+  const n = (bytes != null && !isNaN(Number(bytes))) ? Number(bytes) : 0;
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / (1024 * 1024)).toFixed(2) + ' MB';
 }
 
 const catColors: Record<string, { bg: string; text: string }> = {

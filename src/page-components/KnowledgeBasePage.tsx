@@ -175,38 +175,55 @@ export function KnowledgeBasePage() {
     setViewerContentType('text');
     setViewerTables(undefined);
 
-    // Safe size parsing — backend may return null, undefined, or string
-    const safeSize = typeof doc.size === 'number' ? doc.size : parseInt(String(doc.size), 10) || 0;
-
     try {
-      // Try to fetch the actual file blob and parse it client-side
+      // ── Step 1: Try fetching the raw file blob and parsing it client-side ──
       if (isSupportedForPreview(doc.filename)) {
         try {
           const blob = await apiClient.getDocumentContent(doc.id);
-          const parsed = await parseFileForPreview(blob, doc.filename);
-          setViewerContent(parsed.content);
-          setViewerContentType(parsed.type as 'html' | 'text' | 'table' | 'json' | 'unsupported');
-          setViewerTables(parsed.tables);
-          setViewerLoading(false);
-          return;
+          // Only proceed if the blob actually has content
+          if (blob && blob.size > 0) {
+            const parsed = await parseFileForPreview(blob, doc.filename);
+            if (parsed.type !== 'unsupported' && parsed.content) {
+              setViewerContent(parsed.content);
+              setViewerContentType(parsed.type as 'html' | 'text' | 'table' | 'json' | 'unsupported');
+              setViewerTables(parsed.tables);
+              setViewerLoading(false);
+              return;
+            }
+          }
         } catch {
-          // Blob endpoint may not exist — fall through to search approach
+          // Blob endpoint may not exist on this backend — fall through
         }
       }
 
-      // Fallback: use search API to get snippets
-      const results = await apiClient.searchKnowledge(doc.filename, undefined, 1);
+      // ── Step 2: Search the knowledge base for excerpts from this document ──
+      // Clean the filename for a better semantic search query
+      const cleanQuery = doc.filename
+        .replace(/\.[^.]+$/, '')   // remove extension
+        .replace(/[_-]+/g, ' ')    // underscores/hyphens → spaces
+        .trim();
+
+      const results = await apiClient.searchKnowledge(
+        cleanQuery || doc.filename,
+        undefined,
+        10
+      );
+
       if (results && results.length > 0) {
-        setViewerContent(results[0].content);
-      } else {
-        setViewerContent(
-          `Document: ${doc.filename}\nCategory: ${doc.category}\nSize: ${formatFileSize(safeSize)}\nUploaded: ${new Date(doc.created_at).toLocaleString()}\n\n---\n\nContent preview is not available for this document type. You can search the knowledge base to find relevant excerpts from this document.`
+        // Prefer results that are explicitly from this document
+        const fromThisDoc = results.filter(
+          (r) => r.document_id === doc.id || r.filename === doc.filename
         );
+        const useResults = fromThisDoc.length > 0 ? fromThisDoc : results.slice(0, 3);
+        const content = useResults.map((r) => r.content).join('\n\n---\n\n');
+        setViewerContent(content);
+      } else {
+        // ── Step 3: No content found — show the clean "no content" UI ──
+        setViewerContent(null);
       }
     } catch {
-      setViewerContent(
-        `Document: ${doc.filename}\nCategory: ${doc.category}\nSize: ${formatFileSize(safeSize)}\nUploaded: ${new Date(doc.created_at).toLocaleString()}\n\n---\n\nUnable to retrieve document content at this time.`
-      );
+      // On any unexpected error just show the clean empty state
+      setViewerContent(null);
     } finally {
       setViewerLoading(false);
     }

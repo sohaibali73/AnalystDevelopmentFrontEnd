@@ -55,8 +55,14 @@ export async function blobToText(blob: Blob): Promise<string> {
 export async function parsePdf(blob: Blob): Promise<ParsedDocument> {
   const pdfjsLib = await import('pdfjs-dist');
   
-  // Set worker source
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  // pdfjs-dist v4+ uses .mjs worker files; v3 and below used .js
+  // Use unpkg CDN which reliably hosts the correct format for every version.
+  const majorVersion = parseInt(pdfjsLib.version.split('.')[0], 10);
+  if (majorVersion >= 4) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  } else {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  }
   
   const arrayBuffer = await blobToArrayBuffer(blob);
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
