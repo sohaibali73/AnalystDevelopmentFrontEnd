@@ -62,6 +62,8 @@ import {
   getToolTitle,
   ChatModelSelector,
   ChatSkillSelector,
+  HTMLArtifactPreview,
+  ChatAgentSettings,
   type ChatPreviewFile,
 } from '@/components/chat';
 import {
@@ -574,6 +576,12 @@ export function ChatPage() {
   const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-6');
   const [forcedSkillSlug, setForcedSkillSlug] = useState<string | null>(null);
   const [forcedSkillName, setForcedSkillName] = useState<string | null>(null);
+
+  // ── Agent settings state ───────────────────────────────────────────────────
+  const [thinkingEffort, setThinkingEffort] = useState('medium');
+  const [usePromptCaching, setUsePromptCaching] = useState(true);
+  const [maxIterations, setMaxIterations] = useState(5);
+  const [pinModelVersion, setPinModelVersion] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileDownloadEvents, setFileDownloadEvents] = useState<Record<string, any>>({});
   const fileDownloadEventsRef = useRef<Record<string, any>>({});
@@ -603,10 +611,18 @@ export function ChatPage() {
   const healthCheckAbortControllerRef = useRef<AbortController | null>(null);
   const selectedModelRef    = useRef(selectedModel);
   const forcedSkillSlugRef  = useRef<string | null>(forcedSkillSlug);
+  const thinkingEffortRef   = useRef(thinkingEffort);
+  const usePromptCachingRef = useRef(usePromptCaching);
+  const maxIterationsRef    = useRef(maxIterations);
+  const pinModelVersionRef  = useRef(pinModelVersion);
 
   // ── Sync refs for stable closures in transport body ────────────────────────
   useEffect(() => { selectedModelRef.current = selectedModel; }, [selectedModel]);
   useEffect(() => { forcedSkillSlugRef.current = forcedSkillSlug; }, [forcedSkillSlug]);
+  useEffect(() => { thinkingEffortRef.current = thinkingEffort; }, [thinkingEffort]);
+  useEffect(() => { usePromptCachingRef.current = usePromptCaching; }, [usePromptCaching]);
+  useEffect(() => { maxIterationsRef.current = maxIterations; }, [maxIterations]);
+  useEffect(() => { pinModelVersionRef.current = pinModelVersion; }, [pinModelVersion]);
 
   const artifacts = selectedConversation ? (artifactsByConv[selectedConversation.id] || []) : [];
 
@@ -686,8 +702,12 @@ export function ChatPage() {
         conversationId: conversationIdRef.current,
         thinking_mode: thinkingMode,
         thinking_budget: thinkingBudget,
+        thinking_effort: thinkingEffortRef.current,
         model: selectedModelRef.current,
         skill_slug: forcedSkillSlugRef.current ?? undefined,
+        use_prompt_caching: usePromptCachingRef.current,
+        max_iterations: maxIterationsRef.current,
+        pin_model_version: pinModelVersionRef.current,
       }),
     }),
     onData: (dataPart: any) => {
@@ -1158,12 +1178,7 @@ export function ChatPage() {
             const artLang = language || artType;
             if (['html','svg','react','jsx','tsx'].includes(artType) && artCode) {
               const blobUrl = (() => { try { const h = artType === 'svg' ? `<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh">${artCode}</body></html>` : artCode; return URL.createObjectURL(new Blob([h], { type: 'text/html' })); } catch { return ''; } })();
-              return (
-                <div key={pIdx} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <WebPreview defaultUrl={blobUrl} className="h-[400px]"><WebPreviewNavigation><span className="text-xs text-muted-foreground px-2 truncate flex-1">{title || `${artType.toUpperCase()} Preview`}</span></WebPreviewNavigation><WebPreviewBody /><WebPreviewConsole /></WebPreview>
-                  <CodeBlock code={artCode} language={artLang as any} showLineNumbers><CodeBlockHeader><CodeBlockTitle>{title || artType}</CodeBlockTitle><CodeBlockActions><CodeBlockCopyButton /></CodeBlockActions></CodeBlockHeader></CodeBlock>
-                </div>
-              );
+              return <HTMLArtifactPreview key={pIdx} blobUrl={blobUrl} code={artCode} language={artLang} title={title || artType.toUpperCase()} isDark={isDark} />;
             }
             return <Artifact key={pIdx}><ArtifactHeader><ArtifactTitle>{title || artType}</ArtifactTitle></ArtifactHeader><ArtifactContent><ArtifactRenderer artifact={{ id: part.data.id || `data-${pIdx}`, type: artType, language: artLang, code: artCode, complete: true }} /></ArtifactContent></Artifact>;
           }
@@ -1904,6 +1919,18 @@ export function ChatPage() {
                       selectedModel={selectedModel}
                       onModelChange={setSelectedModel}
                       isDark={isDark}
+                      disabled={isStreaming}
+                    />
+                    <ChatAgentSettings
+                      isDark={isDark}
+                      thinkingEffort={thinkingEffort}
+                      onThinkingEffortChange={setThinkingEffort}
+                      usePromptCaching={usePromptCaching}
+                      onUsePromptCachingChange={setUsePromptCaching}
+                      maxIterations={maxIterations}
+                      onMaxIterationsChange={setMaxIterations}
+                      pinModelVersion={pinModelVersion}
+                      onPinModelVersionChange={setPinModelVersion}
                       disabled={isStreaming}
                     />
                   </PromptInputTools>

@@ -8,6 +8,8 @@ export { KnowledgeBasePanel } from './KnowledgeBasePanel';
 export { renderToolPart, isToolPart } from './tool-registry';
 export { ChatModelSelector } from './ChatModelSelector';
 export { ChatSkillSelector } from './ChatSkillSelector';
+export { HTMLArtifactPreview } from './HTMLArtifactPreview';
+export { ChatAgentSettings } from './ChatAgentSettings';
 export {
   // Utilities
   getAuthToken,
