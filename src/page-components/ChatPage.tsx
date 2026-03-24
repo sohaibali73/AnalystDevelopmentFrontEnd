@@ -1028,6 +1028,25 @@ export function ChatPage() {
     return convId;
   };
 
+  // ── KB Add-to-message handler ──────────────────────────────────────────────
+  const handleKbAddToMessage = useCallback(
+    async (selectedDocs: Array<{ id: string; filename: string; title?: string; category: string }>) => {
+      if (selectedDocs.length === 0) return;
+
+      // Build a visible tag in the textarea for each doc
+      const tags = selectedDocs.map((d) => `[KB: ${d.filename}]`).join(' ');
+      setInput((prev) => {
+        const trimmed = prev.trim();
+        return trimmed ? `${trimmed}\n\n${tags}` : tags;
+      });
+
+      // Close panel and clear selection — parent owns this
+      setKbPanelOpen(false);
+      setSelectedKbDocIds(new Set());
+    },
+    []
+  );
+
   // ── Shared token shortcuts ─────────────────────────────────────────────────
   const T = {
     text:    isDark ? '#EFEFEF'                    : '#0A0A0B',
@@ -1948,6 +1967,7 @@ export function ChatPage() {
         onClose={() => setKbPanelOpen(false)}
         selectedDocIds={selectedKbDocIds}
         onSelectedDocIdsChange={setSelectedKbDocIds}
+        onAddToMessage={handleKbAddToMessage}
         isDark={isDark}
       />
 

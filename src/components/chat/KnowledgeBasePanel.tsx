@@ -28,6 +28,8 @@ interface KnowledgeBasePanelProps {
   onClose: () => void;
   selectedDocIds: Set<string>;
   onSelectedDocIdsChange: (ids: Set<string>) => void;
+  /** Called when user confirms "ADD TO MESSAGE" — receives the selected KBDocument objects */
+  onAddToMessage: (docs: KBDocument[]) => void;
   isDark: boolean;
 }
 
@@ -38,6 +40,7 @@ export function KnowledgeBasePanel({
   onClose,
   selectedDocIds,
   onSelectedDocIdsChange,
+  onAddToMessage,
   isDark,
 }: KnowledgeBasePanelProps) {
   const [docs, setDocs] = useState<KBDocument[]>([]);
@@ -281,7 +284,12 @@ export function KnowledgeBasePanel({
           style={{ borderTop: `1px solid ${isDark ? '#2E2E2E' : '#E5E5E5'}` }}
         >
           <button
-            onClick={onClose}
+            onClick={() => {
+              // Pass the full doc objects for the selected IDs back to the parent
+              const selected = docs.filter((d) => selectedDocIds.has(d.id));
+              onAddToMessage(selected);
+              // Parent is responsible for closing + clearing selection
+            }}
             className="w-full py-2.5 border-none rounded-[9px] cursor-pointer text-[13px] font-bold tracking-wider"
             style={{
               backgroundColor: '#FEC00F',
