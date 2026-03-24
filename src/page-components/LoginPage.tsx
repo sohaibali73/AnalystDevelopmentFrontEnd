@@ -126,7 +126,7 @@ export function LoginPage() {
             letterSpacing: '3px',
             color: 'var(--accent)',
           }}>
-            DEVELOPMENT ENVIRONMENT — NOT FOR PRODUCTION USE
+            Developer Beta Release Candidate 2
           </span>
           <span style={{
             width: '7px',

@@ -37,12 +37,13 @@ const navItems: NavItem[] = [
   { name: 'DASHBOARD', href: '/dashboard', icon: LayoutDashboard },
   { name: 'AFL GENERATOR', href: '/afl', icon: Code2 },
   { name: 'CHAT', href: '/chat', icon: MessageCircle },
-  { name: 'SKILLS', href: '/skills', icon: Sparkles, badge: 'NEW' },
   { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
-  { name: 'BACKTEST', href: '/backtest', icon: TrendingUp },
   { name: 'REVERSE ENGINEER', href: '/reverse-engineer', icon: Zap },
   { name: 'SETTINGS', href: '/settings', icon: Settings },
 ];
+
+// Hidden pages - accessible via URL but not shown in navigation
+// skills, backtest, developer, deck-generator
 
 // Hidden pages - accessible via URL but not shown in navigation
 // developer, non-apple-developer, autopilot, deck-generator
@@ -283,7 +284,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Enhanced Logo Section */}
         {!isMobile && (
           <div style={{
-            height: '80px',
+            height: collapsed ? '80px' : '88px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -336,17 +337,54 @@ export function MainLayout({ children }: MainLayoutProps) {
                 />
               </div>
               {!collapsed && (
-                <span style={{
-                  fontFamily: "'Syne', sans-serif",
-                  fontWeight: 800,
-                  fontSize: '20px',
-                  color: colors.text,
-                  letterSpacing: '2px',
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  textShadow: isDark ? '0 0 15px rgba(96,165,250,0.3)' : 'none',
-                }}>
-                  ANALYST
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 800,
+                    fontSize: '20px',
+                    color: colors.text,
+                    letterSpacing: '2px',
+                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    textShadow: isDark ? '0 0 15px rgba(96,165,250,0.3)' : 'none',
+                    lineHeight: 1,
+                  }}>
+                    ANALYST
+                  </span>
+                  {/* DEVELOPER BETA badge */}
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: '8px',
+                    fontWeight: 700,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase' as const,
+                    color: isDark ? '#FCD34D' : '#D97706',
+                    background: isDark
+                      ? 'rgba(252,211,77,0.1)'
+                      : 'rgba(217,119,6,0.08)',
+                    border: `1px solid ${isDark ? 'rgba(252,211,77,0.3)' : 'rgba(217,119,6,0.25)'}`,
+                    borderRadius: '5px',
+                    padding: '2px 7px',
+                    boxShadow: isDark
+                      ? '0 0 8px rgba(252,211,77,0.25), 0 0 20px rgba(252,211,77,0.1)'
+                      : '0 0 6px rgba(217,119,6,0.15)',
+                    animation: 'devBetaPulse 2.5s ease-in-out infinite',
+                    whiteSpace: 'nowrap' as const,
+                  }}>
+                    <span style={{
+                      width: '5px',
+                      height: '5px',
+                      borderRadius: '50%',
+                      background: isDark ? '#FCD34D' : '#D97706',
+                      flexShrink: 0,
+                      boxShadow: isDark ? '0 0 4px rgba(252,211,77,0.7)' : '0 0 3px rgba(217,119,6,0.5)',
+                      animation: 'devBetaDot 2.5s ease-in-out infinite',
+                    }} />
+                    DEVELOPER BETA
+                  </span>
+                </div>
               )}
             </div>
             
@@ -669,6 +707,20 @@ export function MainLayout({ children }: MainLayoutProps) {
         @keyframes slideOutToLeft {
           from { transform: translateX(0); }
           to   { transform: translateX(-100%); }
+        }
+        @keyframes devBetaPulse {
+          0%, 100% {
+            box-shadow: 0 0 6px rgba(252,211,77,0.2), 0 0 16px rgba(252,211,77,0.08);
+            border-color: rgba(252,211,77,0.28);
+          }
+          50% {
+            box-shadow: 0 0 12px rgba(252,211,77,0.5), 0 0 28px rgba(252,211,77,0.22);
+            border-color: rgba(252,211,77,0.55);
+          }
+        }
+        @keyframes devBetaDot {
+          0%, 100% { opacity: 0.7; transform: scale(1); }
+          50%       { opacity: 1;   transform: scale(1.35); box-shadow: 0 0 6px rgba(252,211,77,0.9); }
         }
       `}</style>
     </div>

@@ -783,9 +783,10 @@ export function SettingsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Version</p>
-                      <p className="stat-num-glow" style={{ fontFamily: "'DM Mono', monospace", fontSize: '28px', fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1 }}>1.6.3</p>
+                      <p className="stat-num-glow" style={{ fontFamily: "'DM Mono', monospace", fontSize: '28px', fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1 }}>RC 2.0</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.05em', marginTop: '6px' }}>Release Candidate 2.0</p>
                     </div>
-                    <span style={{ padding: '4px 12px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', color: '#FEC00F', background: 'rgba(254,192,15,0.1)', border: '1px solid rgba(254,192,15,0.2)' }}>BETA</span>
+                    <span style={{ padding: '4px 12px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', color: '#FCD34D', background: 'rgba(252,211,77,0.1)', border: '1px solid rgba(252,211,77,0.3)' }}>RC 2</span>
                   </div>
                 </div>
 
@@ -797,9 +798,49 @@ export function SettingsPage() {
                   <div className="shimmer-layer" />
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #EC4899, transparent)', opacity: 0.6 }} />
                   <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px' }}>Legal</p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '16px' }}>
                     {"This application\u2019s AI engine is powered by Claude\u2122, a registered trademark of Anthropic, PBC. All trademarks are property of their respective owners."}
                   </p>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <a href="/terms" target="_blank" rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '7px 14px',
+                        background: isDark ? 'rgba(236,72,153,0.08)' : 'rgba(236,72,153,0.06)',
+                        border: '1px solid rgba(236,72,153,0.25)',
+                        borderRadius: '8px',
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
+                        color: '#EC4899', textDecoration: 'none',
+                        textTransform: 'uppercase' as const,
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(236,72,153,0.15)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.5)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(236,72,153,0.08)' : 'rgba(236,72,153,0.06)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <ExternalLink size={10} />
+                      Terms of Service
+                    </a>
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '7px 14px',
+                        background: isDark ? 'rgba(236,72,153,0.08)' : 'rgba(236,72,153,0.06)',
+                        border: '1px solid rgba(236,72,153,0.25)',
+                        borderRadius: '8px',
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
+                        color: '#EC4899', textDecoration: 'none',
+                        textTransform: 'uppercase' as const,
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(236,72,153,0.15)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.5)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(236,72,153,0.08)' : 'rgba(236,72,153,0.06)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <ExternalLink size={10} />
+                      Privacy Policy
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
