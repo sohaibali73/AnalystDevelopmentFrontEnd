@@ -124,6 +124,14 @@ const INVOKE_DOC_INTERPRETER_SLUGS = new Set([
 const INVOKE_AFL_SLUGS = new Set([
   'amibroker_afl_developer',
   'afl_developer',
+  'generate_afl',
+  'afl_generate',
+  'afl_code',
+  'create_afl',
+  'write_afl',
+  'afl_strategy',
+  'amibroker',
+  'afl',
 ]);
 
 const INVOKE_DCF_SLUGS = new Set([
@@ -165,6 +173,14 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   debug_afl_code:           { component: AFLDebugCard },
   explain_afl_code:         { component: AFLExplainCard },
   sanity_check_afl:         { component: AFLSanityCheckCard },
+  generate_afl:             { component: AFLGenerateCard, displayName: 'AFL Generator' },
+  afl_generate:             { component: AFLGenerateCard, displayName: 'AFL Generator' },
+  afl_code:                 { component: AFLGenerateCard, displayName: 'AFL Code' },
+  create_afl:               { component: AFLGenerateCard, displayName: 'AFL Creator' },
+  write_afl:                { component: AFLGenerateCard, displayName: 'AFL Writer' },
+  afl_strategy:             { component: AFLGenerateCard, displayName: 'AFL Strategy' },
+  amibroker:                { component: AFLGenerateCard, displayName: 'AmiBroker' },
+  afl:                      { component: AFLGenerateCard, displayName: 'AFL' },
 
   // ── Web Search ───────────────────────────────────────────────────────────
   web_search:               { component: WebSearchResults },
@@ -291,16 +307,39 @@ function renderInvokeSkill(
   const slug = rawSlug.toLowerCase().replace(/-/g, '_');
   const displaySlug = rawSlug || 'invoke_skill';
 
-  // ── File-producing skills → DocumentGenerationCard ────────────────────────
-  if (INVOKE_FILE_SLUGS.has(slug) || slug === '' || (
-    !INVOKE_RESEARCH_SLUGS.has(slug) &&
-    !INVOKE_BACKTEST_SLUGS.has(slug) &&
-    !INVOKE_QUANT_SLUGS.has(slug) &&
-    !INVOKE_BUBBLE_SLUGS.has(slug) &&
-    !INVOKE_DOC_INTERPRETER_SLUGS.has(slug) &&
-    !INVOKE_AFL_SLUGS.has(slug) &&
-    !INVOKE_DCF_SLUGS.has(slug)
-  )) {
+  // ── Analysis/Research skills → specific cards (check FIRST) ─────────────
+  let Component: React.ComponentType<any> | null = null;
+
+  if (INVOKE_RESEARCH_SLUGS.has(slug))       Component = FinancialResearchCard;
+  else if (INVOKE_BUBBLE_SLUGS.has(slug))    Component = BubbleDetectorCard;
+  else if (INVOKE_DOC_INTERPRETER_SLUGS.has(slug)) Component = DocInterpreterCard;
+  else if (INVOKE_AFL_SLUGS.has(slug))       Component = AFLGenerateCard;
+  else if (INVOKE_DCF_SLUGS.has(slug))       Component = DCFModelCard;
+  else if (INVOKE_BACKTEST_SLUGS.has(slug))  Component = SkillResultCard;
+  else if (INVOKE_QUANT_SLUGS.has(slug))     Component = SkillResultCard;
+
+  // If we found a specific component, use it
+  if (Component) {
+    switch (part.state) {
+      case 'input-streaming':
+      case 'input-available':
+        return <ToolLoading key={pIdx} toolName={displaySlug} input={part.input} />;
+      case 'output-available':
+        return (
+          <Component
+            key={pIdx}
+            {...(typeof part.output === 'object' && part.output ? part.output : {})}
+          />
+        );
+      case 'output-error':
+        return <ToolError key={pIdx} toolName={displaySlug} errorText={part.errorText} />;
+      default:
+        return null;
+    }
+  }
+
+  // ── File-producing skills → DocumentGenerationCard (fallback) ────────────
+  if (INVOKE_FILE_SLUGS.has(slug) || slug === '') {
     return (
       <DocumentGenerationCard
         key={pIdx}
@@ -316,32 +355,20 @@ function renderInvokeSkill(
     );
   }
 
-  // ── Analysis/Research skills → standard card ──────────────────────────────
-  let Component: React.ComponentType<any> = SkillResultCard;
-
-  if (INVOKE_RESEARCH_SLUGS.has(slug))       Component = FinancialResearchCard;
-  else if (INVOKE_BUBBLE_SLUGS.has(slug))    Component = BubbleDetectorCard;
-  else if (INVOKE_DOC_INTERPRETER_SLUGS.has(slug)) Component = DocInterpreterCard;
-  else if (INVOKE_AFL_SLUGS.has(slug))       Component = AFLGenerateCard;
-  else if (INVOKE_DCF_SLUGS.has(slug))       Component = DCFModelCard;
-  // BACKTEST_SLUGS and QUANT_SLUGS fall through to SkillResultCard
-
-  switch (part.state) {
-    case 'input-streaming':
-    case 'input-available':
-      return <ToolLoading key={pIdx} toolName={displaySlug} input={part.input} />;
-    case 'output-available':
-      return (
-        <Component
-          key={pIdx}
-          {...(typeof part.output === 'object' && part.output ? part.output : {})}
-        />
-      );
-    case 'output-error':
-      return <ToolError key={pIdx} toolName={displaySlug} errorText={part.errorText} />;
-    default:
-      return null;
-  }
+  // ── Unknown skill → DocumentGenerationCard (default fallback) ────────────
+  return (
+    <DocumentGenerationCard
+      key={pIdx}
+      toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+      toolName={slug || 'invoke_skill'}
+      input={part.input}
+      output={part.state === 'output-available' ? part.output : undefined}
+      externalOutput={externalOutput}
+      state={part.state as any}
+      errorText={part.errorText}
+      conversationId={conversationId || undefined}
+    />
+  );
 }
 
 // ─── Main Render Function ─────────────────────────────────────────────────────
