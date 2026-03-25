@@ -37,7 +37,7 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
   const highlightCode = (line: string) => {
     // Comments
     if (line.trim().startsWith('//')) {
-      return <span style={{ color: '#6A9955' }}>{line}</span>;
+      return <span style={{ color: 'var(--syntax-comment, #6A9955)' }}>{line}</span>;
     }
 
     // Keywords
@@ -50,19 +50,19 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
       <span>
         {line.split(/(\s+|[(),;=<>!&|+\-*/])/).map((part, i) => {
           if (keywords.includes(part)) {
-            return <span key={i} style={{ color: '#FEC00F', fontWeight: 600 }}>{part}</span>;
+            return <span key={i} style={{ color: 'var(--accent, #FEC00F)', fontWeight: 600 }}>{part}</span>;
           }
           if (functions.includes(part)) {
-            return <span key={i} style={{ color: '#DCDCAA' }}>{part}</span>;
+            return <span key={i} style={{ color: 'var(--syntax-function, #DCDCAA)' }}>{part}</span>;
           }
           if (variables.includes(part)) {
-            return <span key={i} style={{ color: '#9CDCFE' }}>{part}</span>;
+            return <span key={i} style={{ color: 'var(--syntax-variable, #9CDCFE)' }}>{part}</span>;
           }
           if (/^\d+\.?\d*$/.test(part)) {
-            return <span key={i} style={{ color: '#B5CEA8' }}>{part}</span>;
+            return <span key={i} style={{ color: 'var(--syntax-number, #B5CEA8)' }}>{part}</span>;
           }
           if (/^".*"$/.test(part) || /^'.*'$/.test(part)) {
-            return <span key={i} style={{ color: '#CE9178' }}>{part}</span>;
+            return <span key={i} style={{ color: 'var(--syntax-string, #CE9178)' }}>{part}</span>;
           }
           return <span key={i}>{part}</span>;
         })}
@@ -74,8 +74,8 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
 
   return (
     <div style={{
-      backgroundColor: isDark ? '#1E1E1E' : '#ffffff',
-      border: `1px solid ${isDark ? '#424242' : '#e0e0e0'}`,
+      backgroundColor: 'var(--bg-card)',
+      border: '1px solid var(--border)',
       borderRadius: '12px',
       overflow: 'hidden',
       height: expanded ? '80vh' : 'auto',
@@ -88,14 +88,14 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '12px 20px',
-        backgroundColor: isDark ? '#2A2A2A' : '#f5f5f5',
-        borderBottom: `1px solid ${isDark ? '#424242' : '#e0e0e0'}`,
+        backgroundColor: 'var(--bg-raised)',
+        borderBottom: '1px solid var(--border)',
       }}>
         <span style={{
           fontFamily: "'Rajdhani', sans-serif",
           fontSize: '13px',
           fontWeight: 600,
-          color: isDark ? '#FFFFFF' : '#212121',
+          color: 'var(--text)',
           letterSpacing: '0.5px',
         }}>
           {title}
@@ -108,10 +108,10 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
               alignItems: 'center',
               gap: '6px',
               padding: '6px 12px',
-              backgroundColor: copied ? '#2D7F3E' : 'transparent',
-              border: `1px solid ${copied ? '#2D7F3E' : '#424242'}`,
+              backgroundColor: copied ? 'var(--success, #2D7F3E)' : 'transparent',
+              border: `1px solid ${copied ? 'var(--success, #2D7F3E)' : 'var(--border)'}`,
               borderRadius: '6px',
-              color: '#FFFFFF',
+              color: 'var(--text)',
               fontSize: '11px',
               fontFamily: "'Rajdhani', sans-serif",
               fontWeight: 600,
@@ -130,9 +130,9 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
               gap: '6px',
               padding: '6px 12px',
               backgroundColor: 'transparent',
-              border: '1px solid #424242',
+              border: '1px solid var(--border)',
               borderRadius: '6px',
-              color: '#FFFFFF',
+              color: 'var(--text)',
               fontSize: '11px',
               fontFamily: "'Rajdhani', sans-serif",
               fontWeight: 600,
@@ -151,9 +151,9 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
               width: '32px',
               height: '32px',
               backgroundColor: 'transparent',
-              border: '1px solid #424242',
+              border: '1px solid var(--border)',
               borderRadius: '6px',
-              color: '#FFFFFF',
+              color: 'var(--text)',
               cursor: 'pointer',
             }}
           >
@@ -166,7 +166,7 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
       <div style={{
         flex: 1,
         overflow: 'auto',
-        backgroundColor: isDark ? '#0D1117' : '#f8f9fa',
+        backgroundColor: 'var(--bg)',
       }}>
         <pre style={{
           margin: 0,
@@ -180,17 +180,17 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
               {showLineNumbers && (
                 <span style={{
                   width: '50px',
-                  color: isDark ? '#6E7681' : '#adb5bd',
+                  color: 'var(--text-muted)',
                   textAlign: 'right',
                   paddingRight: '20px',
                   userSelect: 'none',
-                  borderRight: `1px solid ${isDark ? '#21262D' : '#e9ecef'}`,
+                  borderRight: '1px solid var(--border)',
                   marginRight: '20px',
                 }}>
                   {index + 1}
                 </span>
               )}
-              <span style={{ color: isDark ? '#E6EDF3' : '#212529', flex: 1 }}>
+              <span style={{ color: 'var(--text)', flex: 1 }}>
                 {highlightCode(line) || ' '}
               </span>
             </div>
@@ -204,13 +204,13 @@ export function CodeDisplay({ code, language = 'afl', title = 'AFL CODE OUTPUT',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '10px 20px',
-        backgroundColor: isDark ? '#161B22' : '#f1f3f5',
-        borderTop: `1px solid ${isDark ? '#21262D' : '#e9ecef'}`,
+        backgroundColor: 'var(--bg-raised)',
+        borderTop: '1px solid var(--border)',
       }}>
-        <span style={{ color: isDark ? '#6E7681' : '#868e96', fontSize: '11px' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
           {lines.length} lines • {language.toUpperCase()}
         </span>
-        <span style={{ color: isDark ? '#6E7681' : '#868e96', fontSize: '11px' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
           {code.length} characters
         </span>
       </div>

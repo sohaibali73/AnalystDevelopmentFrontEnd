@@ -89,21 +89,19 @@ export function ChatModelSelector({
 
   // Theme tokens
   const T = {
-    text: isDark ? '#EFEFEF' : '#0A0A0B',
-    muted: isDark ? '#606068' : '#808088',
-    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
-    bg: isDark ? '#0D0D10' : '#FFFFFF',
-    bgHover: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-    panelBg: isDark ? '#141418' : '#FFFFFF',
-    panelBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
-    panelShadow: isDark
-      ? '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)'
-      : '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
-    accent: '#60A5FA',
-    accentBg: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)',
-    accentBorder: 'rgba(96,165,250,0.35)',
-    providerBg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-    providerText: isDark ? '#606068' : '#909098',
+    text: 'var(--text)',
+    muted: 'var(--text-muted)',
+    border: 'var(--border)',
+    bg: 'var(--bg-card)',
+    bgHover: 'var(--bg-card-hover)',
+    panelBg: 'var(--bg-raised)',
+    panelBorder: 'var(--border)',
+    panelShadow: 'var(--shadow-card)',
+    accent: 'var(--accent)',
+    accentBg: 'var(--accent-dim)',
+    accentBorder: 'var(--border-hover)',
+    providerBg: 'var(--bg-raised)',
+    providerText: 'var(--text-muted)',
   };
 
   return (

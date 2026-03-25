@@ -253,7 +253,7 @@ export function VoiceMode({ isOpen, onClose, onSendMessage, lastAssistantText, i
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1000,
-      background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 70%)',
+      background: 'radial-gradient(ellipse at center, var(--bg-card) 0%, var(--bg) 70%)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       animation: 'fadeIn 0.3s ease',
     }}>

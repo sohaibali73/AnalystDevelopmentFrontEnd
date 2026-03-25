@@ -160,8 +160,8 @@ function TaskItem({
     return () => clearInterval(interval);
   }, [isActive]);
 
-  const statusColor = isActive ? '#FEC00F' : isDone ? '#22c55e' : isFailed ? '#ef4444' : '#555';
-  const borderColor = isActive ? '#FEC00F' : isDone ? '#22c55e' : isFailed ? '#ef4444' : (isDark ? '#2a2a2a' : '#e5e5e5');
+  const statusColor = isActive ? 'var(--accent)' : isDone ? 'var(--success)' : isFailed ? 'var(--error)' : 'var(--text-muted)';
+  const borderColor = isActive ? 'var(--accent)' : isDone ? 'var(--success)' : isFailed ? 'var(--error)' : 'var(--border)';
   const elapsed = isActive ? formatElapsed(now - proc.startedAt) : proc.completedAt ? formatElapsed(proc.completedAt - proc.startedAt) : '';
 
   return (
@@ -169,8 +169,8 @@ function TaskItem({
       style={{
         borderLeft: `3px solid ${borderColor}`,
         backgroundColor: isDark
-          ? (isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent')
-          : (isExpanded ? 'rgba(0,0,0,0.02)' : 'transparent'),
+          ? (isExpanded ? 'var(--bg-hover)' : 'transparent')
+          : (isExpanded ? 'var(--bg-hover)' : 'transparent'),
         transition: 'background-color 0.2s ease, border-color 0.3s ease',
         marginBottom: '1px',
       }}
@@ -186,19 +186,19 @@ function TaskItem({
           cursor: 'pointer',
           userSelect: 'none',
         }}
-        onMouseEnter={e => { e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'; }}
+        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
         onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
       >
         {/* Status icon */}
         <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           {isActive ? (
-            <Loader2 size={15} color="#FEC00F" style={{ animation: 'pm-spin 1s linear infinite' }} />
+            <Loader2 size={15} color="var(--accent)" style={{ animation: 'pm-spin 1s linear infinite' }} />
           ) : isDone ? (
-            <CheckCircle2 size={15} color="#22c55e" />
+            <CheckCircle2 size={15} color="var(--success)" />
           ) : isFailed ? (
-            <AlertCircle size={15} color="#ef4444" />
+            <AlertCircle size={15} color="var(--error)" />
           ) : (
-            <TypeIcon size={15} color={isDark ? '#666' : '#999'} />
+            <TypeIcon size={15} color="var(--text-muted)" />
           )}
         </div>
 
@@ -207,7 +207,7 @@ function TaskItem({
           flex: 1,
           fontSize: '13px',
           fontWeight: 600,
-          color: isFailed ? '#ef4444' : (isDark ? '#e0e0e0' : '#333'),
+          color: isFailed ? 'var(--error)' : 'var(--text)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
@@ -221,7 +221,7 @@ function TaskItem({
           {isActive && (
             <span style={{
               fontSize: '10px',
-              color: isDark ? '#888' : '#888',
+              color: 'var(--text-muted)',
               fontFamily: "'Rajdhani', sans-serif",
               fontWeight: 600,
               letterSpacing: '0.3px',
@@ -232,7 +232,7 @@ function TaskItem({
           {isActive && proc.progress > 0 && (
             <span style={{
               fontSize: '10px',
-              color: '#FEC00F',
+              color: 'var(--accent)',
               fontFamily: "'Rajdhani', sans-serif",
               fontWeight: 700,
             }}>
@@ -241,7 +241,7 @@ function TaskItem({
           )}
           <ChevronRight
             size={13}
-            color={isDark ? '#555' : '#aaa'}
+            color="var(--text-muted)"
             style={{
               transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
               transition: 'transform 0.2s ease',
@@ -268,12 +268,12 @@ function TaskItem({
               gap: '4px',
               padding: '2px 8px',
               borderRadius: '10px',
-              backgroundColor: isDark ? 'rgba(254,192,15,0.1)' : 'rgba(254,192,15,0.12)',
-              border: `1px solid ${isDark ? 'rgba(254,192,15,0.15)' : 'rgba(254,192,15,0.25)'}`,
+              backgroundColor: 'var(--accent-dim)',
+              border: '1px solid var(--border)',
               fontSize: '10px',
               fontFamily: "'Rajdhani', sans-serif",
               fontWeight: 700,
-              color: '#FEC00F',
+              color: 'var(--accent)',
               letterSpacing: '0.5px',
               textTransform: 'uppercase',
             }}>
@@ -283,7 +283,7 @@ function TaskItem({
             {elapsed && (
               <span style={{
                 fontSize: '10px',
-                color: isDark ? '#666' : '#999',
+                color: 'var(--text-muted)',
                 fontFamily: "'Quicksand', sans-serif",
               }}>
                 {isDone ? `Completed in ${elapsed}` : isFailed ? `Failed after ${elapsed}` : elapsed}
@@ -296,7 +296,7 @@ function TaskItem({
             <div style={{
               height: '4px',
               borderRadius: '2px',
-              backgroundColor: isDark ? '#222' : '#e5e5e5',
+              backgroundColor: 'var(--bg-hover)',
               overflow: 'hidden',
               marginBottom: '6px',
             }}>
@@ -304,7 +304,7 @@ function TaskItem({
                 height: '100%',
                 borderRadius: '2px',
                 width: proc.progress > 0 ? `${proc.progress}%` : '30%',
-                background: 'linear-gradient(90deg, #FEC00F, #FFD700)',
+                background: 'linear-gradient(90deg, var(--accent), var(--accent-hover))',
                 transition: 'width 0.4s ease',
                 animation: proc.progress === 0 ? 'pm-indeterminate 1.5s ease-in-out infinite' : 'none',
               }} />

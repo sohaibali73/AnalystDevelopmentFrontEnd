@@ -30,17 +30,17 @@ interface UploadItem {
 }
 
 const ACCEPTED_FORMATS = [
-  { ext: '.pdf', label: 'PDF', color: '#ef4444' },
-  { ext: '.txt', label: 'TXT', color: '#22c55e' },
-  { ext: '.doc', label: 'DOC', color: '#3b82f6' },
-  { ext: '.docx', label: 'DOCX', color: '#3b82f6' },
-  { ext: '.csv', label: 'CSV', color: '#22c55e' },
-  { ext: '.md', label: 'MD', color: '#a855f7' },
-  { ext: '.json', label: 'JSON', color: '#f59e0b' },
-  { ext: '.xml', label: 'XML', color: '#f59e0b' },
-  { ext: '.html', label: 'HTML', color: '#ef4444' },
-  { ext: '.xlsx', label: 'XLSX', color: '#22c55e' },
-  { ext: '.rtf', label: 'RTF', color: '#6366f1' },
+  { ext: '.pdf', label: 'PDF', color: 'var(--error, #ef4444)' },
+  { ext: '.txt', label: 'TXT', color: 'var(--success, #22c55e)' },
+  { ext: '.doc', label: 'DOC', color: 'var(--info, #3b82f6)' },
+  { ext: '.docx', label: 'DOCX', color: 'var(--info, #3b82f6)' },
+  { ext: '.csv', label: 'CSV', color: 'var(--success, #22c55e)' },
+  { ext: '.md', label: 'MD', color: 'var(--purple, #a855f7)' },
+  { ext: '.json', label: 'JSON', color: 'var(--warning, #f59e0b)' },
+  { ext: '.xml', label: 'XML', color: 'var(--warning, #f59e0b)' },
+  { ext: '.html', label: 'HTML', color: 'var(--error, #ef4444)' },
+  { ext: '.xlsx', label: 'XLSX', color: 'var(--success, #22c55e)' },
+  { ext: '.rtf', label: 'RTF', color: 'var(--purple, #6366f1)' },
 ];
 
 const ACCEPT_STRING = ACCEPTED_FORMATS.map((f) => f.ext).join(',');
@@ -225,12 +225,8 @@ export default function KBUploadPanel({
             cursor: uploading ? 'not-allowed' : 'pointer',
             transition: 'all 0.25s ease',
             backgroundColor: dragOver
-              ? isDark
-                ? '#1A1A10'
-                : '#FFFEF5'
-              : isDark
-              ? '#161616'
-              : '#FAFAFA',
+              ? 'var(--accent-dim)'
+              : 'var(--bg)',
           }}
         >
           {uploading ? (
@@ -415,7 +411,7 @@ export default function KBUploadPanel({
                       gap: '10px',
                       padding: '6px 10px',
                       borderRadius: '6px',
-                      backgroundColor: isDark ? '#161616' : '#FAFAFA',
+                      backgroundColor: 'var(--bg)',
                       border: `1px solid ${colors.border}`,
                     }}
                   >
@@ -427,10 +423,10 @@ export default function KBUploadPanel({
                       />
                     )}
                     {item.status === 'success' && (
-                      <CheckCircle size={14} color="#22c55e" style={{ flexShrink: 0 }} />
-                    )}
-                    {item.status === 'error' && (
-                      <XCircle size={14} color="#DC2626" style={{ flexShrink: 0 }} />
+                        <CheckCircle size={14} color="var(--success, #22c55e)" style={{ flexShrink: 0 }} />
+                      )}
+                      {item.status === 'error' && (
+                        <XCircle size={14} color="var(--error, #DC2626)" style={{ flexShrink: 0 }} />
                     )}
                     {item.status === 'pending' && (
                       <FIcon size={14} color={colors.textMuted} style={{ flexShrink: 0 }} />

@@ -57,13 +57,13 @@ export default function FeedbackModal({ isOpen, onClose, strategyId, conversatio
   };
 
   const colors = {
-    background: isDark ? '#121212' : '#ffffff',
-    cardBg: isDark ? '#1E1E1E' : '#ffffff',
-    inputBg: isDark ? '#2A2A2A' : '#f5f5f5',
-    border: isDark ? '#424242' : '#e0e0e0',
-    text: isDark ? '#FFFFFF' : '#212121',
-    textMuted: isDark ? '#9E9E9E' : '#757575',
-    active: '#FEC00F',
+    background: 'var(--bg)',
+    cardBg: 'var(--bg-card)',
+    inputBg: 'var(--bg-raised)',
+    border: 'var(--border)',
+    text: 'var(--text)',
+    textMuted: 'var(--text-muted)',
+    active: 'var(--accent)',
   };
 
   return (
@@ -135,7 +135,7 @@ export default function FeedbackModal({ isOpen, onClose, strategyId, conversatio
               width: '60px',
               height: '60px',
               borderRadius: '50%',
-              backgroundColor: '#2D7F3E',
+              backgroundColor: 'var(--success, #2D7F3E)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -171,7 +171,7 @@ export default function FeedbackModal({ isOpen, onClose, strategyId, conversatio
                       height: '40px',
                       borderRadius: '8px',
                       border: `1px solid ${rating >= star ? colors.active : colors.border}`,
-                      backgroundColor: rating >= star ? 'rgba(254, 192, 15, 0.1)' : 'transparent',
+                      backgroundColor: rating >= star ? 'var(--accent-dim)' : 'transparent',
                       color: rating >= star ? colors.active : colors.textMuted,
                       fontSize: '20px',
                       cursor: 'pointer',
@@ -224,7 +224,7 @@ export default function FeedbackModal({ isOpen, onClose, strategyId, conversatio
                 backgroundColor: !feedback.trim() || submitting ? colors.border : colors.active,
                 border: 'none',
                 borderRadius: '8px',
-                color: !feedback.trim() || submitting ? colors.textMuted : '#212121',
+                color: !feedback.trim() || submitting ? colors.textMuted : 'var(--text)',
                 fontSize: '14px',
                 fontFamily: "'Rajdhani', sans-serif",
                 fontWeight: 600,

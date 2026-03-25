@@ -213,12 +213,12 @@ function PreviewCard({ block, isDark }: { block: DetectedCodeBlock; isDark: bool
     } catch { /* */ }
   }, [block.code]);
 
-  const accent = '#FEC00F';
-  const bg = isDark ? '#111118' : '#f9fafb';
-  const headerBg = isDark ? '#0d0d14' : '#f1f5f9';
-  const border = isDark ? '#23233a' : '#e2e8f0';
-  const text = isDark ? '#e2e8f0' : '#1e293b';
-  const muted = isDark ? '#64748b' : '#94a3b8';
+  const accent = 'var(--accent)';
+  const bg = 'var(--bg)';
+  const headerBg = 'var(--bg-raised)';
+  const border = 'var(--border)';
+  const text = 'var(--text)';
+  const muted = 'var(--text-muted)';
 
   const outerStyle: React.CSSProperties = fullscreen
     ? { position: 'fixed', inset: 0, zIndex: 9999, background: bg, display: 'flex', flexDirection: 'column' }

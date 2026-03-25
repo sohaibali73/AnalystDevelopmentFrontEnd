@@ -281,10 +281,10 @@ function ToolError({ toolName, errorText }: { toolName: string; errorText?: stri
   return (
     <div style={{
       padding: '12px',
-      backgroundColor: 'rgba(220,38,38,0.1)',
+      backgroundColor: 'var(--error-dim)',
       borderRadius: '12px',
       marginTop: '8px',
-      color: '#DC2626',
+      color: 'var(--error)',
       fontSize: '13px',
     }}>
       {toolName.replace(/_/g, ' ')} error: {errorText || 'Unknown error'}
