@@ -22,12 +22,18 @@ import {
   Info,
   Sparkles,
   ArrowRight,
+  Waves,
+  Trees,
+  Sunset,
+  Flower2,
+  Zap,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useFontSize } from '@/contexts/FontSizeContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { apiClient } from '@/lib/api';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface SettingsData {
   profile: {
@@ -152,7 +158,7 @@ function SectionHead({ label }: { label: string }) {
 
 export function SettingsPage() {
   const router = useRouter();
-  const { theme, setTheme, resolvedTheme, setAccentColor } = useTheme();
+  const { theme, setTheme, themeStyle, setThemeStyle, resolvedTheme, setAccentColor } = useTheme();
   const { setFontSize } = useFontSize();
   const { isMobile, isTablet } = useResponsive();
   const [activeSection, setActiveSection] = useState('profile');
@@ -253,6 +259,15 @@ export function SettingsPage() {
     { value: 'light', label: 'Light', icon: Sun, desc: 'Clean, bright interface', color: '#FB923C' },
     { value: 'dark', label: 'Dark', icon: Moon, desc: 'Easy on the eyes', color: '#A78BFA' },
     { value: 'system', label: 'System', icon: Monitor, desc: 'Match your OS', color: '#60A5FA' },
+  ];
+
+  const themeStyleOptions = [
+    { value: 'default', label: 'Default', icon: Zap, desc: 'Classic Potomac yellow', color: '#FEC00F' },
+    { value: 'midnight', label: 'Midnight', icon: Moon, desc: 'Deep purple elegance', color: '#818CF8' },
+    { value: 'ocean', label: 'Ocean', icon: Waves, desc: 'Calm teal waters', color: '#22D3EE' },
+    { value: 'forest', label: 'Forest', icon: Trees, desc: 'Natural green vibes', color: '#4ADE80' },
+    { value: 'sunset', label: 'Sunset', icon: Sunset, desc: 'Warm orange glow', color: '#FB923C' },
+    { value: 'rose', label: 'Rose', icon: Flower2, desc: 'Soft pink elegance', color: '#F472B6' },
   ];
 
   const accentColors = [
@@ -512,41 +527,96 @@ export function SettingsPage() {
             <div>
               <SectionHead label="Appearance & Theme" />
 
-              {/* Theme Picker */}
+              {/* Theme Mode Picker */}
               <div style={{ marginBottom: '32px' }}>
-                <FieldLabel>THEME</FieldLabel>
+                <FieldLabel>THEME MODE</FieldLabel>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginTop: '14px' }}>
                   {themeOptions.map(opt => {
                     const Icon = opt.icon;
                     const isSel = settings.appearance.theme === opt.value;
                     return (
-                      <div key={opt.value} className="settings-card" onClick={() => updateAppearance('theme', opt.value)}
-                        style={{
-                          background: 'var(--bg-card)', border: isSel ? `2px solid ${opt.color}` : '1px solid var(--border)',
-                          borderRadius: '20px', padding: '28px', cursor: 'pointer', textAlign: 'center',
-                          boxShadow: isSel ? `0 8px 32px ${opt.color}25` : 'var(--shadow-card)', position: 'relative', overflow: 'hidden',
-                        }}>
-                        <div className="shimmer-layer" />
-                        {isSel && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, ${opt.color}, transparent)` }} />}
-                        <div style={{
-                          width: '52px', height: '52px', borderRadius: '14px', margin: '0 auto 14px',
-                          background: `linear-gradient(135deg, ${opt.color}20, ${opt.color}08)`,
-                          border: `1px solid ${opt.color}30`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: `0 8px 24px ${opt.color}20`,
-                        }}>
-                          <Icon size={24} color={opt.color} />
-                        </div>
-                        <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '14px', fontWeight: 700, color: isSel ? 'var(--text)' : 'var(--text-muted)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
-                          {opt.label}
-                        </p>
-                        <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>{opt.desc}</p>
-                        {isSel && (
-                          <div style={{ position: 'absolute', top: '12px', right: '12px', width: '24px', height: '24px', backgroundColor: opt.color, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${opt.color}40` }}>
-                            <Check size={14} color="#09090B" />
+                      <motion.div
+                        key={opt.value}
+                        whileHover={{ scale: 1.02, y: -4 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="settings-card" onClick={() => updateAppearance('theme', opt.value)}
+                          style={{
+                            background: 'var(--bg-card)', border: isSel ? `2px solid ${opt.color}` : '1px solid var(--border)',
+                            borderRadius: '20px', padding: '28px', cursor: 'pointer', textAlign: 'center',
+                            boxShadow: isSel ? `0 8px 32px ${opt.color}25` : 'var(--shadow-card)', position: 'relative', overflow: 'hidden',
+                          }}>
+                          <div className="shimmer-layer" />
+                          {isSel && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, ${opt.color}, transparent)` }} />}
+                          <div style={{
+                            width: '52px', height: '52px', borderRadius: '14px', margin: '0 auto 14px',
+                            background: `linear-gradient(135deg, ${opt.color}20, ${opt.color}08)`,
+                            border: `1px solid ${opt.color}30`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: `0 8px 24px ${opt.color}20`,
+                          }}>
+                            <Icon size={24} color={opt.color} />
                           </div>
-                        )}
-                      </div>
+                          <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '14px', fontWeight: 700, color: isSel ? 'var(--text)' : 'var(--text-muted)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
+                            {opt.label}
+                          </p>
+                          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>{opt.desc}</p>
+                          {isSel && (
+                            <div style={{ position: 'absolute', top: '12px', right: '12px', width: '24px', height: '24px', backgroundColor: opt.color, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${opt.color}40` }}>
+                              <Check size={14} color="#09090B" />
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Theme Style Picker */}
+              <div style={{ marginBottom: '32px' }}>
+                <FieldLabel>THEME STYLE</FieldLabel>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '12px', marginTop: '14px' }}>
+                  {themeStyleOptions.map(opt => {
+                    const Icon = opt.icon;
+                    const isSel = themeStyle === opt.value;
+                    return (
+                      <motion.div
+                        key={opt.value}
+                        whileHover={{ scale: 1.03, y: -3 }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        <div
+                          onClick={() => setThemeStyle(opt.value as any)}
+                          style={{
+                            background: 'var(--bg-card)',
+                            border: isSel ? `2px solid ${opt.color}` : '1px solid var(--border)',
+                            borderRadius: '16px', padding: '20px', cursor: 'pointer', textAlign: 'center',
+                            boxShadow: isSel ? `0 6px 24px ${opt.color}20` : 'var(--shadow-card)',
+                            position: 'relative', overflow: 'hidden',
+                            transition: 'all 0.25s ease',
+                          }}
+                        >
+                          {isSel && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, ${opt.color}, transparent)` }} />}
+                          <div style={{
+                            width: '44px', height: '44px', borderRadius: '12px', margin: '0 auto 10px',
+                            background: `linear-gradient(135deg, ${opt.color}25, ${opt.color}08)`,
+                            border: `1px solid ${opt.color}35`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <Icon size={20} color={opt.color} />
+                          </div>
+                          <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 700, color: isSel ? 'var(--text)' : 'var(--text-muted)', marginBottom: '2px' }}>
+                            {opt.label}
+                          </p>
+                          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: 'var(--text-muted)', margin: 0 }}>{opt.desc}</p>
+                          {isSel && (
+                            <div style={{ position: 'absolute', top: '8px', right: '8px', width: '20px', height: '20px', backgroundColor: opt.color, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Check size={12} color="#09090B" />
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
                     );
                   })}
                 </div>

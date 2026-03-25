@@ -641,94 +641,104 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         {!isError && (
           <div style={{ marginBottom: '12px' }}>
 
-            {/* Track */}
-            <div style={{
-              width: '100%', height: '6px',
-              borderRadius: '3px',
-              backgroundColor: trackCol,
-              overflow: 'hidden', position: 'relative',
-            }}>
-              <div style={{
-                height: '100%',
-                borderRadius: '3px',
-                background: isComplete ? `linear-gradient(90deg, ${meta.color}, #10B981)` : meta.gradient,
-                width: `${progress}%`,
-                transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)',
-                position: 'relative',
-                overflow: 'hidden',
-              }}>
-                {!isComplete && progress > 0 && (
-                  <div style={{
-                    position: 'absolute', top: 0, left: '-100%',
-                    width: '100%', height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent)',
-                    animation: 'docGenShimmer 2s linear infinite',
-                  }} />
-                )}
-              </div>
-            </div>
-
-            {/* Phase + time row */}
+            {/* Animated progress indicator */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: '8px',
+              justifyContent: 'center',
+              gap: '12px',
+              padding: '16px 0',
+              position: 'relative',
             }}>
-              <div style={{
-                fontSize: '11.5px',
-                color: isComplete ? '#10B981' : meta.color,
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                maxWidth: '60%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {!isComplete && (
-                  <span style={{
-                    display: 'inline-block',
-                    width: '11px', height: '11px',
-                    border: `1.8px solid ${meta.color}`,
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'docGenSpin 0.8s linear infinite',
-                    flexShrink: 0,
-                  }} />
-                )}
-                {isComplete ? 'Generation complete' : meta.phases[currentPhase] || 'Processing'}
+              {/* Animated dots */}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      backgroundColor: meta.color,
+                      animation: `docGenBounce 1.4s ease-in-out ${i * 0.16}s infinite`,
+                    }}
+                  />
+                ))}
               </div>
-
+              
+              {/* Spinning ring */}
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '11px',
-                color: mutedCol,
-                fontFamily: "'DM Mono', monospace",
-              }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  <IconClock size={11} color={mutedCol} />
-                  {formatTime(elapsedTime)}
-                </span>
-                <span style={{
-                  fontWeight: 800,
-                  fontSize: '12.5px',
-                  color: isComplete ? '#10B981' : meta.color,
-                }}>
-                  {Math.round(progress)}%
-                </span>
-              </div>
+                position: 'absolute',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                border: `2px solid ${trackCol}`,
+                borderTopColor: meta.color,
+                animation: 'docGenSpin 1s linear infinite',
+              }} />
             </div>
+
+            {/* Phase text */}
+            <div style={{
+              fontSize: '12px',
+              color: meta.color,
+              fontWeight: 600,
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              marginBottom: '8px',
+            }}>
+              <span style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: meta.color,
+                animation: 'docGenPulse 1.5s ease-in-out infinite',
+              }} />
+              {isComplete ? 'Generation complete' : meta.phases[currentPhase] || 'Processing your request'}
+            </div>
+
+            {/* Do not refresh warning */}
+            {!isComplete && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--accent-dim)',
+                border: '1px solid var(--border-hover)',
+                marginTop: '8px',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span style={{
+                  fontSize: '11px',
+                  color: 'var(--accent)',
+                  fontWeight: 600,
+                  fontFamily: "'DM Mono', monospace",
+                  letterSpacing: '0.02em',
+                }}>
+                  Do not refresh or leave this page
+                </span>
+              </div>
+            )}
 
             {/* Phase step dots */}
             {!isComplete && (
-              <div style={{ display: 'flex', gap: '3px', marginTop: '9px' }}>
+              <div style={{ display: 'flex', gap: '4px', marginTop: '12px' }}>
                 {meta.phases.map((_, idx) => (
                   <div key={idx} style={{
-                    flex: 1, height: '2px', borderRadius: '2px',
+                    flex: 1,
+                    height: '3px',
+                    borderRadius: '2px',
                     backgroundColor: idx < currentPhase
                       ? meta.color
                       : idx === currentPhase
@@ -1306,6 +1316,10 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         @keyframes docGenShimmer {
           0% { left: -100%; }
           100% { left: 200%; }
+        }
+        @keyframes docGenBounce {
+          0%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-12px); }
         }
       `}</style>
     </div>

@@ -9,14 +9,12 @@ import {
   X, 
   CheckCircle, 
   AlertCircle, 
-  Clock, 
   Eye, 
   Loader2 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -295,7 +293,7 @@ const PersistentGenerationCard: React.FC<PersistentGenerationCardProps> = ({
             </Badge>
           ) : (
             <Badge variant="outline" className="flex items-center space-x-2">
-              <Clock className="h-3 w-3" />
+              <Loader2 className="h-3 w-3" />
               <span>Pending</span>
             </Badge>
           )}
@@ -318,26 +316,66 @@ const PersistentGenerationCard: React.FC<PersistentGenerationCardProps> = ({
       
       <CardContent>
         {isGenerating && (
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span>{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-            <div className="flex justify-between">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancel}
-                className="text-xs"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Cancel
-              </Button>
-              <div className="text-xs text-muted-foreground">
-                Estimated time: 30-60 seconds
+          <div className="space-y-4">
+            {/* Animated dots indicator */}
+            <div className="flex flex-col items-center justify-center py-4 space-y-4">
+              <div className="relative flex items-center justify-center">
+                {/* Spinning ring */}
+                <div className="absolute w-16 h-16 rounded-full border-2 border-muted border-t-primary animate-spin" />
+                {/* Bouncing dots */}
+                <div className="flex space-x-2">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="w-2.5 h-2.5 rounded-full bg-primary"
+                      style={{
+                        animation: `persistentBounce 1.4s ease-in-out ${i * 0.16}s infinite`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              {/* Phase text */}
+              <div className="flex items-center space-x-2 text-sm text-primary font-medium">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <span>Generating your file</span>
+              </div>
+
+              {/* Do not refresh warning */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--accent-dim)',
+                border: '1px solid var(--border-hover)',
+              }}>
+                <svg style={{ width: '16px', height: '16px', color: 'var(--accent)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--accent)',
+                }}>
+                  Do not refresh or leave this page
+                </span>
               </div>
             </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              className="text-xs w-full"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancel
+            </Button>
           </div>
         )}
 
@@ -416,3 +454,13 @@ const PersistentGenerationCard: React.FC<PersistentGenerationCardProps> = ({
 };
 
 export default PersistentGenerationCard;
+
+/* Add animation keyframes */
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes persistentBounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+  }
+`;
+document.head.appendChild(style);

@@ -169,7 +169,7 @@ export function PresentationCard(props: PresentationCardProps) {
             fontSize: '10px', padding: '3px 8px', borderRadius: '4px',
             background: 'rgba(16,185,129,0.2)', color: '#10b981', fontWeight: 600,
           }}>
-            🎨 BRAND TEMPLATE: {props.template_used}
+            BRAND TEMPLATE: {props.template_used}
           </span>
         ) : (
           <span style={{
