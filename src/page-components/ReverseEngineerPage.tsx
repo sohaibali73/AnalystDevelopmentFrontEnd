@@ -683,7 +683,7 @@ export function ReverseEngineerPage() {
           <div className="max-w-[900px] mx-auto">
             <TooltipProvider>
               <PromptInput
-                accept="*"
+                accept=".pdf,.csv,.json,.txt,.afl,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
                 multiple
                 globalDrop={false}
                 maxFiles={10}

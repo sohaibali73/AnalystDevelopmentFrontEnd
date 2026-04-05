@@ -510,7 +510,7 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
     <PromptInputButton
       onClick={() => { if (!disabled) attachments.openFileDialog(); }}
       disabled={disabled}
-      tooltip="Attach files"
+      tooltip="Attach files (PDF, CSV, Images, Docs, etc.)"
     >
       <PaperclipIcon className="size-4" />
     </PromptInputButton>
@@ -1466,7 +1466,7 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* ── Drag-and-drop overlay ──────────────────────────────────────────── */}
+      {/* ── Drag-and-drop overlay ───────────────────────────���──────────────── */}
       {isDragOver && (
         <div
           className="drag-drop-overlay"
@@ -1848,7 +1848,7 @@ export function ChatPage() {
           <div style={{ maxWidth: '820px', margin: '0 auto' }}>
             <TooltipProvider>
               <PromptInput
-                accept="*"
+                accept=".pdf,.csv,.json,.txt,.afl,.doc,.docx,.xls,.xlsx,.pptx,.ppt,.png,.jpg,.jpeg,.gif,.mp3,.wav,.m4a"
                 multiple globalDrop={false} maxFiles={10} maxFileSize={52428800}
                 onError={(err) => {
                   if (err.code === 'max_file_size') toast.error('File too large (max 50MB)');
@@ -1917,7 +1917,7 @@ export function ChatPage() {
                             },
                             30000
                           );
-                          if (!resp.ok) { const e = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` })); throw new Error(e.error); }
+                          if (!resp.ok) { const e = await resp.json().catch(() => ({ detail: `HTTP ${resp.status}` })); throw new Error(e.detail || e.error || `Upload failed: ${resp.status}`); }
                           const respData = await resp.json();
                           uploaded.push(fileName);
                           fileBlobCacheRef.current.set(fileName, { url: file.url || undefined, fileId: respData.file_id || respData.id, filename: fileName, mediaType: file.mediaType, size: actualFile.size });
@@ -1944,6 +1944,7 @@ export function ChatPage() {
                             ...prev,
                             [fileName]: { ...prev[fileName], status: 'error' },
                           }));
+                          toast.error(`Upload failed: ${msg}`, { duration: 5000 });
                           if (msg.includes('fetch') || msg.includes('network') || msg.includes('aborted')) {
                             setBackendAvailable(false);
                           }

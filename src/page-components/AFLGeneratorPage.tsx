@@ -1351,7 +1351,7 @@ export function AFLGeneratorPage() {
           <div className="max-w-[900px] mx-auto px-6 py-5">
             <TooltipProvider>
               <PromptInput
-                accept="*"
+                accept=".pdf,.csv,.json,.txt,.afl,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
                 multiple
                 globalDrop={false}
                 maxFiles={10}
