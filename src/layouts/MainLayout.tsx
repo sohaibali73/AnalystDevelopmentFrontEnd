@@ -346,7 +346,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   }}>
                     ANALYST
                   </span>
-                  {/* DEVELOPER BETA badge - uses theme accent */}
+                  {/* RELEASE CANDIDATE 3.0 badge - uses theme accent */}
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -374,7 +374,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                       boxShadow: '0 0 4px var(--accent-glow)',
                       animation: 'devBetaDot 2.5s ease-in-out infinite',
                     }} />
-                    DEVELOPER BETA
+                    RELEASE CANDIDATE 3.0
                   </span>
                 </div>
               )}
