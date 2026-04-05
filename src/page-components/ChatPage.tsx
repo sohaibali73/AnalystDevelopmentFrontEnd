@@ -1549,6 +1549,7 @@ export function ChatPage() {
         isDark={isDark}
         colors={colors}
         connStatus={connStatus}
+        isCurrentConversationBlank={streamMessages.length === 0}
         onSelectConversation={setSelectedConversation}
         onNewConversation={handleNewConversation}
         onDeleteConversation={handleDeleteConversation}
