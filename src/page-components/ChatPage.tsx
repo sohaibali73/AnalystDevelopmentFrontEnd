@@ -1110,18 +1110,35 @@ export function ChatPage() {
       : '';
 
     // ── Content renderer (same logic, just extracted) ──────────────────────
-    const renderParts = () => parts.map((part: any, pIdx: number) => {
-      if (isToolPart(part.type)) {
-        // Find matching file_download event for externalOutput injection
-        const toolInput = part.input || {};
-        const toolFilename = toolInput.filename || toolInput.name || '';
-        const extOut = toolFilename && fileDownloadEvents[toolFilename]
-          ? fileDownloadEvents[toolFilename]
-          : undefined;
-        return renderToolPart(part, pIdx, message.id, conversationIdRef.current, extOut);
-      }
+    const renderParts = () => {
+      // Deduplicate tool parts by toolCallId — keep the last (most complete) state
+      // to prevent duplicate cards when both input-available + output-available
+      // parts exist for the same tool call.
+      const seenToolCallIds = new Map<string, number>();
+      const deduped = parts.map((part: any, pIdx: number) => ({ part, pIdx }));
+      // First pass: record the last index for each toolCallId
+      deduped.forEach(({ part, pIdx }) => {
+        if (isToolPart(part.type) && part.toolCallId) {
+          seenToolCallIds.set(part.toolCallId, pIdx);
+        }
+      });
 
-      switch (part.type) {
+      return deduped.map(({ part, pIdx }) => {
+        if (isToolPart(part.type)) {
+          // Skip earlier duplicates — only render the last occurrence per toolCallId
+          if (part.toolCallId && seenToolCallIds.get(part.toolCallId) !== pIdx) {
+            return null;
+          }
+          // Find matching file_download event for externalOutput injection
+          const toolInput = part.input || {};
+          const toolFilename = toolInput.filename || toolInput.name || '';
+          const extOut = toolFilename && fileDownloadEvents[toolFilename]
+            ? fileDownloadEvents[toolFilename]
+            : undefined;
+          return renderToolPart(part, pIdx, message.id, conversationIdRef.current, extOut);
+        }
+
+        switch (part.type) {
         case 'text': {
           if (!part.text) return null;
           if (!isUser) {
@@ -1239,6 +1256,7 @@ export function ChatPage() {
           return null;
       }
     });
+  };
 
     // ── USER message ───────────────────────────────────────────────────────
     if (isUser) {
@@ -1266,7 +1284,7 @@ export function ChatPage() {
       );
     }
 
-    // ── ASSISTANT message ───────────��──────────────────────────────────────
+    // ── ASSISTANT message ───────────���──────────────────────────────────────
     return (
       <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', gap: '12px', padding: '4px 0' }}>
         {/* Avatar */}
