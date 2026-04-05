@@ -797,12 +797,12 @@ export const PromptInput = ({
         multiple={multiple}
         onChange={handleChange}
         ref={inputRef}
-        title="Select files to upload (PDF, CSV, JSON, TXT, Images, Documents, etc.)"
+        title="Select files to upload"
         type="file"
         disabled={false}
       />
       <div id="file-input-help" className="sr-only">
-        Upload files to attach to your message. You can select multiple files at once. Maximum 10 files, 50MB each.
+        Upload files to attach to your message. You can select multiple files at once.
       </div>
       <form
         className={cn("w-full", className)}

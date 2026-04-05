@@ -41,16 +41,17 @@ import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineRea
 
 const logo = '/potomac-icon.png';
 
-// Component to display file attachments inside PromptInput
+// Component to display file attachments inside PromptInput - Claude/ChatGPT style
 function AttachmentsDisplay() {
   const attachments = usePromptInputAttachments();
   if (attachments.files.length === 0) return null;
   return (
     <PromptInputHeader>
-      <Attachments variant="grid">
+      <Attachments variant="inline">
         {attachments.files.map((file) => (
           <Attachment key={file.id} data={file} onRemove={() => attachments.remove(file.id)}>
             <AttachmentPreview />
+            <span className="truncate max-w-32 text-xs">{file.filename || 'file'}</span>
             <AttachmentRemove />
           </Attachment>
         ))}
@@ -66,7 +67,7 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
     if (!disabled) attachments.openFileDialog();
   }, [attachments, disabled]);
   return (
-    <PromptInputButton onClick={handleClick} disabled={disabled} tooltip="Attach files (AFL, CSV, PDF, etc.)">
+    <PromptInputButton onClick={handleClick} disabled={disabled} tooltip="Attach files">
       <ArrowUpFromLine className="size-4" />
     </PromptInputButton>
   );
@@ -1350,7 +1351,7 @@ export function AFLGeneratorPage() {
           <div className="max-w-[900px] mx-auto px-6 py-5">
             <TooltipProvider>
               <PromptInput
-                accept=".pdf,.csv,.json,.txt,.afl,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                accept="*"
                 multiple
                 globalDrop={false}
                 maxFiles={10}
