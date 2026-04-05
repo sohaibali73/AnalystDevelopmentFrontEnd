@@ -689,7 +689,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         marginTop: isMobile ? '64px' : 0,
         width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
         transition: 'margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        overflow: 'hidden',
+        overflowY: 'auto',
+        overflowX: 'hidden',
       }}>
         {children}
       </main>
