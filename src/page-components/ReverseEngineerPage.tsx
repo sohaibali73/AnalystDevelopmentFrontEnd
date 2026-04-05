@@ -39,16 +39,17 @@ import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineRea
 
 const logo = '/potomac-icon.png';
 
-// Attachment components
+// Attachment components - Claude/ChatGPT style
 function AttachmentsDisplay() {
   const attachments = usePromptInputAttachments();
   if (attachments.files.length === 0) return null;
   return (
     <PromptInputHeader>
-      <Attachments variant="grid">
+      <Attachments variant="inline">
         {attachments.files.map((file) => (
           <Attachment key={file.id} data={file} onRemove={() => attachments.remove(file.id)}>
             <AttachmentPreview />
+            <span className="truncate max-w-32 text-xs">{file.filename || 'file'}</span>
             <AttachmentRemove />
           </Attachment>
         ))}

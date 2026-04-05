@@ -15,10 +15,17 @@ export const runtime = 'edge';
 
 export async function GET(req: NextRequest) {
   try {
+    // Add 10 second timeout for health check
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
     const response = await fetch(`${API_BASE_URL}/health`, {
       method: 'GET',
       headers: { 'Cache-Control': 'no-cache' },
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       return new Response(
@@ -33,9 +40,17 @@ export async function GET(req: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Connection failed';
+    const errMsg = error instanceof Error ? error.message : 'Connection failed';
+    let userMessage = 'Backend connection failed';
+    
+    if (errMsg.includes('aborted') || errMsg.includes('abort')) {
+      userMessage = 'Backend health check timed out';
+    } else if (errMsg.includes('ECONNRESET') || errMsg.includes('socket hang up')) {
+      userMessage = 'Backend connection was reset';
+    }
+    
     return new Response(
-      JSON.stringify({ status: 'unhealthy', error: errorMsg }),
+      JSON.stringify({ status: 'unhealthy', error: userMessage }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   }

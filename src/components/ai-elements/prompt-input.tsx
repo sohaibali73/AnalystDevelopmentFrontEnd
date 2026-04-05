@@ -431,7 +431,8 @@ export const PromptInput = ({
 
   const matchesAccept = useCallback(
     (f: File) => {
-      if (!accept || accept.trim() === "") {
+      // Accept all files if no accept prop, empty string, or wildcard "*"
+      if (!accept || accept.trim() === "" || accept.trim() === "*") {
         return true;
       }
 
@@ -441,6 +442,10 @@ export const PromptInput = ({
         .filter(Boolean);
 
       return patterns.some((pattern) => {
+        // Handle universal wildcard
+        if (pattern === "*" || pattern === "*/*") {
+          return true;
+        }
         // Handle file extension patterns like ".pdf", ".csv", ".afl"
         if (pattern.startsWith(".")) {
           const fileName = f.name || "";
@@ -797,12 +802,12 @@ export const PromptInput = ({
         multiple={multiple}
         onChange={handleChange}
         ref={inputRef}
-        title="Select files to upload (PDF, CSV, JSON, TXT, Images, Documents, etc.)"
+        title="Select files to upload"
         type="file"
         disabled={false}
       />
       <div id="file-input-help" className="sr-only">
-        Upload files to attach to your message. You can select multiple files at once. Maximum 10 files, 50MB each.
+        Upload files to attach to your message. You can select multiple files at once.
       </div>
       <form
         className={cn("w-full", className)}

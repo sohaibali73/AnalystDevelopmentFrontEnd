@@ -283,36 +283,34 @@ function AttachmentsDisplay({
 
   if (!hasFiles && !hasSkillBadge) return null;
 
-  const colors = {
-    text: isDark ? '#EFEFEF' : '#0A0A0B',
-    muted: isDark ? '#606068' : '#808088',
-    border: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-    bg: isDark ? '#0D0D10' : '#F5F5F5',
-  };
-
   return (
     <PromptInputHeader>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+      <div style={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: '8px',
+        padding: '8px 0',
+      }}>
         {/* Active skill badge */}
         {hasSkillBadge && (
           <div
+            className="group"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '5px 10px',
-              borderRadius: '100px',
-              border: '1px solid rgba(96,165,250,0.35)',
-              background: isDark ? 'rgba(96,165,250,0.1)' : 'rgba(96,165,250,0.08)',
-              fontFamily: "'DM Mono', monospace",
-              fontSize: '11px',
+              padding: '6px 10px 6px 8px',
+              borderRadius: '8px',
+              border: `1px solid ${isDark ? 'rgba(96,165,250,0.3)' : 'rgba(96,165,250,0.4)'}`,
+              background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)',
+              fontSize: '13px',
               fontWeight: 500,
-              color: '#60A5FA',
-              letterSpacing: '0.02em',
+              color: isDark ? '#93C5FD' : '#3B82F6',
+              transition: 'all 0.15s ease',
             }}
           >
-            <span style={{ opacity: 0.7 }}>Skill:</span>
-            <span style={{ fontWeight: 600 }}>{forcedSkillName}</span>
+            <span style={{ opacity: 0.7, fontSize: '12px' }}>Skill:</span>
+            <span>{forcedSkillName}</span>
             <button
               onClick={onClearSkill}
               style={{
@@ -321,172 +319,181 @@ function AttachmentsDisplay({
                 justifyContent: 'center',
                 width: '16px',
                 height: '16px',
-                borderRadius: '50%',
-                background: 'rgba(96,165,250,0.15)',
+                borderRadius: '4px',
+                background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
-                color: '#60A5FA',
-                fontSize: '10px',
-                lineHeight: 1,
-                padding: 0,
-                transition: 'background .15s',
+                color: isDark ? '#93C5FD' : '#3B82F6',
+                opacity: 0.6,
+                marginLeft: '2px',
+                transition: 'opacity 0.15s, background 0.15s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.3)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.15)'; }}
+              onMouseEnter={e => { 
+                e.currentTarget.style.opacity = '1'; 
+                e.currentTarget.style.background = isDark ? 'rgba(96,165,250,0.2)' : 'rgba(96,165,250,0.15)';
+              }}
+              onMouseLeave={e => { 
+                e.currentTarget.style.opacity = '0.6'; 
+                e.currentTarget.style.background = 'transparent';
+              }}
             >
-              <XIcon size={10} />
+              <XIcon size={12} />
             </button>
           </div>
         )}
+        
+        {/* File attachments - Claude/ChatGPT style compact chips */}
         {attachments.files.map((file) => {
           const fname = file.filename || 'file';
-          const ext = getFileExtension(fname) || '';
-          const cc = getFileChipColor(ext);
           const Icon = getFileTypeIcon(fname);
 
           return (
             <div
               key={file.id}
-              className="upload-file-card"
+              className="group"
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '8px 12px',
+                gap: '6px',
+                padding: '6px 10px 6px 8px',
                 borderRadius: '8px',
-                border: `1px solid ${colors.border}`,
-                background: colors.bg,
-                maxWidth: '240px',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
+                maxWidth: '200px',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
               }}
             >
-              <div style={{
-                width: 28,
-                height: 28,
-                borderRadius: '6px',
-                background: `${cc}18`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <Icon size={14} color={cc} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  margin: 0,
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: colors.text,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>{file.filename}</p>
-                <p style={{ margin: 0, fontSize: '10px', color: colors.muted }}>Ready to upload</p>
-              </div>
+              <Icon size={14} style={{ opacity: 0.7, flexShrink: 0 }} />
+              <span style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>{fname}</span>
               <button
                 onClick={() => onRemoveFile(file.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
+                  width: '16px',
+                  height: '16px',
                   borderRadius: '4px',
-                  background: 'none',
+                  background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
-                  color: colors.muted,
+                  color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
                   flexShrink: 0,
-                  transition: 'color .15s',
+                  marginLeft: '2px',
+                  transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = colors.muted; }}
+                onMouseEnter={e => { 
+                  e.currentTarget.style.color = '#EF4444';
+                  e.currentTarget.style.background = isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)';
+                }}
+                onMouseLeave={e => { 
+                  e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
-                <XIcon size={14} />
+                <XIcon size={12} />
               </button>
             </div>
           );
         })}
 
+        {/* Upload states - uploading/complete/error */}
         {Object.entries(uploadStates).map(([filename, state]) => {
-          const ext = getFileExtension(filename) || '';
-          const cc = getFileChipColor(ext);
           const Icon = getFileTypeIcon(filename);
+          const isError = state.status === 'error';
+          const isUploading = state.status === 'uploading';
 
           return (
             <div
               key={filename}
-              className="upload-file-card"
+              className="group"
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '8px 12px',
+                gap: '6px',
+                padding: '6px 10px 6px 8px',
                 borderRadius: '8px',
-                border: `1px solid ${state.status === 'error' ? 'rgba(239,68,68,0.3)' : colors.border}`,
-                background: state.status === 'error'
-                  ? (isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)')
-                  : colors.bg,
-                maxWidth: '240px',
+                border: `1px solid ${isError 
+                  ? 'rgba(239,68,68,0.3)' 
+                  : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                background: isError
+                  ? (isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)')
+                  : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: isError 
+                  ? '#EF4444' 
+                  : isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
+                maxWidth: '200px',
+                transition: 'all 0.15s ease',
               }}
             >
-              <div style={{
-                width: 28,
-                height: 28,
-                borderRadius: '6px',
-                background: `${cc}18`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                {state.showCheckmark ? (
-                  <div className="upload-checkmark">
-                    <CheckIcon size={14} color="#22C55E" />
-                  </div>
-                ) : state.status === 'uploading' ? (
-                  <div className="upload-spinner" />
-                ) : state.status === 'error' ? (
-                  <XIcon size={14} color="#EF4444" />
-                ) : (
-                  <Icon size={14} color={cc} />
-                )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  margin: 0,
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: colors.text,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>{filename}</p>
-                <p style={{ margin: 0, fontSize: '10px', color: colors.muted }}>
-                  {state.status === 'uploading' ? 'Uploading...' : state.status === 'error' ? 'Upload failed' : formatChatFileSize(state.size)}
-                </p>
-              </div>
-              {state.status !== 'uploading' && (
+              {state.showCheckmark ? (
+                <CheckIcon size={14} color="#22C55E" style={{ flexShrink: 0 }} />
+              ) : isUploading ? (
+                <div 
+                  style={{ 
+                    width: 14, 
+                    height: 14, 
+                    borderRadius: '50%',
+                    border: '2px solid transparent',
+                    borderTopColor: isDark ? '#6366F1' : '#4F46E5',
+                    borderRightColor: isDark ? '#6366F1' : '#4F46E5',
+                    animation: 'chat-spin 0.6s linear infinite',
+                    flexShrink: 0,
+                  }} 
+                />
+              ) : isError ? (
+                <XIcon size={14} style={{ flexShrink: 0 }} />
+              ) : (
+                <Icon size={14} style={{ opacity: 0.7, flexShrink: 0 }} />
+              )}
+              <span style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>{filename}</span>
+              {!isUploading && (
                 <button
                   onClick={() => onRemoveUpload(filename)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '20px',
-                    height: '20px',
+                    width: '16px',
+                    height: '16px',
                     borderRadius: '4px',
-                    background: 'none',
+                    background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
-                    color: colors.muted,
+                    color: isError ? '#EF4444' : isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
                     flexShrink: 0,
-                    transition: 'color .15s',
+                    marginLeft: '2px',
+                    transition: 'all 0.15s ease',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = colors.muted; }}
+                  onMouseEnter={e => { 
+                    e.currentTarget.style.color = '#EF4444';
+                    e.currentTarget.style.background = isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)';
+                  }}
+                  onMouseLeave={e => { 
+                    e.currentTarget.style.color = isError ? '#EF4444' : isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
+                    e.currentTarget.style.background = 'transparent';
+                  }}
                 >
-                  <XIcon size={14} />
+                  <XIcon size={12} />
                 </button>
               )}
             </div>
@@ -503,7 +510,7 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
     <PromptInputButton
       onClick={() => { if (!disabled) attachments.openFileDialog(); }}
       disabled={disabled}
-      tooltip="Attach files (PDF, CSV, JSON, Images, Docs, etc.)"
+      tooltip="Attach files (PDF, CSV, Images, Docs, etc.)"
     >
       <PaperclipIcon className="size-4" />
     </PromptInputButton>
@@ -1459,7 +1466,7 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* ── Drag-and-drop overlay ──────────────────────────────────────────── */}
+      {/* ── Drag-and-drop overlay ───────────────────────────���──────────────── */}
       {isDragOver && (
         <div
           className="drag-drop-overlay"
@@ -1542,6 +1549,7 @@ export function ChatPage() {
         isDark={isDark}
         colors={colors}
         connStatus={connStatus}
+        isCurrentConversationBlank={streamMessages.length === 0}
         onSelectConversation={setSelectedConversation}
         onNewConversation={handleNewConversation}
         onDeleteConversation={handleDeleteConversation}
@@ -1910,7 +1918,7 @@ export function ChatPage() {
                             },
                             30000
                           );
-                          if (!resp.ok) { const e = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` })); throw new Error(e.error); }
+                          if (!resp.ok) { const e = await resp.json().catch(() => ({ detail: `HTTP ${resp.status}` })); throw new Error(e.detail || e.error || `Upload failed: ${resp.status}`); }
                           const respData = await resp.json();
                           uploaded.push(fileName);
                           fileBlobCacheRef.current.set(fileName, { url: file.url || undefined, fileId: respData.file_id || respData.id, filename: fileName, mediaType: file.mediaType, size: actualFile.size });
@@ -1937,6 +1945,7 @@ export function ChatPage() {
                             ...prev,
                             [fileName]: { ...prev[fileName], status: 'error' },
                           }));
+                          toast.error(`Upload failed: ${msg}`, { duration: 5000 });
                           if (msg.includes('fetch') || msg.includes('network') || msg.includes('aborted')) {
                             setBackendAvailable(false);
                           }

@@ -41,16 +41,17 @@ import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineRea
 
 const logo = '/potomac-icon.png';
 
-// Component to display file attachments inside PromptInput
+// Component to display file attachments inside PromptInput - Claude/ChatGPT style
 function AttachmentsDisplay() {
   const attachments = usePromptInputAttachments();
   if (attachments.files.length === 0) return null;
   return (
     <PromptInputHeader>
-      <Attachments variant="grid">
+      <Attachments variant="inline">
         {attachments.files.map((file) => (
           <Attachment key={file.id} data={file} onRemove={() => attachments.remove(file.id)}>
             <AttachmentPreview />
+            <span className="truncate max-w-32 text-xs">{file.filename || 'file'}</span>
             <AttachmentRemove />
           </Attachment>
         ))}
@@ -66,7 +67,7 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
     if (!disabled) attachments.openFileDialog();
   }, [attachments, disabled]);
   return (
-    <PromptInputButton onClick={handleClick} disabled={disabled} tooltip="Attach files (AFL, CSV, PDF, etc.)">
+    <PromptInputButton onClick={handleClick} disabled={disabled} tooltip="Attach files">
       <ArrowUpFromLine className="size-4" />
     </PromptInputButton>
   );
@@ -700,33 +701,42 @@ export function AFLGeneratorPage() {
         {/* New Chat + Search */}
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <button 
-            onClick={handleNewConversation} 
+            onClick={handleNewConversation}
+            disabled={streamMessages.length === 0}
+            title={streamMessages.length === 0 ? 'Current conversation is empty' : 'Start a new strategy'}
             style={{ 
               width: '100%', 
               padding: '12px', 
-              background: `linear-gradient(135deg, ${colors.primaryBlue} 0%, ${colors.primaryBlueHover} 100%)`, 
+              background: streamMessages.length === 0
+                ? `linear-gradient(135deg, rgba(96,165,250,0.4) 0%, rgba(147,197,253,0.4) 100%)`
+                : `linear-gradient(135deg, ${colors.primaryBlue} 0%, ${colors.primaryBlueHover} 100%)`, 
               border: 'none', 
               borderRadius: '10px', 
-              cursor: 'pointer', 
+              cursor: streamMessages.length === 0 ? 'not-allowed' : 'pointer', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               gap: '8px', 
               fontWeight: 700, 
-              color: colors.darkGray, 
+              color: streamMessages.length === 0 ? 'rgba(26, 26, 26, 0.5)' : colors.darkGray, 
               fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
               fontSize: '13px', 
               transition: 'all 0.2s ease', 
-              boxShadow: '0 2px 8px rgba(96,165,250,0.25)',
-              letterSpacing: '0.3px'
+              boxShadow: streamMessages.length === 0 ? 'none' : '0 2px 8px rgba(96,165,250,0.25)',
+              letterSpacing: '0.3px',
+              opacity: streamMessages.length === 0 ? 0.7 : 1
             }} 
             onMouseOver={(e) => { 
-              e.currentTarget.style.transform = 'translateY(-1px)'; 
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(96,165,250,0.35)'; 
+              if (streamMessages.length > 0) {
+                e.currentTarget.style.transform = 'translateY(-1px)'; 
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(96,165,250,0.35)'; 
+              }
             }} 
             onMouseOut={(e) => { 
-              e.currentTarget.style.transform = 'translateY(0)'; 
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(96,165,250,0.25)'; 
+              if (streamMessages.length > 0) {
+                e.currentTarget.style.transform = 'translateY(0)'; 
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(96,165,250,0.25)'; 
+              }
             }}
           >
             <Plus size={18} strokeWidth={2.5} /> New Strategy
@@ -1376,6 +1386,14 @@ export function AFLGeneratorPage() {
                       conversationIdRef.current = conv.id;
                       convId = conv.id;
                     } catch { setPageError('Failed to create conversation'); return; }
+                  } else if (selectedConversation?.title === 'New Strategy' && streamMessages.length === 0 && text.trim()) {
+                    // Auto-rename conversation on first message if it was created with default title
+                    const newTitle = text.trim().replace(/\[AFL Generator Context:.*?\]\s*/s, '').slice(0, 50).trim();
+                    if (newTitle && newTitle !== 'New Strategy') {
+                      setConversations(prev => prev.map(c => c.id === convId ? { ...c, title: newTitle } : c));
+                      setSelectedConversation(prev => prev ? { ...prev, title: newTitle } : prev);
+                      apiClient.renameConversation(convId, newTitle).catch(() => {});
+                    }
                   }
 
                   let messageText = text;

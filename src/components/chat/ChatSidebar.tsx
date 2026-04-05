@@ -28,6 +28,7 @@ interface ChatSidebarProps {
   isDark: boolean;
   colors: ChatColors;
   connStatus: 'connected' | 'checking' | 'disconnected' | 'unknown';
+  isCurrentConversationBlank?: boolean;
   onSelectConversation: (conv: ConversationType) => void;
   onNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
@@ -47,6 +48,7 @@ export function ChatSidebar({
   isDark,
   colors,
   connStatus,
+  isCurrentConversationBlank = false,
   onSelectConversation,
   onNewConversation,
   onDeleteConversation,
@@ -272,12 +274,14 @@ export function ChatSidebar({
       <div style={{ padding: '0 16px 12px', position: 'relative', zIndex: 1 }}>
         <button
           onClick={onNewConversation}
+          disabled={isCurrentConversationBlank}
+          title={isCurrentConversationBlank ? 'Current conversation is empty' : 'Start a new conversation'}
           style={{
             width: '100%',
             padding: '12px 16px',
             borderRadius: '12px',
             border: 'none',
-            cursor: 'pointer',
+            cursor: isCurrentConversationBlank ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -285,19 +289,28 @@ export function ChatSidebar({
             fontWeight: 600,
             fontSize: '13px',
             letterSpacing: '-0.01em',
-            color: '#ffffff',
-            background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-            boxShadow: '0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+            color: isCurrentConversationBlank ? 'rgba(255, 255, 255, 0.5)' : '#ffffff',
+            background: isCurrentConversationBlank 
+              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.4) 100%)'
+              : 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+            boxShadow: isCurrentConversationBlank 
+              ? 'none'
+              : '0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
             fontFamily: "'Inter', system-ui, sans-serif",
+            opacity: isCurrentConversationBlank ? 0.7 : 1,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+            if (!isCurrentConversationBlank) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+            if (!isCurrentConversationBlank) {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+            }
           }}
         >
           <Sparkles size={16} />

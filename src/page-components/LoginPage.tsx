@@ -9,11 +9,14 @@ import {
   LogIn, 
   Loader2, 
   AlertCircle,
+  Mail,
+  Lock,
   Sparkles,
-  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+
+const logoSrc = '/potomac-icon.png';
 
 export function LoginPage() {
   const router = useRouter();
@@ -26,23 +29,14 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isMobile, setIsMobile] = useState(false);
-  const [isSmallMobile, setIsSmallMobile] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-      setIsSmallMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 768);
     };
-
-    // Initial check
     handleResize();
-
     window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +51,6 @@ export function LoginPage() {
 
     try {
       await login(email, password);
-      // Note: AuthContext.login() already handles navigation to /dashboard
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
@@ -65,519 +58,254 @@ export function LoginPage() {
     }
   };
 
+  // Frosted glass styles (matching RegisterPage)
+  const glassCard = {
+    background: isDark 
+      ? 'rgba(255, 255, 255, 0.03)' 
+      : 'rgba(255, 255, 255, 0.7)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
+    borderRadius: '24px',
+    boxShadow: isDark 
+      ? '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)' 
+      : '0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '14px 16px 14px 48px',
+    fontSize: '15px',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontWeight: 500,
+    color: isDark ? '#FAFAFA' : '#0A0A0B',
+    background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+    border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+    borderRadius: '12px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: 600,
+    color: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+    marginBottom: '8px',
+    fontFamily: "'Inter', system-ui, sans-serif",
+  };
+
   return (
     <div style={{
       minHeight: '100dvh',
-      backgroundColor: 'var(--bg)',
       display: 'flex',
-      fontFamily: "'Instrument Sans', sans-serif",
-      flexDirection: isMobile ? 'column' : 'row',
-      WebkitUserSelect: 'none',
-      WebkitTouchCallout: 'none',
-      paddingTop: '36px', // offset for the fixed DEV banner
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: isMobile ? '24px 16px' : '40px',
+      background: isDark
+        ? 'linear-gradient(135deg, #0A0A0B 0%, #141419 50%, #0A0A0B 100%)'
+        : 'linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 50%, #F8FAFC 100%)',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      {/* ── DEV ENVIRONMENT TOP BANNER ── */}
+      {/* Animated background orbs */}
       <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        height: '36px',
-        background: 'repeating-linear-gradient(90deg, var(--accent) 0px, var(--accent) 60px, var(--bg) 60px, var(--bg) 120px)',
-        backgroundSize: '120px 100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-        animation: 'devBannerScroll 6s linear infinite',
-        borderBottom: '2px solid rgba(96,165,250,0.6)',
-        boxShadow: '0 2px 20px rgba(96,165,250,0.25)',
-      }}>
-        {/* Frosted label sits on top of the moving stripes */}
-        <div style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          backgroundColor: 'rgba(10,10,11,0.82)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
-          padding: '0 20px',
-          borderRadius: '4px',
-          height: '26px',
-          border: '1px solid rgba(96,165,250,0.35)',
-        }}>
-          {/* Blinking dot */}
-          <span style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--accent)',
-            display: 'inline-block',
-            animation: 'devDotBlink 1.2s ease-in-out infinite',
-            flexShrink: 0,
-          }} />
-          <span style={{
-            fontFamily: "'Syne', sans-serif",
-            fontSize: '12px',
-            fontWeight: 700,
-            letterSpacing: '3px',
-            color: 'var(--accent)',
-          }}>
-            Developer Beta Release Candidate 2
-          </span>
-          <span style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--accent)',
-            display: 'inline-block',
-            animation: 'devDotBlink 1.2s ease-in-out infinite 0.6s',
-            flexShrink: 0,
-          }} />
-        </div>
-      </div>
-
-      {/* ── DEV CORNER BADGE ── */}
-      <div style={{
-        position: 'fixed',
-        bottom: '52px', // sits just above the copyright footer
-        right: '16px',
-        zIndex: 9998,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        backgroundColor: isDark ? 'rgba(10,10,11,0.9)' : 'rgba(255,255,255,0.9)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        border: '1px solid rgba(96,165,250,0.5)',
-        borderRadius: '8px',
-        padding: '6px 12px',
-        boxShadow: '0 0 0 0 rgba(96,165,250,0.4)',
-        animation: 'devBadgePulse 2.5s ease-in-out infinite',
-      }}>
-        <span style={{
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          backgroundColor: 'var(--accent)',
-          display: 'inline-block',
-          animation: 'devDotBlink 1.2s ease-in-out infinite',
-          flexShrink: 0,
-        }} />
-        <span style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: '11px',
-          fontWeight: 700,
-          letterSpacing: '2px',
-          color: 'var(--accent)',
-        }}>
-          DEV
-        </span>
-        <span style={{
-          fontFamily: "'Instrument Sans', sans-serif",
-          fontSize: '11px',
-          fontWeight: 600,
-          color: isDark ? '#757575' : '#999999',
-          letterSpacing: '0.5px',
-        }}>
-          localhost
-        </span>
-      </div>
-
-      {/* Left Side - Branding */}
-      <div style={{
-        flex: isMobile ? undefined : 1,
+        position: 'absolute',
+        top: '10%',
+        left: '10%',
+        width: '400px',
+        height: '400px',
+        borderRadius: '50%',
         background: isDark 
-          ? 'linear-gradient(135deg, #0A0A0B 0%, #0D1117 50%, #0A0A0B 100%)'
-          : 'linear-gradient(160deg, #f8fbff 0%, #f0f7ff 40%, #e8f2ff 100%)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: isSmallMobile ? '48px 24px' : '60px',
+          ? 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%)',
+        filter: 'blur(60px)',
+        animation: 'float1 8s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '10%',
+        right: '10%',
+        width: '350px',
+        height: '350px',
+        borderRadius: '50%',
+        background: isDark 
+          ? 'radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%)',
+        filter: 'blur(60px)',
+        animation: 'float2 10s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '500px',
+        height: '500px',
+        borderRadius: '50%',
+        background: isDark 
+          ? 'radial-gradient(circle, rgba(254, 192, 15, 0.08) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(254, 192, 15, 0.1) 0%, transparent 70%)',
+        filter: 'blur(80px)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Main Card */}
+      <div style={{
+        ...glassCard,
+        width: '100%',
+        maxWidth: '440px',
+        padding: isMobile ? '32px 24px' : '48px 40px',
         position: 'relative',
-        overflow: 'hidden',
-        minHeight: isMobile ? 'auto' : '100dvh',
+        zIndex: 1,
       }}>
-        {/* Enhanced Background Pattern */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundImage: `
-            radial-gradient(circle at 20% 50%, rgba(96,165,250,0.12) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(96,165,250,0.08) 0%, transparent 40%),
-            radial-gradient(circle at 60% 20%, rgba(167,139,250,0.06) 0%, transparent 50%)
-          `,
-          pointerEvents: 'none',
-        }} />
-
-        {/* Enhanced Grid Lines */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundImage: `
-            linear-gradient(rgba(96,165,250,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(96,165,250,0.04) 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px',
-          pointerEvents: 'none',
-        }} />
-
-        {/* Floating particles */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          overflow: 'hidden',
-          pointerEvents: 'none',
-        }}>
-          {[...Array(8)].map((_, i) => (
-            <div key={i} style={{
-              position: 'absolute',
-              width: `${Math.random() * 4 + 2}px`,
-              height: `${Math.random() * 4 + 2}px`,
-              borderRadius: '50%',
-              background: `rgba(96,165,250,${Math.random() * 0.3 + 0.1})`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${Math.random() * 6 + 4}s linear infinite`,
-              opacity: Math.random() * 0.5 + 0.3,
-            }} />
-          ))}
-        </div>
-
-        {/* Content */}
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '500px' }}>
-          {/* Logo with enhanced container */}
+        {/* Logo & Header */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{
-            width: isSmallMobile ? '90px' : '110px',
-            height: isSmallMobile ? '90px' : '110px',
-            borderRadius: '28px',
+            width: '72px',
+            height: '72px',
+            borderRadius: '18px',
+            background: isDark 
+              ? 'linear-gradient(135deg, rgba(254, 192, 15, 0.15) 0%, rgba(254, 192, 15, 0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(254, 192, 15, 0.2) 0%, rgba(254, 192, 15, 0.08) 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 36px',
-            overflow: 'hidden',
-            background: isDark 
-              ? 'linear-gradient(135deg, rgba(96,165,250,0.1), rgba(167,139,250,0.08))'
-              : 'linear-gradient(135deg, rgba(96,165,250,0.08), rgba(167,139,250,0.06))',
-            border: `1px solid ${isDark ? 'rgba(96,165,250,0.2)' : 'rgba(96,165,250,0.15)'}`,
-            boxShadow: isDark 
-              ? '0 8px 32px rgba(96,165,250,0.15), inset 0 0 20px rgba(96,165,250,0.05)'
-              : '0 8px 32px rgba(96,165,250,0.1), inset 0 0 20px rgba(96,165,250,0.03)',
-            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            margin: '0 auto 20px',
+            border: `1px solid ${isDark ? 'rgba(254, 192, 15, 0.2)' : 'rgba(254, 192, 15, 0.3)'}`,
+            boxShadow: '0 8px 24px rgba(254, 192, 15, 0.15)',
           }}>
             <img 
-              src="/potomac-icon.png" 
+              src={logoSrc} 
               alt="Analyst Logo" 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'contain',
-                filter: isDark ? 'brightness(1.1) saturate(1.2)' : 'none',
-              }} 
+              style={{ width: '44px', height: '44px', objectFit: 'contain' }} 
             />
           </div>
-
           <h1 style={{
             fontFamily: "'Syne', sans-serif",
-            fontSize: isSmallMobile ? '42px' : '52px',
-            fontWeight: 800,
-            color: isDark ? 'var(--text)' : 'var(--text)',
-            letterSpacing: '-0.03em',
-            marginBottom: '8px',
-            textShadow: isDark ? '0 0 20px rgba(96,165,250,0.3)' : 'none',
+            fontSize: '32px',
+            fontWeight: 700,
+            color: isDark ? '#FAFAFA' : '#0A0A0B',
+            letterSpacing: '-0.02em',
+            margin: '0 0 6px',
           }}>
-            ANALYST
+            Welcome Back
           </h1>
           <p style={{
-            fontFamily: "'Syne', sans-serif",
-            fontSize: isSmallMobile ? '14px' : '17px',
-            fontWeight: 600,
-            color: 'var(--accent)',
-            letterSpacing: '0.14em',
-            marginBottom: isSmallMobile ? '36px' : '52px',
-            textTransform: 'uppercase',
-            textShadow: '0 0 15px rgba(96,165,250,0.4)',
+            fontSize: '14px',
+            color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+            margin: 0,
+            fontFamily: "'Inter', system-ui, sans-serif",
           }}>
-            BY POTOMAC
+            Sign in to continue to Potomac Analyst
           </p>
-
-          {/* Enhanced Tagline */}
-          <div style={{
-            position: 'relative',
-            padding: isSmallMobile ? '24px 28px' : '32px 44px',
-            marginBottom: '0',
-            borderRadius: '16px',
-            background: isDark 
-              ? 'linear-gradient(135deg, rgba(96,165,250,0.08), rgba(167,139,250,0.06))'
-              : 'linear-gradient(135deg, rgba(96,165,250,0.06), rgba(167,139,250,0.04))',
-            border: `1px solid ${isDark ? 'rgba(96,165,250,0.25)' : 'rgba(96,165,250,0.2)'}`,
-            boxShadow: isDark 
-              ? '0 8px 32px rgba(96,165,250,0.15), inset 0 0 20px rgba(96,165,250,0.05)'
-              : '0 8px 32px rgba(96,165,250,0.1), inset 0 0 20px rgba(96,165,250,0.03)',
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '80px',
-              height: '2px',
-              background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
-              boxShadow: '0 0 15px rgba(96,165,250,0.5)',
-            }} />
-            <h2
-              className="tagline-glow"
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: isSmallMobile ? '24px' : '30px',
-                fontWeight: 800,
-                color: 'var(--accent)',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                margin: 0,
-                lineHeight: 1.3,
-                textShadow: '0 0 20px rgba(96,165,250,0.6)',
-              }}
-            >
-              Break the Status Quo
-            </h2>
-            <div style={{
-              position: 'absolute',
-              bottom: 0,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '80px',
-              height: '2px',
-              background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
-              boxShadow: '0 0 15px rgba(96,165,250,0.5)',
-            }} />
-          </div>
         </div>
-      </div>
 
-      {/* Right Side - Login Form */}
-      <div style={{
-        width: isMobile ? '100%' : '520px',
-        backgroundColor: 'var(--bg-card)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        padding: isSmallMobile ? '36px 28px' : '72px 64px',
-        borderLeft: isMobile ? 'none' : `1px solid var(--border)`,
-        borderTop: isMobile ? `1px solid var(--border)` : 'none',
-        boxShadow: isDark ? 'none' : 'var(--shadow-card)',
-        minHeight: isMobile ? 'auto' : '100dvh',
-        paddingBottom: isSmallMobile ? 'max(70px, env(safe-area-inset-bottom))' : '90px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Form accent background */}
-        <div style={{
-          position: 'absolute',
-          top: '-50%',
-          right: '-50%',
-          width: '200%',
-          height: '200%',
-          background: `radial-gradient(circle at 70% 30%, rgba(96,165,250,0.08), transparent 50%)`,
-          opacity: 0,
-          transition: 'opacity 0.5s ease',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }} />
-
-        <div style={{ 
-          position: 'relative', 
-          zIndex: 1, 
-          maxWidth: '380px', 
-          margin: '0 auto', 
-          width: '100%' 
-        }}>
+        {/* Error Message */}
+        {error && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '16px',
-            marginBottom: '16px',
+            gap: '10px',
+            padding: '12px 14px',
+            background: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            borderRadius: '10px',
+            marginBottom: '20px',
           }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              background: isDark 
-                ? 'linear-gradient(135deg, rgba(96,165,250,0.15), rgba(167,139,250,0.12))'
-                : 'linear-gradient(135deg, rgba(96,165,250,0.12), rgba(167,139,250,0.09))',
-              border: `1px solid ${isDark ? 'rgba(96,165,250,0.3)' : 'rgba(96,165,250,0.25)'}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: isDark 
-                ? '0 8px 24px rgba(96,165,250,0.15)'
-                : '0 8px 24px rgba(96,165,250,0.1)',
+            <AlertCircle size={18} color="#EF4444" />
+            <p style={{ 
+              color: '#EF4444', 
+              fontSize: '13px', 
+              margin: 0, 
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontWeight: 500,
             }}>
-              <Sparkles size={18} color="#60A5FA" />
-            </div>
-            <div>
-              <h2 style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: '30px',
-                fontWeight: 800,
-                color: 'var(--text)',
-                letterSpacing: '0.08em',
-                margin: 0,
-                textShadow: isDark ? '0 0 15px rgba(96,165,250,0.3)' : 'none',
-              }}>
-                Welcome Back
-              </h2>
-              <p style={{
-                color: 'var(--text-muted)',
-                fontSize: '14px',
-                margin: '6px 0 0',
-                fontFamily: "'Instrument Sans', sans-serif",
-              }}>
-                Sign in to continue to your dashboard
-              </p>
-            </div>
+              {error}
+            </p>
           </div>
+        )}
 
-          {/* Error Message */}
-          {error && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '16px 18px',
-              backgroundColor: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '12px',
-              marginBottom: '28px',
-              boxShadow: '0 4px 16px rgba(239, 68, 68, 0.1)',
-            }}>
-              <AlertCircle size={20} color="#EF4444" />
-              <p style={{ color: '#EF4444', fontSize: '13px', margin: 0, fontFamily: "'Instrument Sans', sans-serif" }}>{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Email Field */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                fontFamily: "'DM Mono', monospace",
-                fontSize: '9px',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: 'var(--text-muted)',
-                display: 'block',
-                marginBottom: '10px',
-              }}>
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                style={{
-                  width: '100%',
-                  padding: '16px 18px',
-                  borderRadius: '12px',
-                  border: `1px solid var(--border)`,
-                  backgroundColor: 'var(--bg-raised)',
-                  color: 'var(--text)',
-                  fontFamily: "'Instrument Sans', sans-serif",
-                  fontSize: '14px',
-                  transition: 'all 0.2s ease',
-                  boxShadow: 'var(--shadow-card)',
-                }}
-                onFocus={e => {
-                  e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(96,165,250,0.15)';
-                }}
-                onBlur={e => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-card)';
-                }}
-              />
+            <div>
+              <label style={labelStyle}>Email Address</label>
+              <div style={{ position: 'relative' }}>
+                <Mail 
+                  size={18} 
+                  style={{ 
+                    position: 'absolute', 
+                    left: '16px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.35)',
+                  }} 
+                />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                  placeholder="you@example.com"
+                  style={inputStyle}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#6366F1';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.15)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
             </div>
 
             {/* Password Field */}
-            <div style={{ marginBottom: '28px' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px',
-              }}>
-                <label style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: '9px',
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
-                }}>
-                  Password
-                </label>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
                 <Link
                   href="/forgot-password"
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--accent)',
                     fontSize: '12px',
                     fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: "'Instrument Sans', sans-serif",
+                    color: '#6366F1',
                     textDecoration: 'none',
-                    transition: 'all 0.2s ease',
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    transition: 'color 0.2s ease',
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateX(2px)';
-                    e.currentTarget.style.color = '#93C5FD';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'translateX(0)';
-                    e.currentTarget.style.color = 'var(--accent)';
-                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#8B5CF6'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#6366F1'}
                 >
                   Forgot password?
                 </Link>
               </div>
               <div style={{ position: 'relative' }}>
+                <Lock 
+                  size={18} 
+                  style={{ 
+                    position: 'absolute', 
+                    left: '16px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.35)',
+                  }} 
+                />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setError(''); }}
                   placeholder="Enter your password"
-                  style={{
-                    width: '100%',
-                    padding: '16px 52px 16px 18px',
-                    borderRadius: '12px',
-                    border: `1px solid var(--border)`,
-                    backgroundColor: 'var(--bg-raised)',
-                    color: 'var(--text)',
-                    fontFamily: "'Instrument Sans', sans-serif",
-                    fontSize: '14px',
-                    transition: 'all 0.2s ease',
-                    boxShadow: 'var(--shadow-card)',
+                  style={{ ...inputStyle, paddingRight: '48px' }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#6366F1';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.15)';
                   }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(96,165,250,0.15)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor = 'var(--border)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+                  onBlur={(e) => {
+                    e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+                    e.target.style.boxShadow = 'none';
                   }}
                 />
                 <button
@@ -585,27 +313,18 @@ export function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
-                    right: '16px',
+                    right: '14px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: 'var(--text-muted)',
-                    padding: '6px',
-                    borderRadius: '8px',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(96,165,250,0.1)';
-                    e.currentTarget.style.color = '#60A5FA';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'none';
-                    e.currentTarget.style.color = 'var(--text-muted)';
+                    color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.35)',
+                    padding: '4px',
+                    display: 'flex',
                   }}
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
@@ -616,220 +335,137 @@ export function LoginPage() {
               disabled={loading}
               style={{
                 width: '100%',
-                height: '56px',
-                borderRadius: '14px',
+                padding: '14px 24px',
+                marginTop: '8px',
+                fontSize: '15px',
+                fontWeight: 600,
+                fontFamily: "'Inter', system-ui, sans-serif",
+                color: '#FFFFFF',
+                background: loading 
+                  ? isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                  : 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
                 border: 'none',
-                fontFamily: "'Syne', sans-serif",
-                fontWeight: 800,
-                letterSpacing: '0.08em',
+                borderRadius: '12px',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '10px',
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: loading ? 'none' : '0 8px 24px rgba(96,165,250,0.25), 0 0 0 1px rgba(96,165,250,0.2)',
+                gap: '8px',
+                boxShadow: loading ? 'none' : '0 4px 16px rgba(99, 102, 241, 0.3)',
+                transition: 'all 0.2s ease',
               }}
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 if (!loading) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(96,165,250,0.35), 0 0 0 1px rgba(96,165,250,0.3)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.4)';
                 }
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 if (!loading) {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(96,165,250,0.25), 0 0 0 1px rgba(96,165,250,0.2)';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(99, 102, 241, 0.3)';
                 }
               }}
             >
-              {/* Animated gradient background */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)',
-                opacity: loading ? 0.6 : 1,
-                transition: 'opacity 0.3s ease',
-              }} />
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'linear-gradient(135deg, #93C5FD 0%, #C084FC 100%)',
-                opacity: 0,
-                transition: 'opacity 0.3s ease',
-              }} />
-              
-              <span style={{
-                position: 'relative',
-                zIndex: 2,
-                color: loading ? '#6B7280' : '#0A0A0B',
-                textShadow: loading ? 'none' : '0 0 10px rgba(255,255,255,0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}>
-                {loading ? (
-                  <>
-                    <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                    <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                      Signing In...
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <LogIn size={20} />
-                    <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                      Sign In
-                    </span>
-                    <ChevronRight size={16} style={{ transition: 'transform 0.3s ease' }} />
-                  </>
-                )}
-              </span>
+              {loading ? (
+                <>
+                  <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <LogIn size={18} />
+                  Sign In
+                </>
+              )}
             </button>
-          </form>
+          </div>
+        </form>
 
-          {/* Divider */}
+        {/* Divider */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          margin: '28px 0',
+        }}>
           <div style={{
+            flex: 1,
+            height: '1px',
+            background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+          }} />
+          <span style={{
+            fontSize: '12px',
+            color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)',
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}>
+            New to Potomac?
+          </span>
+          <div style={{
+            flex: 1,
+            height: '1px',
+            background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+          }} />
+        </div>
+
+        {/* Register Link */}
+        <Link
+          href="/register"
+          style={{
             display: 'flex',
             alignItems: 'center',
-            margin: '36px 0',
-          }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
-            <span style={{ padding: '0 16px', color: 'var(--text-muted)', fontSize: '12px', fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em' }}>OR</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
-          </div>
+            justifyContent: 'center',
+            gap: '8px',
+            width: '100%',
+            padding: '14px 24px',
+            fontSize: '15px',
+            fontWeight: 600,
+            fontFamily: "'Inter', system-ui, sans-serif",
+            color: isDark ? '#FAFAFA' : '#0A0A0B',
+            background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+            border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+            borderRadius: '12px',
+            textDecoration: 'none',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)';
+            e.currentTarget.style.borderColor = '#6366F1';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)';
+            e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+          }}
+        >
+          <Sparkles size={18} />
+          Create an account
+        </Link>
 
-          {/* Sign Up Link */}
-          <div style={{
-            textAlign: 'center',
-            padding: '20px 16px',
-            borderRadius: '14px',
-            background: isDark 
-              ? 'linear-gradient(135deg, rgba(96,165,250,0.06), rgba(167,139,250,0.04))'
-              : 'linear-gradient(135deg, rgba(96,165,250,0.04), rgba(167,139,250,0.03))',
-            border: `1px solid ${isDark ? 'rgba(96,165,250,0.2)' : 'rgba(96,165,250,0.15)'}`,
-            boxShadow: isDark 
-              ? '0 8px 24px rgba(96,165,250,0.1)'
-              : '0 8px 24px rgba(96,165,250,0.05)',
-          }}>
-              <p style={{
-                color: 'var(--text-muted)',
-                fontSize: '14px',
-                margin: '0 0 8px 0',
-                fontFamily: "'Instrument Sans', sans-serif",
-              }}>
-              Don't have an account?
-            </p>
-            <Link
-              href="/register"
-              style={{
-                color: 'var(--accent)',
-                fontWeight: 700,
-                textDecoration: 'none',
-                fontFamily: "'Syne', sans-serif",
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                fontSize: '13px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                border: `1px solid rgba(96,165,250,0.3)`,
-                background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(96,165,250,0.25)';
-                e.currentTarget.style.background = 'rgba(96,165,250,0.15)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.background = isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)';
-              }}
-            >
-              Create one
-              <ChevronRight size={14} />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Fixed Copyright Footer */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        textAlign: 'center',
-        padding: '12px 16px',
-        backgroundColor: isDark ? 'rgba(10, 10, 11, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        borderTop: `1px solid var(--border)`,
-        zIndex: 50,
-      }}>
+        {/* Footer */}
         <p style={{
-          color: 'var(--text-muted)',
+          textAlign: 'center',
           fontSize: '12px',
-          margin: 0,
-          fontFamily: "'Instrument Sans', sans-serif",
+          color: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
+          marginTop: '28px',
+          fontFamily: "'Inter', system-ui, sans-serif",
         }}>
-          © 2026 Potomac Fund Management. All rights reserved.
+          2026 Potomac Fund Management. All rights reserved.
         </p>
       </div>
 
-      {/* Enhanced CSS Animations */}
+      {/* CSS Animations */}
       <style>{`
+        @keyframes float1 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(30px, -30px); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-20px, 20px); }
+        }
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
-        }
-        @keyframes devBannerScroll {
-          from { background-position: 0 0; }
-          to   { background-position: 120px 0; }
-        }
-        @keyframes devDotBlink {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50%       { opacity: 0.3; transform: scale(0.7); }
-        }
-        @keyframes devBadgePulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); }
-          50%       { box-shadow: 0 0 0 4px rgba(96,165,250,0.15); }
-        }
-        @keyframes taglinePulse {
-          0%, 100% {
-            text-shadow:
-              0 0 10px  var(--accent),
-              0 0 20px  var(--accent),
-              0 0 40px  rgba(96,165,250,0.85),
-              0 0 70px  rgba(96,165,250,0.65),
-              0 0 110px rgba(96,165,250,0.45),
-              0 0 160px rgba(96,165,250,0.25);
-            opacity: 0.95;
-          }
-          50% {
-            text-shadow:
-              0 0 15px  var(--accent),
-              0 0 30px  var(--accent),
-              0 0 60px  rgba(96,165,250,1),
-              0 0 100px rgba(96,165,250,0.9),
-              0 0 150px rgba(96,165,250,0.7),
-              0 0 200px rgba(96,165,250,0.4);
-            opacity: 1;
-          }
-        }
-        @keyframes float {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
-          100% { transform: translateY(0px) rotate(360deg); }
-        }
-        .tagline-glow {
-          animation: taglinePulse 3.5s ease-in-out infinite;
         }
       `}</style>
     </div>
