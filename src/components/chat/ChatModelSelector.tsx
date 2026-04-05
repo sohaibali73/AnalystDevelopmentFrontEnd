@@ -44,7 +44,7 @@ const MODELS: ModelInfo[] = [
 interface ChatModelSelectorProps {
   selectedModel: string;
   onModelChange: (model: string) => void;
-  isDark: boolean;
+  isDark?: boolean;
   disabled?: boolean;
 }
 
@@ -53,7 +53,7 @@ interface ChatModelSelectorProps {
 export function ChatModelSelector({
   selectedModel,
   onModelChange,
-  isDark,
+  isDark = false,
   disabled,
 }: ChatModelSelectorProps) {
   const [open, setOpen] = useState(false);
@@ -87,21 +87,23 @@ export function ChatModelSelector({
     [onModelChange]
   );
 
-  // Theme tokens
+  // Theme tokens - Potomac brand colors
   const T = {
-    text: 'var(--text)',
-    muted: 'var(--text-muted)',
-    border: 'var(--border)',
-    bg: 'var(--bg-card)',
-    bgHover: 'var(--bg-card-hover)',
-    panelBg: 'var(--bg-raised)',
-    panelBorder: 'var(--border)',
-    panelShadow: 'var(--shadow-card)',
-    accent: 'var(--accent)',
-    accentBg: 'var(--accent-dim)',
-    accentBorder: 'var(--border-hover)',
-    providerBg: 'var(--bg-raised)',
-    providerText: 'var(--text-muted)',
+    text: isDark ? '#E8E8E8' : '#1A1A1A',
+    muted: isDark ? '#B0B0B0' : '#666666',
+    border: isDark ? '#333333' : '#e5e5e5',
+    bg: isDark ? '#1A1A1A' : '#ffffff',
+    bgHover: isDark ? 'rgba(254, 192, 15, 0.06)' : 'rgba(254, 192, 15, 0.06)',
+    panelBg: isDark ? '#262626' : '#ffffff',
+    panelBorder: isDark ? '#333333' : '#e5e5e5',
+    panelShadow: isDark 
+      ? '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(254, 192, 15, 0.2)'
+      : '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(254, 192, 15, 0.15)',
+    accent: '#FEC00F',
+    accentBg: isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.08)',
+    accentBorder: 'rgba(254, 192, 15, 0.3)',
+    providerBg: isDark ? '#333333' : '#f8f8f8',
+    providerText: isDark ? '#B0B0B0' : '#666666',
   };
 
   return (

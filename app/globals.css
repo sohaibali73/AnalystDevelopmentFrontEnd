@@ -52,6 +52,134 @@
   50% { transform: translateY(-5px); }
 }
 
+/* ==============================
+   Skills Section Animations
+   ============================== */
+
+@keyframes skill-panel-open {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes skill-pill-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skill-pills-slide {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes skill-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skill-item-skeleton {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes skill-shimmer {
+  0% {
+    background-position: -1000px 0;
+    opacity: 0.6;
+  }
+  100% {
+    background-position: 1000px 0;
+    opacity: 1;
+  }
+}
+
+@keyframes skill-check-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-45deg);
+  }
+  50% {
+    transform: scale(1.15) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes skill-result-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skill-spark {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1) rotate(10deg);
+  }
+}
+
+@keyframes skill-badge-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(254, 192, 15, 0.2);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow: 0 0 0 4px rgba(254, 192, 15, 0.1);
+  }
+}
+
+/* ==============================
+   Empty Conversation Logic
+   ============================== */
+
+@keyframes empty-chat-tooltip-fade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* Animation utility classes */
 .animate-shimmer {
   animation: shimmer 2s infinite;
@@ -97,6 +225,68 @@
 .stagger-4 { animation-delay: 0.4s; }
 .stagger-5 { animation-delay: 0.5s; }
 
+/* ==============================
+   Chat Interface Utilities
+   ============================== */
+
+/* Unified chat button styling with yellow accent */
+.chat-btn-primary {
+  background-color: #FEC00F;
+  color: #212121;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(254, 192, 15, 0.2);
+}
+.chat-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(254, 192, 15, 0.3);
+}
+.chat-btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Chat message container unified styling */
+.chat-message {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.chat-message:hover {
+  transform: translateY(-1px);
+}
+
+/* Chat input field styling with yellow focus */
+.chat-input {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+.chat-input:focus {
+  outline: none;
+  border-color: #FEC00F;
+  box-shadow: 0 0 0 3px rgba(254, 192, 15, 0.1);
+}
+
+/* Card-based layout for cohesive design */
+.chat-card {
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.chat-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Unified avatar styling with yellow accent */
+.chat-avatar {
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+.chat-avatar:hover {
+  box-shadow: 0 0 12px rgba(254, 192, 15, 0.3);
+}
+
 /* Hover animations */
 .hover-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -104,6 +294,15 @@
 .hover-lift:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Reduce motion support for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .hover-glow {
