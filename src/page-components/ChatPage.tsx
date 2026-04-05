@@ -1688,6 +1688,7 @@ export function ChatPage() {
                     }}>
                       Select a suggestion or start typing
                     </span>
+                  </div>
                 </ConversationEmptyState>
               ) : (
                 <>

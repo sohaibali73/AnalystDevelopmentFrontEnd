@@ -455,12 +455,14 @@ const PersistentGenerationCard: React.FC<PersistentGenerationCardProps> = ({
 
 export default PersistentGenerationCard;
 
-/* Add animation keyframes */
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes persistentBounce {
-    0%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-  }
-`;
-document.head.appendChild(style);
+/* Add animation keyframes - only run on client */
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes persistentBounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
+    }
+  `;
+  document.head.appendChild(style);
+}
