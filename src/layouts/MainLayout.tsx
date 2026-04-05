@@ -41,9 +41,6 @@ const navItems: NavItem[] = [
   { name: 'SETTINGS', href: '/settings', icon: Settings },
 ];
 
-// Hidden pages - accessible via URL but not shown in navigation
-// reverse-engineer, skills, backtest, developer, deck-generator, non-apple-developer, autopilot
-
 interface MainLayoutProps {
   children: React.ReactNode;
 }
@@ -67,7 +64,6 @@ export function MainLayout({ children }: MainLayoutProps) {
       setIsMobile(mobile);
       setIsTablet(tablet);
       
-      // Auto-collapse on tablet, hide on mobile
       if (mobile) {
         setCollapsed(true);
         setMobileMenuOpen(false);
@@ -77,11 +73,10 @@ export function MainLayout({ children }: MainLayoutProps) {
     };
     
     window.addEventListener('resize', handleResize);
-    handleResize(); // Run on mount
+    handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Lock body scroll when mobile menu is open
   useEffect(() => {
     if (mobileMenuOpen && isMobile) {
       document.body.style.overflow = 'hidden';
@@ -94,21 +89,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   }, [mobileMenuOpen, isMobile]);
 
   const sidebarWidth = isMobile ? 0 : (collapsed ? 80 : 256);
-  const isDark = actualTheme === 'dark';
-
-  // Theme-aware colors using CSS variables
-  const colors = {
-    background: 'var(--bg)',
-    sidebar: 'var(--bg-card)',
-    border: 'var(--border)',
-    text: 'var(--text)',
-    textMuted: 'var(--text-muted)',
-    textSecondary: 'var(--text-muted)',
-    hoverBg: 'var(--accent-dim)',
-    accent: 'var(--accent)',
-    accentText: '#0A0A0B',
-    accentGlow: 'var(--accent-glow)',
-  };
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -128,9 +108,8 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div style={{
       display: 'flex',
       minHeight: '100vh',
-      backgroundColor: colors.background,
-      fontFamily: "'Instrument Sans', sans-serif",
-      transition: 'background-color 0.3s ease',
+      backgroundColor: '#0a0a0a',
+      fontFamily: "'Rajdhani', sans-serif",
       position: 'relative',
     }}>
       {/* Mobile Header */}
@@ -141,19 +120,15 @@ export function MainLayout({ children }: MainLayoutProps) {
           left: 0,
           right: 0,
           height: '64px',
-          background: isDark 
-            ? 'linear-gradient(180deg, rgba(96,165,250,0.1), rgba(96,165,250,0.05))'
-            : 'linear-gradient(180deg, rgba(96,165,250,0.08), rgba(96,165,250,0.03))',
-          borderBottom: `1px solid ${colors.border}`,
+          background: 'rgba(26, 26, 26, 0.8)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(212, 169, 68, 0.1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 20px',
           zIndex: 100,
-          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-          boxShadow: isDark 
-            ? '0 4px 20px rgba(96,165,250,0.15)'
-            : '0 4px 20px rgba(96,165,250,0.08)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
@@ -164,94 +139,77 @@ export function MainLayout({ children }: MainLayoutProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: isDark 
-                ? 'linear-gradient(135deg, rgba(96,165,250,0.15), rgba(167,139,250,0.12))'
-                : 'linear-gradient(135deg, rgba(96,165,250,0.12), rgba(167,139,250,0.09))',
-              border: `1px solid ${colors.border}`,
-              boxShadow: isDark 
-                ? '0 8px 24px rgba(96,165,250,0.15)'
-                : '0 8px 24px rgba(96,165,250,0.1)',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              background: 'rgba(212, 169, 68, 0.1)',
+              border: '1px solid rgba(212, 169, 68, 0.2)',
+              boxShadow: '0 0 20px rgba(212, 169, 68, 0.15)',
             }}>
               <img 
                 src={logo} 
-                alt="Analyst Logo" 
+                alt="Potomac Logo" 
                 style={{ 
                   width: '100%', 
                   height: '100%', 
                   objectFit: 'contain',
-                  filter: isDark ? 'brightness(1.1) saturate(1.2)' : 'none',
+                  filter: 'drop-shadow(0 0 8px rgba(212, 169, 68, 0.4))',
                 }} 
               />
             </div>
             <span style={{
-              fontFamily: "'Syne', sans-serif",
-              fontWeight: 800,
+              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 700,
               fontSize: '18px',
-              color: colors.text,
-              letterSpacing: '1.5px',
-              textShadow: isDark ? '0 0 15px rgba(96,165,250,0.3)' : 'none',
+              color: '#ffffff',
+              letterSpacing: '2px',
+              textShadow: '0 0 20px rgba(212, 169, 68, 0.4)',
             }}>
-              ANALYST
+              POTOMAC ANALYST
             </span>
           </div>
           
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             style={{
-              background: 'none',
-              border: 'none',
-              color: colors.text,
+              background: 'rgba(212, 169, 68, 0.1)',
+              border: '1px solid rgba(212, 169, 68, 0.2)',
+              color: '#D4A944',
               cursor: 'pointer',
               padding: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '10px',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'all 0.3s ease',
               minWidth: '48px',
               minHeight: '48px',
-              boxShadow: isDark 
-                ? '0 4px 16px rgba(96,165,250,0.15)'
-                : '0 4px 16px rgba(96,165,250,0.1)',
             }}
             onMouseEnter={(e) => { 
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = isDark 
-                ? '0 8px 24px rgba(96,165,250,0.25)'
-                : '0 8px 24px rgba(96,165,250,0.15)';
+              e.currentTarget.style.background = 'rgba(212, 169, 68, 0.2)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(212, 169, 68, 0.3)';
             }}
             onMouseLeave={(e) => { 
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = isDark 
-                ? '0 4px 20px rgba(96,165,250,0.15)'
-                : '0 4px 20px rgba(96,165,250,0.08)';
+              e.currentTarget.style.background = 'rgba(212, 169, 68, 0.1)';
+              e.currentTarget.style.boxShadow = 'none';
             }}
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </header>
       )}
 
-      {/* Backdrop for mobile menu */}
-      {mobileMenuOpen && isMobile && (
+      {/* Mobile Menu Backdrop */}
+      {isMobile && mobileMenuOpen && (
         <div 
+          onClick={() => setMobileMenuOpen(false)}
           style={{
             position: 'fixed',
-            inset: 0,
-            background: isDark 
-              ? 'radial-gradient(circle at 50% 50%, rgba(96,165,250,0.3) 0%, rgba(96,165,250,0.1) 50%, transparent 100%)'
-              : 'radial-gradient(circle at 50% 50%, rgba(96,165,250,0.2) 0%, rgba(96,165,250,0.05) 50%, transparent 100%)',
-            zIndex: 98,
-            animation: 'fadeIn 0.2s ease',
-            WebkitTapHighlightColor: 'transparent',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
             backdropFilter: 'blur(4px)',
-          }}
-          onClick={() => setMobileMenuOpen(false)}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            setMobileMenuOpen(false);
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 998,
           }}
         />
       )}
@@ -260,226 +218,186 @@ export function MainLayout({ children }: MainLayoutProps) {
       <aside style={{
         position: 'fixed',
         left: isMobile ? (mobileMenuOpen ? 0 : '-100%') : 0,
-        top: isMobile ? '64px' : 0,
-        height: isMobile ? 'calc(100vh - 64px)' : '100vh',
+        top: 0,
+        bottom: 0,
         width: isMobile ? '280px' : sidebarWidth,
-        background: isDark 
-          ? 'linear-gradient(180deg, #0D0D0D, #0A0A0A)'
-          : 'linear-gradient(180deg, #ffffff, #fafafa)',
-        borderRight: `1px solid ${colors.border}`,
+        background: 'rgba(26, 26, 26, 0.6)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRight: '1px solid rgba(212, 169, 68, 0.1)',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        zIndex: 99,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        boxShadow: isDark 
-          ? '0 8px 32px rgba(96,165,250,0.15), inset 0 0 20px rgba(96,165,250,0.05)'
-          : '0 8px 32px rgba(96,165,250,0.1), inset 0 0 20px rgba(96,165,250,0.03)',
+        transition: isMobile 
+          ? 'left 0.4s cubic-bezier(0.16, 1, 0.3, 1)' 
+          : 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        zIndex: isMobile ? 999 : 50,
+        boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5)',
       }}>
-        {/* Enhanced Logo Section */}
-        {!isMobile && (
-          <div style={{
-            height: collapsed ? '80px' : '88px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 20px',
-            borderBottom: `1px solid ${colors.border}`,
-            flexShrink: 0,
-            position: 'relative',
-            overflow: 'hidden',
-          }}>
-            {/* Floating accent background */}
+        {/* Logo Section */}
+        <div style={{
+          padding: collapsed && !isMobile ? '24px 16px' : '32px 24px',
+          borderBottom: '1px solid rgba(212, 169, 68, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed && !isMobile ? 'center' : 'space-between',
+          gap: '16px',
+          flexShrink: 0,
+          background: 'rgba(212, 169, 68, 0.03)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{
-              position: 'absolute',
-              top: '-50%',
-              right: '-50%',
-              width: '200%',
-              height: '200%',
-              background: `radial-gradient(circle at 70% 30%, rgba(96,165,250,0.08), transparent 50%)`,
-              opacity: 0,
-              transition: 'opacity 0.5s ease',
-              pointerEvents: 'none',
-            }} />
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 1 }}>
-              <div style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '14px',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: isDark 
-                  ? 'linear-gradient(135deg, rgba(96,165,250,0.15), rgba(167,139,250,0.12))'
-                  : 'linear-gradient(135deg, rgba(96,165,250,0.12), rgba(167,139,250,0.09))',
-                border: `1px solid ${colors.border}`,
-                boxShadow: isDark 
-                  ? '0 8px 24px rgba(96,165,250,0.15)'
-                  : '0 8px 24px rgba(96,165,250,0.1)',
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}>
-                <img 
-                  src={logo} 
-                  alt="Analyst Logo" 
-                  style={{ 
-                    width: '100%', 
-                    height: '100%', 
-                    objectFit: 'contain',
-                    filter: isDark ? 'brightness(1.1) saturate(1.2)' : 'none',
-                  }} 
-                />
-              </div>
-              {!collapsed && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{
-                    fontFamily: "'Syne', sans-serif",
-                    fontWeight: 800,
-                    fontSize: '20px',
-                    color: colors.text,
-                    letterSpacing: '2px',
-                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    textShadow: isDark ? '0 0 15px rgba(96,165,250,0.3)' : 'none',
-                    lineHeight: 1,
-                  }}>
-                    ANALYST
-                  </span>
-                  {/* RELEASE CANDIDATE 3.0 badge - uses theme accent */}
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: '8px',
-                    fontWeight: 700,
-                    letterSpacing: '0.14em',
-                    textTransform: 'uppercase' as const,
-                    color: 'var(--accent)',
-                    background: 'var(--accent-dim)',
-                    border: '1px solid var(--border-hover)',
-                    borderRadius: '5px',
-                    padding: '2px 7px',
-                    boxShadow: '0 0 8px var(--accent-glow)',
-                    animation: 'devBetaPulse 2.5s ease-in-out infinite',
-                    whiteSpace: 'nowrap' as const,
-                  }}>
-                    <span style={{
-                      width: '5px',
-                      height: '5px',
-                      borderRadius: '50%',
-                      background: 'var(--accent)',
-                      flexShrink: 0,
-                      boxShadow: '0 0 4px var(--accent-glow)',
-                      animation: 'devBetaDot 2.5s ease-in-out infinite',
-                    }} />
-                    RELEASE CANDIDATE 3.0
-                  </span>
-                </div>
-              )}
+              width: collapsed && !isMobile ? '48px' : '52px',
+              height: collapsed && !isMobile ? '48px' : '52px',
+              borderRadius: '14px',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(212, 169, 68, 0.15)',
+              border: '1px solid rgba(212, 169, 68, 0.3)',
+              boxShadow: '0 0 24px rgba(212, 169, 68, 0.2)',
+              flexShrink: 0,
+            }}>
+              <img 
+                src={logo} 
+                alt="Potomac Logo" 
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 0 10px rgba(212, 169, 68, 0.5))',
+                }} 
+              />
             </div>
-            
+            {(!collapsed || isMobile) && (
+              <div>
+                <div style={{
+                  fontFamily: "'Rajdhani', sans-serif",
+                  fontWeight: 700,
+                  fontSize: '16px',
+                  color: '#ffffff',
+                  letterSpacing: '2px',
+                  lineHeight: 1.2,
+                  textShadow: '0 0 20px rgba(212, 169, 68, 0.3)',
+                }}>
+                  POTOMAC
+                </div>
+                <div style={{
+                  fontFamily: "'Quicksand', sans-serif",
+                  fontSize: '12px',
+                  color: '#9ca3af',
+                  letterSpacing: '1px',
+                  marginTop: '2px',
+                }}>
+                  Analyst Platform
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {!isMobile && (!collapsed || isMobile) && (
             <button
               onClick={() => setCollapsed(!collapsed)}
               style={{
-                background: 'none',
-                border: 'none',
-                color: colors.textMuted,
-                cursor: 'pointer',
-                padding: '10px',
+                background: 'rgba(212, 169, 68, 0.1)',
+                border: '1px solid rgba(212, 169, 68, 0.2)',
                 borderRadius: '10px',
+                width: '36px',
+                height: '36px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                minWidth: '40px',
-                minHeight: '40px',
-                boxShadow: isDark 
-                  ? '0 4px 16px rgba(96,165,250,0.15)'
-                  : '0 4px 16px rgba(96,165,250,0.1)',
+                cursor: 'pointer',
+                color: '#D4A944',
+                transition: 'all 0.3s ease',
+                flexShrink: 0,
               }}
-              onMouseEnter={(e) => { 
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.color = '#93C5FD';
-                e.currentTarget.style.boxShadow = isDark 
-                  ? '0 8px 24px rgba(96,165,250,0.25)'
-                  : '0 8px 24px rgba(96,165,250,0.15)';
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(212, 169, 68, 0.2)';
+                e.currentTarget.style.boxShadow = '0 0 16px rgba(212, 169, 68, 0.3)';
               }}
-              onMouseLeave={(e) => { 
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.color = colors.textMuted;
-                e.currentTarget.style.boxShadow = isDark 
-                  ? '0 4px 16px rgba(96,165,250,0.15)'
-                  : '0 4px 16px rgba(96,165,250,0.1)';
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(212, 169, 68, 0.1)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+              {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Enhanced Navigation */}
+        {/* Navigation */}
         <nav style={{
           flex: 1,
-          padding: isMobile ? '24px 16px' : (collapsed ? '20px 8px' : '24px 16px'),
+          padding: '24px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
           overflowY: 'auto',
+          overflowX: 'hidden',
         }}>
-          {navItems.map((item, index) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            
             return (
               <button
                 key={item.href}
                 onClick={() => handleNavClick(item.href)}
+                title={collapsed && !isMobile ? item.name : ''}
                 style={{
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
-                  padding: isMobile ? '16px 20px' : (collapsed ? '14px 8px' : '16px 16px'),
-                  marginBottom: '8px',
-                  border: 'none',
-                  borderRadius: '14px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  fontFamily: "'Syne', sans-serif",
-                  fontSize: isMobile ? '15px' : '13px',
-                  fontWeight: 700,
-                  letterSpacing: '0.5px',
-                  color: active ? colors.accentText : colors.textMuted,
-                  justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
-                  minHeight: isMobile ? '52px' : '52px',
-                  position: 'relative',
-                  transform: 'translateZ(0)',
-                  boxShadow: active 
-                    ? '0 8px 24px var(--accent-glow), inset 0 0 20px var(--accent-dim)'
-                    : 'none',
+                  gap: '14px',
+                  padding: collapsed && !isMobile ? '16px' : '14px 16px',
                   background: active 
-                    ? 'var(--accent)'
+                    ? 'rgba(212, 169, 68, 0.15)' 
                     : 'transparent',
+                  color: active ? '#ffffff' : '#9ca3af',
+                  border: active 
+                    ? '1px solid rgba(212, 169, 68, 0.3)'
+                    : '1px solid transparent',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: "'Rajdhani', sans-serif",
+                  letterSpacing: '1.5px',
+                  transition: 'all 0.3s ease',
+                  textAlign: 'left',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: active 
+                    ? '0 0 20px rgba(212, 169, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                    : 'none',
+                  justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
-                    e.currentTarget.style.transform = 'translateX(6px) translateZ(0)';
-                    e.currentTarget.style.color = 'var(--text)';
-                    e.currentTarget.style.background = 'var(--accent-dim)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px var(--accent-glow)';
+                    e.currentTarget.style.background = 'rgba(212, 169, 68, 0.08)';
+                    e.currentTarget.style.borderColor = 'rgba(212, 169, 68, 0.15)';
+                    e.currentTarget.style.color = '#D4A944';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!active) {
-                    e.currentTarget.style.transform = 'translateX(0) translateZ(0)';
-                    e.currentTarget.style.color = 'var(--text-muted)';
                     e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = 'transparent';
+                    e.currentTarget.style.color = '#9ca3af';
                   }
                 }}
-                title={collapsed && !isMobile ? item.name : undefined}
               >
-                {/* Enhanced icon container */}
+                {/* Active indicator glow */}
+                {active && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'radial-gradient(circle at 50% 50%, rgba(212, 169, 68, 0.1), transparent 70%)',
+                    pointerEvents: 'none',
+                  }} />
+                )}
+                
                 <div style={{
                   width: '36px',
                   height: '36px',
@@ -488,18 +406,21 @@ export function MainLayout({ children }: MainLayoutProps) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: active 
-                    ? 'rgba(255,255,255,0.2)'
-                    : 'var(--accent-dim)',
+                    ? 'rgba(212, 169, 68, 0.2)'
+                    : 'rgba(255, 255, 255, 0.05)',
                   border: active 
-                    ? '1px solid rgba(255,255,255,0.3)'
-                    : '1px solid var(--border)',
+                    ? '1px solid rgba(212, 169, 68, 0.4)'
+                    : '1px solid rgba(255, 255, 255, 0.1)',
                   boxShadow: active 
-                    ? '0 4px 16px var(--accent-glow)'
+                    ? '0 0 16px rgba(212, 169, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                     : 'none',
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  transition: 'all 0.3s ease',
                   flexShrink: 0,
                 }}>
-                  <Icon size={isMobile ? 20 : 18} style={{ color: active ? '#ffffff' : 'var(--accent)' }} />
+                  <Icon size={isMobile ? 20 : 18} style={{ 
+                    color: active ? '#D4A944' : 'currentColor',
+                    filter: active ? 'drop-shadow(0 0 6px rgba(212, 169, 68, 0.6))' : 'none',
+                  }} />
                 </div>
                 
                 {(!collapsed || isMobile) && (
@@ -507,6 +428,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <span style={{
                       position: 'relative',
                       zIndex: 1,
+                      textShadow: active ? '0 0 12px rgba(212, 169, 68, 0.4)' : 'none',
                     }}>
                       {item.name}
                     </span>
@@ -515,22 +437,15 @@ export function MainLayout({ children }: MainLayoutProps) {
                         marginLeft: 'auto',
                         fontSize: '9px',
                         fontWeight: 700,
-                        padding: '2px 8px',
+                        padding: '3px 8px',
                         borderRadius: '6px',
-                        background: active 
-                          ? 'rgba(255,255,255,0.2)'
-                          : 'var(--accent-dim)',
-                        color: active ? '#ffffff' : 'var(--accent)',
+                        background: 'rgba(212, 169, 68, 0.2)',
+                        color: '#D4A944',
                         letterSpacing: '0.5px',
                         lineHeight: 1.4,
-                        border: active 
-                          ? '1px solid rgba(255,255,255,0.3)'
-                          : '1px solid var(--border)',
-                        boxShadow: active 
-                          ? '0 4px 12px var(--accent-glow)'
-                          : 'none',
+                        border: '1px solid rgba(212, 169, 68, 0.3)',
+                        boxShadow: '0 0 12px rgba(212, 169, 68, 0.2)',
                         flexShrink: 0,
-                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                       }}>
                         {item.badge}
                       </span>
@@ -542,77 +457,61 @@ export function MainLayout({ children }: MainLayoutProps) {
           })}
         </nav>
 
-        {/* Enhanced User Section */}
+        {/* User Section */}
         <div style={{
           padding: isMobile ? '24px 16px' : '24px',
-          borderTop: `1px solid ${colors.border}`,
+          borderTop: '1px solid rgba(212, 169, 68, 0.1)',
           flexShrink: 0,
-          position: 'relative',
-          overflow: 'hidden',
+          background: 'rgba(212, 169, 68, 0.03)',
         }}>
-          {/* Floating accent background */}
-          <div style={{
-            position: 'absolute',
-            top: '-50%',
-            right: '-50%',
-            width: '200%',
-            height: '200%',
-            background: `radial-gradient(circle at 70% 30%, rgba(96,165,250,0.06), transparent 50%)`,
-            opacity: 0,
-            transition: 'opacity 0.5s ease',
-            pointerEvents: 'none',
-          }} />
-          
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
             gap: '16px',
             marginBottom: '20px',
-            position: 'relative',
-            zIndex: 1,
           }}>
             <div style={{
               width: '48px',
               height: '48px',
               borderRadius: '50%',
-              background: 'var(--accent)',
+              background: 'linear-gradient(135deg, #D4A944 0%, #C9A03D 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 700,
-              color: '#0A0A0B',
-              fontSize: '16px',
+              color: '#0a0a0a',
+              fontSize: '18px',
               flexShrink: 0,
-              boxShadow: '0 8px 24px var(--accent-glow)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 0 24px rgba(212, 169, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
             }}>
               {user?.name?.charAt(0).toUpperCase() || user?.nickname?.charAt(0).toUpperCase() || 'U'}
             </div>
             {(!collapsed || isMobile) && (
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ 
-                  color: colors.text, 
+                  color: '#ffffff', 
                   fontSize: '15px', 
                   fontWeight: 700, 
                   whiteSpace: 'nowrap', 
                   overflow: 'hidden', 
                   textOverflow: 'ellipsis',
                   lineHeight: 1.4,
-                  transition: 'color 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  textShadow: isDark ? '0 0 10px rgba(96,165,250,0.3)' : 'none',
+                  fontFamily: "'Rajdhani', sans-serif",
+                  letterSpacing: '0.5px',
+                  textShadow: '0 0 12px rgba(212, 169, 68, 0.3)',
                 }}>
                   {user?.name || user?.nickname || 'User'}
                 </div>
                 <div style={{ 
-                  color: colors.textSecondary, 
-                  fontSize: '13px', 
+                  color: '#6b7280', 
+                  fontSize: '12px', 
                   whiteSpace: 'nowrap', 
                   overflow: 'hidden', 
                   textOverflow: 'ellipsis',
                   lineHeight: 1.4,
                   marginTop: '4px',
-                  fontFamily: "'Instrument Sans', sans-serif",
+                  fontFamily: "'Quicksand', sans-serif",
                 }}>
                   {user?.email || 'user@example.com'}
                 </div>
@@ -632,30 +531,27 @@ export function MainLayout({ children }: MainLayoutProps) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '12px',
-              padding: '16px 18px',
-              background: 'transparent',
+              padding: '14px 18px',
+              background: 'rgba(239, 68, 68, 0.1)',
               color: '#EF4444',
-              border: `1px solid ${colors.border}`,
-              borderRadius: '14px',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              borderRadius: '12px',
               cursor: 'pointer',
-              fontSize: isMobile ? '14px' : '13px',
+              fontSize: isMobile ? '13px' : '12px',
               fontWeight: 700,
-              fontFamily: "'Syne', sans-serif",
-              letterSpacing: '0.5px',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-              minHeight: isMobile ? '52px' : '52px',
-              boxShadow: 'none',
+              fontFamily: "'Rajdhani', sans-serif",
+              letterSpacing: '1.5px',
+              transition: 'all 0.3s ease',
+              minHeight: '48px',
             }}
             onMouseEnter={(e) => { 
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-              e.currentTarget.style.boxShadow = '0 8px 20px rgba(239, 68, 68, 0.2)';
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.3)';
             }}
             onMouseLeave={(e) => { 
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
@@ -678,36 +574,6 @@ export function MainLayout({ children }: MainLayoutProps) {
       }}>
         {children}
       </main>
-
-      {/* Enhanced CSS Animations */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes slideInFromLeft {
-          from { transform: translateX(-100%); }
-          to   { transform: translateX(0); }
-        }
-        @keyframes slideOutToLeft {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-100%); }
-        }
-        @keyframes devBetaPulse {
-          0%, 100% {
-            box-shadow: 0 0 6px rgba(252,211,77,0.2), 0 0 16px rgba(252,211,77,0.08);
-            border-color: rgba(252,211,77,0.28);
-          }
-          50% {
-            box-shadow: 0 0 12px rgba(252,211,77,0.5), 0 0 28px rgba(252,211,77,0.22);
-            border-color: rgba(252,211,77,0.55);
-          }
-        }
-        @keyframes devBetaDot {
-          0%, 100% { opacity: 0.7; transform: scale(1); }
-          50%       { opacity: 1;   transform: scale(1.35); box-shadow: 0 0 6px rgba(252,211,77,0.9); }
-        }
-      `}</style>
     </div>
   );
 }
