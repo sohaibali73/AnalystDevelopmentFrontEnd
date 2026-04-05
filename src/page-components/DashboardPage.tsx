@@ -95,7 +95,7 @@ const STYLES = `
     position: absolute;
     left: 0; top: 8px; bottom: 8px;
     width: 2px;
-    background: linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2));
+    background: linear-gradient(to bottom, var(--accent), var(--accent-glow));
     border-radius: 2px;
     opacity: 0;
     transition: opacity .15s ease;
@@ -173,7 +173,7 @@ function SectionHead({ label, action, onAction }: { label: string; action?: stri
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px' }}>
       <div style={{
         width: '3px', height: '16px',
-        background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))',
+        background: 'linear-gradient(to bottom, var(--accent), var(--accent-glow))',
         borderRadius: '3px', flexShrink: 0,
       }} />
       <span style={{
@@ -206,7 +206,7 @@ function SectionHead({ label, action, onAction }: { label: string; action?: stri
   );
 }
 
-/* ─────────────────────────────────────────────
+/* ───────────────────────────────────────────��─
    Main Component
 ───────────────────────────────────────────── */
 export default function DashboardPage() {
@@ -291,7 +291,7 @@ export default function DashboardPage() {
       title: 'Reverse Engineer',
       description: 'Convert strategy logic and descriptions directly into working AFL code.',
       href: '/reverse-engineer',
-      color: '#FEC00F',
+      color: 'var(--accent)',
       bgColor: 'rgba(254,192,15,0.08)',
       sparkData: [4, 8, 5, 10, 6, 14, 8, 16, 10, 18],
     },
@@ -305,24 +305,7 @@ export default function DashboardPage() {
     { label: 'Reverse Eng.', change: 'Live' },
   ];
 
-  /* ── Theme tokens ── */
-  const cssVars: React.CSSProperties = {
-    ['--accent' as any]: '#FEC00F',
-    ['--accent-dim' as any]: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.07)',
-    ['--accent-glow' as any]: 'rgba(254,192,15,0.3)',
-    ['--bg' as any]: isDark ? '#080809' : '#F5F5F6',
-    ['--bg-card' as any]: isDark ? '#0D0D10' : '#FFFFFF',
-    ['--bg-card-hover' as any]: isDark ? '#121216' : '#F9F9FA',
-    ['--bg-raised' as any]: isDark ? '#111115' : '#FAFAFA',
-    ['--border' as any]: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-    ['--border-hover' as any]: 'rgba(254,192,15,0.4)',
-    ['--text' as any]: isDark ? '#EFEFEF' : '#0A0A0B',
-    ['--text-muted' as any]: isDark ? '#606068' : '#808088',
-    ['--text-dim' as any]: isDark ? '#2E2E36' : '#D8D8DC',
-    ['--shadow-card' as any]: isDark
-      ? '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)'
-      : '0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.06)',
-  };
+  /* CSS variables are now set globally by ThemeContext */
 
   /* ── Styles object ── */
   const p = isMobile ? '20px' : '52px';
@@ -332,20 +315,16 @@ export default function DashboardPage() {
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
       <div style={{
-        ...cssVars,
         minHeight: 'auto',
-        background: isDark
-          ? 'radial-gradient(ellipse 120% 60% at 60% -10%, rgba(254,192,15,0.04) 0%, transparent 60%), var(--bg)'
-          : 'radial-gradient(ellipse 120% 60% at 60% -10%, rgba(254,192,15,0.06) 0%, transparent 60%), var(--bg)',
+        background: `radial-gradient(ellipse 120% 60% at 60% -10%, var(--accent-dim) 0%, transparent 60%), var(--bg)`,
         fontFamily: "'Instrument Sans', sans-serif",
         color: 'var(--text)',
-
       }}>
 
         {/* ── Top bar ── */}
         <div style={{
           height: '1px',
-          background: `linear-gradient(90deg, transparent 0%, #FEC00F 40%, rgba(254,192,15,0.3) 60%, transparent 100%)`,
+          background: `linear-gradient(90deg, transparent 0%, var(--accent) 40%, var(--accent-glow) 60%, transparent 100%)`,
           opacity: 0.5,
         }} />
 
@@ -391,21 +370,21 @@ export default function DashboardPage() {
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: '10px',
               background: isDark ? 'rgba(254,192,15,0.07)' : 'rgba(254,192,15,0.08)',
-              border: '1px solid rgba(254,192,15,0.2)',
+              border: '1px solid var(--accent-glow)',
               borderRadius: '100px',
               padding: '5px 14px 5px 10px',
               marginBottom: '24px',
             }}>
               <div style={{
                 width: '5px', height: '5px', borderRadius: '50%',
-                background: '#FEC00F',
+                background: 'var(--accent)',
                 animation: 'dash-pulse 2.4s ease-in-out infinite',
               }} />
               <span style={{
                 fontFamily: "'DM Mono', monospace",
                 fontSize: '9.5px', letterSpacing: '0.14em',
                 textTransform: 'uppercase' as const,
-                color: '#FEC00F',
+                color: 'var(--accent)',
               }}>
                 Trading Platform · Live
               </span>
@@ -423,7 +402,7 @@ export default function DashboardPage() {
             }}>
               {greeting},{' '}
               <span style={{
-                color: '#FEC00F',
+                color: 'var(--accent)',
                 position: 'relative' as const,
               }}>
                 {user?.name || 'Trader'}
@@ -451,7 +430,7 @@ export default function DashboardPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '10px',
                   padding: isMobile ? '13px 24px' : '15px 32px',
-                  background: '#FEC00F',
+                  background: 'var(--accent)',
                   color: '#09090B',
                   border: 'none', borderRadius: '10px',
                   fontFamily: "'Syne', sans-serif",
@@ -598,7 +577,7 @@ export default function DashboardPage() {
                 onMouseEnter={e => {
                   e.currentTarget.style.borderColor = 'rgba(254,192,15,0.3)';
                   e.currentTarget.style.background = 'var(--accent-dim)';
-                  e.currentTarget.style.color = '#FEC00F';
+                  e.currentTarget.style.color = 'var(--accent)';
                   e.currentTarget.style.boxShadow = '0 4px 20px rgba(254,192,15,0.1)';
                 }}
                 onMouseLeave={e => {
@@ -661,7 +640,7 @@ export default function DashboardPage() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0,
                     }}>
-                      <MessageSquare size={13} color="#FEC00F" />
+                      <MessageSquare size={13} color="var(--accent)" />
                     </div>
                     <span style={{
                       flex: 1, fontSize: '13px', fontWeight: 500,
@@ -718,7 +697,7 @@ export default function DashboardPage() {
                       e.currentTarget.style.transform = 'translateY(-8px) translateZ(0)';
                       e.currentTarget.style.borderColor = 'rgba(254,192,15,0.4)';
                       e.currentTarget.style.boxShadow = isDark
-                        ? '0 24px 56px rgba(0,0,0,0.6), 0 0 0 1px rgba(254,192,15,0.3), 0 0 40px rgba(254,192,15,0.2)'
+                        ? '0 24px 56px rgba(0,0,0,0.6), 0 0 0 1px rgba(254,192,15,0.3), 0 0 40px var(--accent-glow)'
                         : '0 16px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(254,192,15,0.3), 0 0 40px rgba(254,192,15,0.1)';
                       e.currentTarget.style.background = isDark
                         ? 'linear-gradient(180deg, rgba(254,192,15,0.05), rgba(254,192,15,0.02))'
@@ -891,7 +870,7 @@ export default function DashboardPage() {
             }}>
               <div style={{
                 position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px',
-                background: 'linear-gradient(90deg, #FEC00F 0%, rgba(254,192,15,0.1) 80%, transparent 100%)',
+                background: 'linear-gradient(90deg, var(--accent) 0%, rgba(254,192,15,0.1) 80%, transparent 100%)',
               }} />
               {/* Subtle bg decoration */}
               <div style={{
@@ -905,7 +884,7 @@ export default function DashboardPage() {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '22px',
               }}>
-                <Activity size={14} color="#FEC00F" />
+                <Activity size={14} color="var(--accent)" />
                 <span style={{
                   fontFamily: "'Syne', sans-serif",
                   fontSize: '13px', fontWeight: 700,
@@ -930,7 +909,7 @@ export default function DashboardPage() {
                 }}>
                   <span style={{
                     fontFamily: "'DM Mono', monospace",
-                    fontSize: '9px', color: '#FEC00F',
+                    fontSize: '9px', color: 'var(--accent)',
                     opacity: 0.55, flexShrink: 0, paddingTop: '2px', width: '16px',
                   }}>
                     {String(idx + 1).padStart(2, '0')}
@@ -980,7 +959,7 @@ export default function DashboardPage() {
                 { label: 'Total Conversations', value: stats.conversations, valueColor: 'var(--text)' },
                 { label: 'Documents Indexed', value: stats.documents, valueColor: 'var(--text)' },
                 { label: 'Platform Status', value: 'Online', valueColor: '#34D399' },
-                { label: 'AI Engine', value: 'Active', valueColor: '#FEC00F' },
+                { label: 'AI Engine', value: 'Active', valueColor: 'var(--accent)' },
               ].map(({ label, value, valueColor }, idx, arr) => (
                 <div key={label} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',

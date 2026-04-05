@@ -76,22 +76,20 @@ export function KnowledgeBasePage() {
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [showFeedback, setShowFeedback] = useState(false);
 
-  // ─── Theme tokens (matches dashboard/chat) ─────────────────
+  // ─── Theme tokens now come from CSS variables set by ThemeContext ───
   const colors = useMemo(
     () => ({
-      background: isDark ? '#080809' : '#F5F5F6',
-      cardBg:     isDark ? '#0D0D10' : '#FFFFFF',
-      inputBg:    isDark ? '#111115' : '#F8F8F9',
-      border:     isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-      text:       isDark ? '#EFEFEF' : '#0A0A0B',
-      textMuted:  isDark ? '#606068' : '#808088',
-      hoverBg:    isDark ? '#121216' : '#F4F4F5',
-      accent:     '#FEC00F',
-      shadow:     isDark
-        ? '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)'
-        : '0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.06)',
+      background: 'var(--bg)',
+      cardBg:     'var(--bg-card)',
+      inputBg:    'var(--bg-raised)',
+      border:     'var(--border)',
+      text:       'var(--text)',
+      textMuted:  'var(--text-muted)',
+      hoverBg:    'var(--bg-card-hover)',
+      accent:     'var(--accent)',
+      shadow:     'var(--shadow-card)',
     }),
-    [isDark]
+    []
   );
 
   // ─── Data Loading ──────────────────────────────────────────
@@ -262,7 +260,7 @@ export function KnowledgeBasePage() {
   );
 
   const catColors: Record<string, { bg: string; text: string }> = {
-    afl: { bg: 'rgba(254, 192, 15, 0.12)', text: '#FEC00F' },
+    afl: { bg: 'rgba(254, 192, 15, 0.12)', text: 'var(--accent)' },
     strategy: { bg: 'rgba(34, 197, 94, 0.12)', text: '#22c55e' },
     indicator: { bg: 'rgba(99, 102, 241, 0.12)', text: '#818cf8' },
     documentation: { bg: 'rgba(59, 130, 246, 0.12)', text: '#3b82f6' },
@@ -289,7 +287,7 @@ export function KnowledgeBasePage() {
       {/* ── Top accent line ── */}
       <div style={{
         height: '1px',
-        background: 'linear-gradient(90deg, transparent 0%, #FEC00F 45%, rgba(254,192,15,0.25) 65%, transparent 100%)',
+        background: 'linear-gradient(90deg, transparent 0%, var(--accent) 45%, rgba(254,192,15,0.25) 65%, transparent 100%)',
         opacity: 0.45,
       }} />
 
@@ -323,13 +321,13 @@ export function KnowledgeBasePage() {
               }}>
                 <div style={{
                   width: 5, height: 5, borderRadius: '50%',
-                  background: '#FEC00F',
+                  background: 'var(--accent)',
                   animation: 'kb-pulse 2.4s ease-in-out infinite',
                 }} />
                 <span style={{
                   fontFamily: "'DM Mono', monospace",
                   fontSize: '9px', letterSpacing: '0.16em',
-                  textTransform: 'uppercase' as const, color: '#FEC00F',
+                  textTransform: 'uppercase' as const, color: 'var(--accent)',
                 }}>
                   Knowledge Base · {stats ? `${stats.total_documents} docs` : 'Loading'}
                 </span>
@@ -345,7 +343,7 @@ export function KnowledgeBasePage() {
                 margin: 0,
               }}>
                 Knowledge{' '}
-                <span style={{ color: '#FEC00F' }}>Base</span>
+                <span style={{ color: 'var(--accent)' }}>Base</span>
               </h1>
               <p style={{
                 fontSize: '13px', color: colors.textMuted,
@@ -371,7 +369,7 @@ export function KnowledgeBasePage() {
                   boxShadow: colors.shadow,
                   transition: 'border-color .2s, color .2s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(254,192,15,0.35)'; e.currentTarget.style.color = '#FEC00F'; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(254,192,15,0.35)'; e.currentTarget.style.color = 'var(--accent)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.color = colors.textMuted; }}
               >
                 <RefreshCw size={14} />
@@ -392,7 +390,7 @@ export function KnowledgeBasePage() {
                   boxShadow: colors.shadow,
                   transition: 'border-color .2s, color .2s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(254,192,15,0.35)'; e.currentTarget.style.color = '#FEC00F'; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(254,192,15,0.35)'; e.currentTarget.style.color = 'var(--accent)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.color = colors.textMuted; }}
               >
                 <MessageSquarePlus size={13} />
@@ -405,7 +403,7 @@ export function KnowledgeBasePage() {
           {stats && !loading && (
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' as const, marginBottom: '4px' }}>
               {([
-                { label: 'Documents',  value: stats.total_documents,               icon: FileText,   color: '#FEC00F' },
+                { label: 'Documents',  value: stats.total_documents,               icon: FileText,   color: 'var(--accent)' },
                 { label: 'Total Size', value: formatFileSize(stats.total_size),     icon: HardDrive,  color: '#60A5FA' },
                 { label: 'Categories', value: Object.keys(stats.categories).length, icon: FolderOpen, color: '#34D399' },
                 { label: 'Bookmarks',  value: bookmarkedIds.size,                   icon: BookOpen,   color: '#A78BFA' },
@@ -474,8 +472,8 @@ export function KnowledgeBasePage() {
                     padding: isMobile ? '10px 14px' : '11px 22px',
                     background: 'transparent',
                     border: 'none',
-                    borderBottom: `2px solid ${isActive ? '#FEC00F' : 'transparent'}`,
-                    color: isActive ? '#FEC00F' : colors.textMuted,
+                    borderBottom: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
+                    color: isActive ? 'var(--accent)' : colors.textMuted,
                     fontFamily: "'Syne', sans-serif",
                     fontSize: '11px', fontWeight: 700,
                     letterSpacing: '0.1em', textTransform: 'uppercase' as const,
@@ -536,7 +534,7 @@ export function KnowledgeBasePage() {
               border: '1px solid rgba(254,192,15,0.2)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Loader2 size={22} color="#FEC00F" style={{ animation: 'spin 1s linear infinite' }} />
+              <Loader2 size={22} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />
             </div>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: colors.textMuted }}>
               Loading knowledge base…
@@ -566,15 +564,15 @@ export function KnowledgeBasePage() {
                       position: 'relative' as const,
                     }}>
                       {/* Top accent */}
-                      <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #FEC00F 0%, rgba(254,192,15,0.1) 60%, transparent 100%)' }} />
+                      <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, var(--accent) 0%, rgba(254,192,15,0.1) 60%, transparent 100%)' }} />
                       <div style={{ padding: isMobile ? '14px 16px' : '16px 22px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         {/* Section header style */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: 3, height: 14, borderRadius: 3, background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))' }} />
-                          <Clock size={13} color="#FEC00F" />
+                          <div style={{ width: 3, height: 14, borderRadius: 3, background: 'linear-gradient(to bottom, var(--accent), rgba(254,192,15,0.2))' }} />
+                          <Clock size={13} color="var(--accent)" />
                           <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: colors.textMuted }}>Recently Added</span>
                         </div>
-                        <button onClick={() => setActiveTab('documents')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#FEC00F', opacity: 0.7, transition: 'opacity .15s' }}
+                        <button onClick={() => setActiveTab('documents')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--accent)', opacity: 0.7, transition: 'opacity .15s' }}
                           onMouseEnter={e => e.currentTarget.style.opacity = '1'}
                           onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}
                         >View All →</button>
@@ -589,7 +587,7 @@ export function KnowledgeBasePage() {
                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                           >
                             <div style={{ width: 32, height: 32, borderRadius: '9px', background: `rgba(254,192,15,0.08)`, border: '1px solid rgba(254,192,15,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <FileText size={14} color="#FEC00F" />
+                              <FileText size={14} color="var(--accent)" />
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ color: colors.text, fontSize: '13px', fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, letterSpacing: '-0.01em' }}>{doc.filename}</p>
@@ -597,7 +595,7 @@ export function KnowledgeBasePage() {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                               <span style={{ fontSize: '9px', padding: '2px 8px', borderRadius: '5px', background: cc.bg, color: cc.text, fontFamily: "'DM Mono', monospace", letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>{doc.category}</span>
-                              <button onClick={e => { e.stopPropagation(); handleBookmark(doc.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: bookmarkedIds.has(doc.id) ? '#FEC00F' : colors.textMuted, padding: 2, display: 'flex', opacity: bookmarkedIds.has(doc.id) ? 1 : 0.45, transition: 'all .2s' }}>
+                              <button onClick={e => { e.stopPropagation(); handleBookmark(doc.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: bookmarkedIds.has(doc.id) ? 'var(--accent)' : colors.textMuted, padding: 2, display: 'flex', opacity: bookmarkedIds.has(doc.id) ? 1 : 0.45, transition: 'all .2s' }}>
                                 {bookmarkedIds.has(doc.id) ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
                               </button>
                             </div>
@@ -626,7 +624,7 @@ export function KnowledgeBasePage() {
                         >
                           <FileText size={13} color="#A78BFA" style={{ flexShrink: 0 }} />
                           <span style={{ color: colors.text, fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1, letterSpacing: '-0.01em' }}>{doc.filename}</span>
-                          <button onClick={e => { e.stopPropagation(); handleBookmark(doc.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FEC00F', padding: 2, display: 'flex', flexShrink: 0 }}><BookmarkCheck size={13} /></button>
+                          <button onClick={e => { e.stopPropagation(); handleBookmark(doc.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 2, display: 'flex', flexShrink: 0 }}><BookmarkCheck size={13} /></button>
                         </div>
                       ))}
                     </div>
@@ -653,9 +651,9 @@ export function KnowledgeBasePage() {
                     {categories.map(cat => (
                       <button key={cat} onClick={() => setActiveCategory(cat)} style={{
                         padding: '5px 14px', borderRadius: '100px',
-                        border: `1px solid ${activeCategory === cat ? '#FEC00F' : colors.border}`,
+                        border: `1px solid ${activeCategory === cat ? 'var(--accent)' : colors.border}`,
                         background: activeCategory === cat ? 'rgba(254,192,15,0.1)' : 'transparent',
-                        color: activeCategory === cat ? '#FEC00F' : colors.textMuted,
+                        color: activeCategory === cat ? 'var(--accent)' : colors.textMuted,
                         fontFamily: "'DM Mono', monospace", fontSize: '9.5px', letterSpacing: '0.1em',
                         textTransform: 'uppercase' as const, cursor: 'pointer',
                         transition: 'all .2s',
@@ -675,10 +673,10 @@ export function KnowledgeBasePage() {
 
                 {/* Upload Tips card */}
                 <div style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: '16px', overflow: 'hidden', boxShadow: colors.shadow, position: 'relative' as const }}>
-                  <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #FEC00F 0%, rgba(254,192,15,0.1) 60%, transparent 100%)' }} />
+                  <div style={{ position: 'absolute' as const, top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, var(--accent) 0%, rgba(254,192,15,0.1) 60%, transparent 100%)' }} />
                   <div style={{ padding: isMobile ? '14px 16px' : '16px 22px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: 3, height: 14, borderRadius: 3, background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))' }} />
-                    <TrendingUp size={13} color="#FEC00F" />
+                    <div style={{ width: 3, height: 14, borderRadius: 3, background: 'linear-gradient(to bottom, var(--accent), rgba(254,192,15,0.2))' }} />
+                    <TrendingUp size={13} color="var(--accent)" />
                     <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: colors.textMuted }}>Upload Tips</span>
                   </div>
                   <div style={{ padding: isMobile ? '16px' : '20px 22px' }}>
@@ -690,7 +688,7 @@ export function KnowledgeBasePage() {
                       { title: 'Bookmarking',             desc: 'Bookmark important documents for quick access from the Discover tab. Bookmarks persist across sessions.' },
                     ].map((tip, i, arr) => (
                       <div key={i} style={{ padding: '11px 0', borderBottom: i < arr.length - 1 ? `1px solid ${colors.border}` : 'none', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: '#FEC00F', opacity: 0.55, flexShrink: 0, paddingTop: '2px', width: '16px' }}>{String(i + 1).padStart(2, '0')}</span>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: 'var(--accent)', opacity: 0.55, flexShrink: 0, paddingTop: '2px', width: '16px' }}>{String(i + 1).padStart(2, '0')}</span>
                         <div>
                           <p style={{ color: colors.text, fontSize: '13px', fontWeight: 600, margin: '0 0 3px', letterSpacing: '-0.01em' }}>{tip.title}</p>
                           <p style={{ color: colors.textMuted, fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{tip.desc}</p>
