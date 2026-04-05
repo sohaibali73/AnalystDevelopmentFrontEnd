@@ -106,10 +106,12 @@ export function KnowledgeBasePanel({
         width: '360px',
         maxWidth: 'calc(100vw - 48px)',
         maxHeight: '420px',
-        backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF',
-        border: `1px solid ${isDark ? '#3A3A3A' : '#E0E0E0'}`,
-        borderRadius: '16px',
-        boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
+        backgroundColor: isDark ? '#262626' : '#ffffff',
+        border: `1px solid ${isDark ? '#333333' : '#e5e5e5'}`,
+        borderRadius: '12px',
+        boxShadow: isDark 
+          ? '0 12px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(254, 192, 15, 0.2)'
+          : '0 12px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(254, 192, 15, 0.15)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -119,7 +121,10 @@ export function KnowledgeBasePanel({
       {/* Header */}
       <div
         className="px-4 py-3.5 flex items-center justify-between flex-shrink-0"
-        style={{ borderBottom: `1px solid ${isDark ? '#2E2E2E' : '#E5E5E5'}` }}
+        style={{ 
+          borderBottom: `1px solid ${isDark ? '#333333' : '#e5e5e5'}`,
+          backgroundColor: isDark ? 'rgba(254, 192, 15, 0.05)' : 'rgba(254, 192, 15, 0.03)',
+        }}
       >
         <div className="flex items-center gap-2">
           <Database size={15} color="#FEC00F" />

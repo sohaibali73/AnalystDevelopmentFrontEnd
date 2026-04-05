@@ -39,11 +39,11 @@ export function ArtifactRenderer({ artifact, onClose }: ArtifactRendererProps) {
   const [error, setError] = useState<string | null>(null);
 
   const colors = {
-    background: isDark ? '#1E1E1E' : '#ffffff',
-    headerBg: isDark ? '#161B22' : '#f5f5f5',
-    border: isDark ? '#424242' : '#e0e0e0',
-    text: isDark ? '#FFFFFF' : '#212121',
-    textMuted: isDark ? '#9E9E9E' : '#757575',
+    background: isDark ? '#1A1A1A' : '#ffffff',
+    headerBg: isDark ? '#262626' : '#f8f8f8',
+    border: isDark ? '#333333' : '#e5e5e5',
+    text: isDark ? '#E8E8E8' : '#1A1A1A',
+    textMuted: isDark ? '#B0B0B0' : '#666666',
     accent: '#FEC00F',
   };
 
@@ -193,9 +193,10 @@ export function ArtifactRenderer({ artifact, onClose }: ArtifactRendererProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '12px 16px',
+        padding: '14px 16px',
         backgroundColor: colors.headerBg,
         borderBottom: `1px solid ${colors.border}`,
+        transition: 'all 0.2s ease',
       }}>
         {/* Left: Title & Type */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

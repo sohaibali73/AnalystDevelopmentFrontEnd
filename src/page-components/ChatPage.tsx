@@ -137,6 +137,9 @@ const CHAT_STYLES = `
     50%  { opacity: 1; transform: scale(1.1); }
     100% { opacity: 0; transform: scale(1); }
   }
+  @keyframes chat-hover-lift {
+    to { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(254, 192, 15, 0.15); }
+  }
 
   /* Message entrance */
   .chat-msg-enter { animation: chat-fadeUp .25s cubic-bezier(.22,.68,0,1.2) both; }
@@ -145,18 +148,26 @@ const CHAT_STYLES = `
   .chat-msg-row:hover .msg-actions { opacity: 1 !important; }
 
   /* Slim scrollbar */
-  [data-scroll-container]::-webkit-scrollbar { width: 4px; }
+  [data-scroll-container]::-webkit-scrollbar { width: 6px; }
   [data-scroll-container]::-webkit-scrollbar-track { background: transparent; }
-  [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.18); border-radius: 4px; }
-  [data-scroll-container]::-webkit-scrollbar-thumb:hover { background: rgba(96,165,250,0.35); }
+  [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(254, 192, 15, 0.15); border-radius: 3px; }
+  [data-scroll-container]::-webkit-scrollbar-thumb:hover { background: rgba(254, 192, 15, 0.3); }
 
   /* Dot-grid background */
   .chat-root {
     background-color: var(--chat-bg);
     background-image:
-      radial-gradient(ellipse 130% 55% at 65% -8%, rgba(96,165,250,0.045) 0%, transparent 55%),
+      radial-gradient(ellipse 130% 55% at 65% -8%, rgba(254, 192, 15, 0.05) 0%, transparent 55%),
       radial-gradient(var(--chat-dot) 1px, transparent 1px);
     background-size: auto, 24px 24px;
+  }
+
+  /* Message container - user & assistant unified styling */
+  .chat-msg-container {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .chat-msg-container:hover {
+    transform: translateY(-1px);
   }
 
   /* Upload file card */
@@ -172,8 +183,8 @@ const CHAT_STYLES = `
   .upload-spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(96,165,250,0.15);
-    border-top-color: #60A5FA;
+    border: 2px solid rgba(254, 192, 15, 0.2);
+    border-top-color: #FEC00F;
     border-radius: 50%;
     animation: chat-spin 1s linear infinite;
   }
@@ -186,6 +197,43 @@ const CHAT_STYLES = `
   /* Drag-and-drop overlay */
   .drag-drop-overlay {
     animation: chat-fadeIn 0.2s ease-out;
+  }
+
+  /* Unified button styling with yellow accent */
+  .chat-button-primary {
+    background-color: #FEC00F;
+    color: #212121;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(254, 192, 15, 0.2);
+  }
+  .chat-button-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(254, 192, 15, 0.3);
+  }
+  .chat-button-primary:active {
+    transform: translateY(0);
+  }
+
+  /* Input field unified styling */
+  .chat-input-field {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    color: var(--text-color);
+  }
+  .chat-input-field:focus {
+    border-color: #FEC00F;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(254, 192, 15, 0.1);
   }
 `;
 
@@ -1049,15 +1097,17 @@ export function ChatPage() {
 
   // ── Shared token shortcuts ─────────────────────────────────────────────────
   const T = {
-    text:    isDark ? '#EFEFEF'                    : '#0A0A0B',
-    muted:   isDark ? '#606068'                    : '#808088',
-    border:  isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
-    card:    isDark ? '#0D0D10'                    : '#FFFFFF',
-    userBg:  isDark ? 'rgba(96,165,250,0.07)'      : 'rgba(96,165,250,0.09)',
-    userBdr: isDark ? 'rgba(96,165,250,0.18)'      : 'rgba(96,165,250,0.25)',
-    aiBg:    isDark ? 'rgba(255,255,255,0.03)'     : 'rgba(0,0,0,0.02)',
-    aiBdr:   isDark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
+    text:    isDark ? '#E8E8E8'                    : '#1A1A1A',
+    muted:   isDark ? '#B0B0B0'                    : '#666666',
+    border:  isDark ? '#333333'                    : '#e5e5e5',
+    card:    isDark ? '#1A1A1A'                    : '#FFFFFF',
+    userBg:  isDark ? 'rgba(254, 192, 15, 0.08)'  : 'rgba(254, 192, 15, 0.08)',
+    userBdr: isDark ? 'rgba(254, 192, 15, 0.25)'  : 'rgba(254, 192, 15, 0.35)',
+    aiBg:    isDark ? '#262626'                    : '#f8f8f8',
+    aiBdr:   isDark ? '#333333'                    : '#e5e5e5',
     dim:     isDark ? 'rgba(255,255,255,0.18)'     : 'rgba(0,0,0,0.25)',
+    yellow:  '#FEC00F',
+    yellowAccent: 'rgba(254, 192, 15, 0.12)',
   };
 
   // ── renderMessage ──────────────────────────────────────────────────────────
@@ -1208,21 +1258,24 @@ export function ChatPage() {
     // ── USER message ───────────────────────────────────────────────────────
     if (isUser) {
       return (
-        <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '4px 0' }}>
-          <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+        <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '8px 0' }}>
+          <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
             {/* Meta */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {timeStr && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: T.dim, letterSpacing: '0.06em' }}>{timeStr}</span>}
               <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: T.muted, letterSpacing: '0.02em' }}>{userName}</span>
             </div>
-            {/* Bubble */}
+            {/* Bubble with yellow left accent */}
             <div style={{
               background: T.userBg,
               border: `1px solid ${T.userBdr}`,
-              borderRadius: '16px 4px 16px 16px',
+              borderLeft: `3px solid ${T.yellow}`,
+              borderRadius: '12px 16px 16px 12px',
               padding: '12px 16px',
-              fontSize: 14, lineHeight: 1.7,
+              fontSize: 14, 
+              lineHeight: 1.6,
               color: T.text,
+              transition: 'all 0.2s ease',
             }}>
               {renderParts()}
             </div>
@@ -1233,21 +1286,26 @@ export function ChatPage() {
 
     // ── ASSISTANT message ──────────────────────────────────────────────────
     return (
-      <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', gap: '12px', padding: '4px 0' }}>
+      <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', gap: '12px', padding: '8px 0' }}>
         {/* Avatar */}
         <div style={{ flexShrink: 0, paddingTop: 2 }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '10px',
-            background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.1)',
-            border: '1px solid rgba(96,165,250,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 36, 
+            height: 36, 
+            borderRadius: '10px',
+            background: isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.08)',
+            border: `1px solid rgba(254, 192, 15, 0.3)`,
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            transition: 'all 0.2s ease',
           }}>
-            <img src={logo} alt="Yang" style={{ width: 18, height: 18, borderRadius: '5px' }} />
+            <img src={logo} alt="Yang" style={{ width: 20, height: 20, borderRadius: '5px' }} />
           </div>
         </div>
 
         {/* Content column */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {/* Meta */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 700, color: T.text, letterSpacing: '-0.01em' }}>Yang</span>
@@ -1278,12 +1336,13 @@ export function ChatPage() {
             </ChainOfThought>
           )}
 
-          {/* Message body */}
+          {/* Message body - unified card styling */}
           <div style={{
             background: T.aiBg,
             border: `1px solid ${T.aiBdr}`,
-            borderRadius: '4px 16px 16px 16px',
+            borderRadius: '12px',
             padding: '14px 18px',
+            transition: 'all 0.2s ease',
           }}>
             <MessageContent>
               {renderParts()}

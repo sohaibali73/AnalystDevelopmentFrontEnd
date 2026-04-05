@@ -100,20 +100,33 @@ export function ChatSidebar({
         style={{
           borderBottom: `2px solid ${colors.primaryYellow}`,
           backgroundColor: isDark
-            ? 'rgba(254, 192, 15, 0.05)'
+            ? 'rgba(254, 192, 15, 0.06)'
             : 'rgba(254, 192, 15, 0.08)',
+          transition: 'all 0.2s ease',
         }}
       >
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Logo" className="w-8 h-8" />
+          <div style={{
+            width: 32,
+            height: 32,
+            borderRadius: '8px',
+            background: isDark ? 'rgba(254, 192, 15, 0.12)' : 'rgba(254, 192, 15, 0.1)',
+            border: `1px solid ${colors.primaryYellow}30`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <img src={logo} alt="Logo" className="w-5 h-5" />
+          </div>
           <h2
             className="m-0 text-sm font-bold uppercase tracking-wider"
             style={{
               fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
               color: colors.text,
+              letterSpacing: '0.08em',
             }}
           >
-            CHATS
+            Chats
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -126,7 +139,11 @@ export function ChatSidebar({
                   ? 'API Disconnected — click to retry'
                   : 'Checking...'
             }
-            className="cursor-pointer flex items-center"
+            className="cursor-pointer flex items-center p-1 rounded transition-colors"
+            style={{
+              backgroundColor: connStatus === 'connected' ? 'rgba(34, 197, 94, 0.1)' : 
+                              connStatus === 'disconnected' ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+            }}
           >
             {connStatus === 'connected' ? (
               <Wifi size={14} color="#22c55e" />
@@ -138,7 +155,17 @@ export function ChatSidebar({
           </div>
           <button
             onClick={onCollapse}
-            className="bg-transparent border-none cursor-pointer p-1"
+            className="bg-transparent border-none cursor-pointer p-1 rounded transition-colors"
+            style={{
+              color: colors.textMuted,
+              hover: `background ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <ChevronLeft size={16} color={colors.textMuted} />
           </button>
@@ -146,19 +173,21 @@ export function ChatSidebar({
       </div>
 
       {/* Actions */}
-      <div className="p-4 flex flex-col gap-2.5">
+      <div className="p-4 flex flex-col gap-3">
         <button
           onClick={onNewConversation}
-          className="w-full py-3 border-none rounded-xl cursor-pointer flex items-center justify-center gap-2 font-bold text-sm transition-all"
+          className="w-full py-3 border-none rounded-lg cursor-pointer flex items-center justify-center gap-2 font-bold text-sm transition-all hover-lift"
           style={{
             backgroundColor: colors.primaryYellow,
             color: colors.darkGray,
             fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
             boxShadow: '0 2px 8px rgba(254, 192, 15, 0.2)',
+            fontWeight: 600,
+            letterSpacing: '0.02em',
           }}
           onMouseOver={(e) => {
             e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(254, 192, 15, 0.3)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(254, 192, 15, 0.3)';
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.transform = 'translateY(0)';
@@ -230,30 +259,33 @@ export function ChatSidebar({
               onClick={() => {
                 if (renamingId !== conv.id) onSelectConversation(conv);
               }}
-              className="mb-1 rounded-[10px] cursor-pointer text-[13px] flex items-center gap-2 transition-all"
+              className="mb-2 rounded-lg cursor-pointer text-[13px] flex items-center gap-2 transition-all"
               style={{
                 padding: '10px 12px',
                 backgroundColor:
                   selectedConversation?.id === conv.id
-                    ? 'rgba(254, 192, 15, 0.15)'
+                    ? `rgba(254, 192, 15, 0.12)`
                     : 'transparent',
                 border:
                   selectedConversation?.id === conv.id
-                    ? `2px solid ${colors.primaryYellow}`
-                    : '1px solid transparent',
+                    ? `1.5px solid ${colors.primaryYellow}`
+                    : `1px solid transparent`,
                 color: colors.text,
                 fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
               onMouseOver={(e) => {
                 if (selectedConversation?.id !== conv.id) {
                   e.currentTarget.style.backgroundColor = isDark
-                    ? 'rgba(254, 192, 15, 0.05)'
-                    : 'rgba(254, 192, 15, 0.08)';
+                    ? 'rgba(254, 192, 15, 0.06)'
+                    : 'rgba(254, 192, 15, 0.06)';
+                  e.currentTarget.style.transform = 'translateX(4px)';
                 }
               }}
               onMouseOut={(e) => {
                 if (selectedConversation?.id !== conv.id) {
                   e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.transform = 'translateX(0)';
                 }
               }}
             >
