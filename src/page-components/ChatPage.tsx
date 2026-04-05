@@ -1117,13 +1117,13 @@ export function ChatPage() {
       const seenToolCallIds = new Map<string, number>();
       const deduped = parts.map((part: any, pIdx: number) => ({ part, pIdx }));
       // First pass: record the last index for each toolCallId
-      deduped.forEach(({ part, pIdx }) => {
+      deduped.forEach(({ part, pIdx }: { part: any; pIdx: number }) => {
         if (isToolPart(part.type) && part.toolCallId) {
           seenToolCallIds.set(part.toolCallId, pIdx);
         }
       });
 
-      return deduped.map(({ part, pIdx }) => {
+      return deduped.map(({ part, pIdx }: { part: any; pIdx: number }) => {
         if (isToolPart(part.type)) {
           // Skip earlier duplicates — only render the last occurrence per toolCallId
           if (part.toolCallId && seenToolCallIds.get(part.toolCallId) !== pIdx) {
