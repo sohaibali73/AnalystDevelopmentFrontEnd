@@ -431,7 +431,8 @@ export const PromptInput = ({
 
   const matchesAccept = useCallback(
     (f: File) => {
-      if (!accept || accept.trim() === "") {
+      // Accept all files if no accept prop, empty string, or wildcard "*"
+      if (!accept || accept.trim() === "" || accept.trim() === "*") {
         return true;
       }
 
@@ -441,6 +442,10 @@ export const PromptInput = ({
         .filter(Boolean);
 
       return patterns.some((pattern) => {
+        // Handle universal wildcard
+        if (pattern === "*" || pattern === "*/*") {
+          return true;
+        }
         // Handle file extension patterns like ".pdf", ".csv", ".afl"
         if (pattern.startsWith(".")) {
           const fileName = f.name || "";
