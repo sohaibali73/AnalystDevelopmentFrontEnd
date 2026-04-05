@@ -91,7 +91,7 @@ export function getFileChipColor(ext: string): string {
   if (['xls', 'xlsx'].includes(ext)) return '#22c55e';
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return '#a855f7';
   if (['csv', 'json', 'xml'].includes(ext)) return '#f59e0b';
-  return '#FEC00F';
+  return 'var(--accent)';
 }
 
 // ─── Process Manager Utilities ───────────────────────────────────────────────
@@ -178,25 +178,25 @@ export interface ChatColors {
 
 export function getChatColors(isDark: boolean): ChatColors {
   return {
-    // Base surfaces - modern frosted glass aesthetic
-    background: isDark ? '#0C0C0E' : '#FAFAFA',
-    sidebar: isDark ? 'rgba(12, 12, 14, 0.85)' : 'rgba(255, 255, 255, 0.75)',
-    cardBg: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
-    inputBg: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
+    // Base surfaces - now using CSS variables from ThemeContext
+    background: 'var(--bg)',
+    sidebar: 'var(--bg-card)',
+    cardBg: 'var(--bg-card)',
+    inputBg: 'var(--bg-raised)',
     surfaceGlass: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.7)',
-    // Borders - subtle and refined
-    border: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
+    // Borders
+    border: 'var(--border)',
     borderSubtle: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
-    // Text - high contrast, modern
-    text: isDark ? '#F1F1F4' : '#18181B',
-    textMuted: isDark ? '#71717A' : '#A1A1AA',
-    // Accent colors - indigo/violet gradient
-    accent: '#6366F1',
-    accentLight: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
-    accentGlow: 'rgba(99, 102, 241, 0.4)',
+    // Text
+    text: 'var(--text)',
+    textMuted: 'var(--text-muted)',
+    // Accent colors - using CSS variables for theme support
+    accent: 'var(--accent)',
+    accentLight: 'var(--accent-dim)',
+    accentGlow: 'var(--accent-glow)',
     // Legacy compatibility
-    primaryYellow: '#6366F1', // Now uses accent indigo
+    primaryYellow: 'var(--accent)',
     darkGray: '#18181B',
-    accentYellow: '#8B5CF6', // Violet accent
+    accentYellow: 'var(--accent)',
   };
 }

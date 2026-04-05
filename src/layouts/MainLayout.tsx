@@ -96,18 +96,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   const sidebarWidth = isMobile ? 0 : (collapsed ? 80 : 256);
   const isDark = actualTheme === 'dark';
 
-  // Modern blue/teal color palette
+  // Theme-aware colors using CSS variables
   const colors = {
-    background: isDark ? '#0A0A0A' : '#ffffff',
-    sidebar: isDark ? '#0D0D0D' : '#ffffff',
-    border: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.1)',
-    text: isDark ? '#FFFFFF' : '#111111',
-    textMuted: isDark ? '#93C5FD' : '#3B82F6',
-    textSecondary: isDark ? '#A5B4FC' : '#60A5FA',
-    hoverBg: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.08)',
-    accent: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)',
+    background: 'var(--bg)',
+    sidebar: 'var(--bg-card)',
+    border: 'var(--border)',
+    text: 'var(--text)',
+    textMuted: 'var(--text-muted)',
+    textSecondary: 'var(--text-muted)',
+    hoverBg: 'var(--accent-dim)',
+    accent: 'var(--accent)',
     accentText: '#0A0A0B',
-    accentGlow: 'rgba(96,165,250,0.3)',
+    accentGlow: 'var(--accent-glow)',
   };
 
   const isActive = (href: string) => {
@@ -346,7 +346,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   }}>
                     ANALYST
                   </span>
-                  {/* DEVELOPER BETA badge */}
+                  {/* DEVELOPER BETA badge - uses theme accent */}
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -356,16 +356,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                     fontWeight: 700,
                     letterSpacing: '0.14em',
                     textTransform: 'uppercase' as const,
-                    color: isDark ? '#FCD34D' : '#D97706',
-                    background: isDark
-                      ? 'rgba(252,211,77,0.1)'
-                      : 'rgba(217,119,6,0.08)',
-                    border: `1px solid ${isDark ? 'rgba(252,211,77,0.3)' : 'rgba(217,119,6,0.25)'}`,
+                    color: 'var(--accent)',
+                    background: 'var(--accent-dim)',
+                    border: '1px solid var(--border-hover)',
                     borderRadius: '5px',
                     padding: '2px 7px',
-                    boxShadow: isDark
-                      ? '0 0 8px rgba(252,211,77,0.25), 0 0 20px rgba(252,211,77,0.1)'
-                      : '0 0 6px rgba(217,119,6,0.15)',
+                    boxShadow: '0 0 8px var(--accent-glow)',
                     animation: 'devBetaPulse 2.5s ease-in-out infinite',
                     whiteSpace: 'nowrap' as const,
                   }}>
@@ -373,9 +369,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                       width: '5px',
                       height: '5px',
                       borderRadius: '50%',
-                      background: isDark ? '#FCD34D' : '#D97706',
+                      background: 'var(--accent)',
                       flexShrink: 0,
-                      boxShadow: isDark ? '0 0 4px rgba(252,211,77,0.7)' : '0 0 3px rgba(217,119,6,0.5)',
+                      boxShadow: '0 0 4px var(--accent-glow)',
                       animation: 'devBetaDot 2.5s ease-in-out infinite',
                     }} />
                     DEVELOPER BETA
@@ -459,28 +455,24 @@ export function MainLayout({ children }: MainLayoutProps) {
                   position: 'relative',
                   transform: 'translateZ(0)',
                   boxShadow: active 
-                    ? isDark 
-                      ? '0 8px 24px rgba(96,165,250,0.35), inset 0 0 20px rgba(96,165,250,0.2)'
-                      : '0 8px 24px rgba(96,165,250,0.25), inset 0 0 20px rgba(96,165,250,0.15)'
+                    ? '0 8px 24px var(--accent-glow), inset 0 0 20px var(--accent-dim)'
                     : 'none',
                   background: active 
-                    ? 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)'
+                    ? 'var(--accent)'
                     : 'transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
                     e.currentTarget.style.transform = 'translateX(6px) translateZ(0)';
-                    e.currentTarget.style.color = colors.text;
-                    e.currentTarget.style.background = colors.hoverBg;
-                    e.currentTarget.style.boxShadow = isDark 
-                      ? '0 8px 24px rgba(96,165,250,0.2)'
-                      : '0 8px 24px rgba(96,165,250,0.12)';
+                    e.currentTarget.style.color = 'var(--text)';
+                    e.currentTarget.style.background = 'var(--accent-dim)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px var(--accent-glow)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!active) {
                     e.currentTarget.style.transform = 'translateX(0) translateZ(0)';
-                    e.currentTarget.style.color = colors.textMuted;
+                    e.currentTarget.style.color = 'var(--text-muted)';
                     e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.boxShadow = 'none';
                   }
@@ -497,19 +489,17 @@ export function MainLayout({ children }: MainLayoutProps) {
                   justifyContent: 'center',
                   background: active 
                     ? 'rgba(255,255,255,0.2)'
-                    : isDark 
-                      ? 'rgba(96,165,250,0.1)'
-                      : 'rgba(96,165,250,0.08)',
+                    : 'var(--accent-dim)',
                   border: active 
                     ? '1px solid rgba(255,255,255,0.3)'
-                    : `1px solid ${colors.border}`,
+                    : '1px solid var(--border)',
                   boxShadow: active 
-                    ? '0 4px 16px rgba(96,165,250,0.4)'
+                    ? '0 4px 16px var(--accent-glow)'
                     : 'none',
                   transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                   flexShrink: 0,
                 }}>
-                  <Icon size={isMobile ? 20 : 18} color={active ? '#ffffff' : '#60A5FA'} />
+                  <Icon size={isMobile ? 20 : 18} style={{ color: active ? '#ffffff' : 'var(--accent)' }} />
                 </div>
                 
                 {(!collapsed || isMobile) && (
@@ -529,17 +519,15 @@ export function MainLayout({ children }: MainLayoutProps) {
                         borderRadius: '6px',
                         background: active 
                           ? 'rgba(255,255,255,0.2)'
-                          : isDark 
-                            ? 'rgba(96,165,250,0.2)'
-                            : 'rgba(96,165,250,0.15)',
-                        color: active ? '#ffffff' : '#60A5FA',
+                          : 'var(--accent-dim)',
+                        color: active ? '#ffffff' : 'var(--accent)',
                         letterSpacing: '0.5px',
                         lineHeight: 1.4,
                         border: active 
                           ? '1px solid rgba(255,255,255,0.3)'
-                          : `1px solid ${colors.border}`,
+                          : '1px solid var(--border)',
                         boxShadow: active 
-                          ? '0 4px 12px rgba(96,165,250,0.3)'
+                          ? '0 4px 12px var(--accent-glow)'
                           : 'none',
                         flexShrink: 0,
                         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -587,7 +575,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               width: '48px',
               height: '48px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%)',
+              background: 'var(--accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -595,7 +583,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               color: '#0A0A0B',
               fontSize: '16px',
               flexShrink: 0,
-              boxShadow: '0 8px 24px rgba(96,165,250,0.35)',
+              boxShadow: '0 8px 24px var(--accent-glow)',
               border: '1px solid rgba(255,255,255,0.3)',
               transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}>
