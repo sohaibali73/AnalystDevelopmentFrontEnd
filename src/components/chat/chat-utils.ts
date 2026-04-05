@@ -168,19 +168,35 @@ export interface ChatColors {
   primaryYellow: string;
   darkGray: string;
   accentYellow: string;
+  // Modern additions
+  accent: string;
+  accentLight: string;
+  accentGlow: string;
+  surfaceGlass: string;
+  borderSubtle: string;
 }
 
 export function getChatColors(isDark: boolean): ChatColors {
   return {
-    background: isDark ? '#0F0F0F' : '#ffffff',
-    sidebar: isDark ? '#1A1A1A' : '#ffffff',
-    cardBg: isDark ? '#1A1A1A' : '#ffffff',
-    inputBg: isDark ? '#262626' : '#f8f8f8',
-    border: isDark ? '#333333' : '#e5e5e5',
-    text: isDark ? '#E8E8E8' : '#1A1A1A',
-    textMuted: isDark ? '#B0B0B0' : '#666666',
-    primaryYellow: '#FEC00F',
-    darkGray: '#212121',
-    accentYellow: '#FFD700',
+    // Base surfaces - modern frosted glass aesthetic
+    background: isDark ? '#0C0C0E' : '#FAFAFA',
+    sidebar: isDark ? 'rgba(12, 12, 14, 0.85)' : 'rgba(255, 255, 255, 0.75)',
+    cardBg: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+    inputBg: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
+    surfaceGlass: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.7)',
+    // Borders - subtle and refined
+    border: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
+    borderSubtle: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+    // Text - high contrast, modern
+    text: isDark ? '#F1F1F4' : '#18181B',
+    textMuted: isDark ? '#71717A' : '#A1A1AA',
+    // Accent colors - indigo/violet gradient
+    accent: '#6366F1',
+    accentLight: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+    accentGlow: 'rgba(99, 102, 241, 0.4)',
+    // Legacy compatibility
+    primaryYellow: '#6366F1', // Now uses accent indigo
+    darkGray: '#18181B',
+    accentYellow: '#8B5CF6', // Violet accent
   };
 }

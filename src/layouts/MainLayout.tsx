@@ -38,15 +38,11 @@ const navItems: NavItem[] = [
   { name: 'AFL GENERATOR', href: '/afl', icon: Code2 },
   { name: 'CHAT', href: '/chat', icon: MessageCircle },
   { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
-  { name: 'REVERSE ENGINEER', href: '/reverse-engineer', icon: Zap },
   { name: 'SETTINGS', href: '/settings', icon: Settings },
 ];
 
 // Hidden pages - accessible via URL but not shown in navigation
-// skills, backtest, developer, deck-generator
-
-// Hidden pages - accessible via URL but not shown in navigation
-// developer, non-apple-developer, autopilot, deck-generator
+// reverse-engineer, skills, backtest, developer, deck-generator, non-apple-developer, autopilot
 
 interface MainLayoutProps {
   children: React.ReactNode;

@@ -115,15 +115,15 @@ import { Database } from 'lucide-react';
 const logo = '/potomac-icon.png';
 
 const CHAT_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
   @keyframes chat-fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   @keyframes chat-pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.3; transform: scale(0.55); }
+    50%       { opacity: 0.4; transform: scale(0.6); }
   }
   @keyframes chat-spin {
     to { transform: rotate(360deg); }
@@ -137,45 +137,57 @@ const CHAT_STYLES = `
     50%  { opacity: 1; transform: scale(1.1); }
     100% { opacity: 0; transform: scale(1); }
   }
+  @keyframes chat-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes chat-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); }
+    50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.4); }
+  }
 
   /* Message entrance */
-  .chat-msg-enter { animation: chat-fadeUp .25s cubic-bezier(.22,.68,0,1.2) both; }
+  .chat-msg-enter { animation: chat-fadeUp .3s cubic-bezier(.16, 1, .3, 1) both; }
 
   /* Hover-reveal action bar on message rows */
   .chat-msg-row:hover .msg-actions { opacity: 1 !important; }
 
-  /* Slim scrollbar */
-  [data-scroll-container]::-webkit-scrollbar { width: 4px; }
+  /* Modern scrollbar */
+  [data-scroll-container]::-webkit-scrollbar { width: 6px; }
   [data-scroll-container]::-webkit-scrollbar-track { background: transparent; }
-  [data-scroll-container]::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.18); border-radius: 4px; }
-  [data-scroll-container]::-webkit-scrollbar-thumb:hover { background: rgba(96,165,250,0.35); }
+  [data-scroll-container]::-webkit-scrollbar-thumb { 
+    background: var(--scroll-thumb, rgba(99, 102, 241, 0.15)); 
+    border-radius: 3px; 
+  }
+  [data-scroll-container]::-webkit-scrollbar-thumb:hover { 
+    background: var(--scroll-thumb-hover, rgba(99, 102, 241, 0.3)); 
+  }
 
-  /* Dot-grid background */
+  /* Modern frosted glass background */
   .chat-root {
     background-color: var(--chat-bg);
     background-image:
-      radial-gradient(ellipse 130% 55% at 65% -8%, rgba(96,165,250,0.045) 0%, transparent 55%),
-      radial-gradient(var(--chat-dot) 1px, transparent 1px);
-    background-size: auto, 24px 24px;
+      radial-gradient(ellipse 100% 80% at 50% -20%, var(--chat-glow, rgba(99, 102, 241, 0.08)) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, var(--chat-glow-secondary, rgba(139, 92, 246, 0.05)) 0%, transparent 50%);
   }
 
   /* Upload file card */
   .upload-file-card {
     animation: chat-fadeIn 0.3s ease-out;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(.16, 1, .3, 1);
   }
   .upload-file-card:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
 
   /* Upload spinner */
   .upload-spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(96,165,250,0.15);
-    border-top-color: #60A5FA;
+    border: 2px solid rgba(99, 102, 241, 0.15);
+    border-top-color: #6366F1;
     border-radius: 50%;
-    animation: chat-spin 1s linear infinite;
+    animation: chat-spin 0.8s linear infinite;
   }
 
   /* Checkmark flash */
@@ -186,6 +198,29 @@ const CHAT_STYLES = `
   /* Drag-and-drop overlay */
   .drag-drop-overlay {
     animation: chat-fadeIn 0.2s ease-out;
+  }
+
+  /* Modern message bubble styles */
+  .chat-message-user {
+    background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+    color: white;
+    border-radius: 18px 18px 4px 18px;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
+  }
+  
+  .chat-message-assistant {
+    background: var(--assistant-bg, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--assistant-border, rgba(255, 255, 255, 0.06));
+    border-radius: 18px 18px 18px 4px;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Input area glass effect */
+  .chat-input-container {
+    background: var(--input-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid var(--input-border);
   }
 `;
 
@@ -1323,8 +1358,15 @@ export function ChatPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const cssVars = {
-    '--chat-bg':  isDark ? '#080809' : '#F5F5F6',
-    '--chat-dot': isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)',
+    '--chat-bg':  isDark ? '#0C0C0E' : '#FAFAFA',
+    '--chat-glow': isDark ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.05)',
+    '--chat-glow-secondary': isDark ? 'rgba(139, 92, 246, 0.05)' : 'rgba(139, 92, 246, 0.03)',
+    '--scroll-thumb': isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.12)',
+    '--scroll-thumb-hover': isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.25)',
+    '--assistant-bg': isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+    '--assistant-border': isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    '--input-bg': isDark ? 'rgba(12, 12, 14, 0.9)' : 'rgba(255, 255, 255, 0.85)',
+    '--input-border': isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
   } as React.CSSProperties;
 
   return (
@@ -1338,7 +1380,7 @@ export function ChatPage() {
         display: 'flex',
         overflow: 'hidden',
         position: 'relative',
-        fontFamily: "'Instrument Sans', 'Quicksand', sans-serif",
+        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
       }}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
@@ -1425,45 +1467,47 @@ export function ChatPage() {
           }}
         >
           <div style={{
-            width: '80%',
-            maxWidth: '500px',
-            padding: '48px',
-            borderRadius: '16px',
-            border: `2px dashed ${isDark ? 'rgba(96,165,250,0.5)' : 'rgba(96,165,250,0.6)'}`,
+            width: '85%',
+            maxWidth: '480px',
+            padding: '56px 48px',
+            borderRadius: '24px',
+            border: `2px dashed ${isDark ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.4)'}`,
             background: isDark
-              ? 'rgba(96,165,250,0.06)'
-              : 'rgba(96,165,250,0.08)',
+              ? 'rgba(99, 102, 241, 0.08)'
+              : 'rgba(99, 102, 241, 0.06)',
+            backdropFilter: 'blur(20px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '12px',
+            gap: '16px',
+            boxShadow: '0 24px 48px rgba(99, 102, 241, 0.15)',
           }}>
             <div style={{
-              width: 48,
-              height: 48,
-              borderRadius: '12px',
-              background: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.12)',
-              border: '1px solid rgba(96,165,250,0.3)',
+              width: 64,
+              height: 64,
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
             }}>
-              <PaperclipIcon size={24} color="#60A5FA" />
+              <PaperclipIcon size={28} color="#ffffff" />
             </div>
             <span style={{
-              fontFamily: "'Syne', sans-serif",
-              fontSize: '18px',
-              fontWeight: 700,
-              color: isDark ? '#EFEFEF' : '#0A0A0B',
-              letterSpacing: '-0.01em',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: '20px',
+              fontWeight: 600,
+              color: isDark ? '#F1F1F4' : '#18181B',
+              letterSpacing: '-0.02em',
             }}>
               Drop files to upload
             </span>
             <span style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: '11px',
-              letterSpacing: '0.06em',
-              color: isDark ? '#606068' : '#808088',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '12px',
+              letterSpacing: '0.02em',
+              color: isDark ? '#71717A' : '#A1A1AA',
             }}>
               PDF, CSV, JSON, Images, Documents, and more
             </span>
@@ -1504,22 +1548,26 @@ export function ChatPage() {
               position: 'absolute',
               top: backendAvailable ? 20 : 60,
               left: 20, zIndex: 100,
-              background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.1)',
-              border: '1px solid rgba(96,165,250,0.3)',
-              borderRadius: '9px', padding: '8px',
+              background: isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.08)',
+              border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.2)'}`,
+              borderRadius: '12px', padding: '10px',
               cursor: 'pointer',
-              transition: 'background .15s, border-color .15s',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(96,165,250,0.18)';
-              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.5)';
+              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+              e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+              e.currentTarget.style.transform = 'scale(1.05)';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.1)';
-              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.3)';
+              e.currentTarget.style.background = isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.08)';
+              e.currentTarget.style.borderColor = isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.2)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <ChevronRight size={16} color="#60A5FA" />
+            <ChevronRight size={18} color="#6366F1" />
           </button>
         )}
 
@@ -1545,55 +1593,85 @@ export function ChatPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '28px', padding: '40px 20px 20px' }}>
 
                     {/* Logo + glow */}
+                    {/* Logo with modern glow */}
                     <div style={{ position: 'relative' }}>
                       <div style={{
-                        position: 'absolute', inset: '-20px',
-                        background: 'radial-gradient(circle, rgba(96,165,250,0.15) 0%, transparent 70%)',
+                        position: 'absolute', inset: '-30px',
+                        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 60%)',
                         borderRadius: '50%', pointerEvents: 'none',
+                        animation: 'chat-glow 3s ease-in-out infinite',
                       }} />
-                      <img src={logo} alt="Yang" style={{
-                        width: 68,
-                        filter: 'drop-shadow(0 4px 16px rgba(96,165,250,0.3))',
+                      <div style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '20px',
+                        background: isDark
+                          ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))'
+                          : 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1))',
+                        border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.2)'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         position: 'relative',
-                      }} />
+                        boxShadow: '0 8px 32px rgba(99, 102, 241, 0.25)',
+                      }}>
+                        <img src={logo} alt="Yang" style={{
+                          width: 48,
+                          filter: 'drop-shadow(0 2px 8px rgba(99, 102, 241, 0.3))',
+                        }} />
+                      </div>
                     </div>
 
-                    {/* Headline */}
+                    {/* Headline - Modern typography */}
                     <div style={{ textAlign: 'center' }}>
                       <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        background: isDark ? 'rgba(96,165,250,0.07)' : 'rgba(96,165,250,0.08)',
-                        border: '1px solid rgba(96,165,250,0.2)',
-                        borderRadius: '100px', padding: '4px 14px 4px 10px',
-                        marginBottom: '18px',
+                        background: isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.08)',
+                        border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.2)'}`,
+                        borderRadius: '100px', padding: '6px 16px 6px 12px',
+                        marginBottom: '20px',
+                        backdropFilter: 'blur(10px)',
                       }}>
-                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#60A5FA' }} />
+                        <div style={{ 
+                          width: 6, height: 6, borderRadius: '50%', 
+                          background: '#22C55E',
+                          boxShadow: '0 0 8px rgba(34, 197, 94, 0.6)',
+                        }} />
                         <span style={{
-                          fontFamily: "'DM Mono', monospace",
-                          fontSize: '9px', letterSpacing: '0.16em',
-                          textTransform: 'uppercase' as const, color: '#60A5FA',
+                          fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+                          fontSize: '10px', letterSpacing: '0.12em',
+                          textTransform: 'uppercase' as const, 
+                          color: isDark ? '#A5B4FC' : '#6366F1',
+                          fontWeight: 500,
                         }}>
-                          AI Chat · Online
+                          AI Assistant · Online
                         </span>
                       </div>
                       <h2 style={{
-                        fontFamily: "'Syne', var(--font-rajdhani), sans-serif",
-                        fontSize: isMobile ? '26px' : '34px',
-                        fontWeight: 800, letterSpacing: '-0.025em',
-                        color: T.text, margin: '0 0 10px',
-                        lineHeight: 1.1,
+                        fontFamily: "'Inter', system-ui, sans-serif",
+                        fontSize: isMobile ? '28px' : '38px',
+                        fontWeight: 700, letterSpacing: '-0.03em',
+                        color: T.text, margin: '0 0 12px',
+                        lineHeight: 1.15,
+                        background: isDark 
+                          ? 'linear-gradient(135deg, #F1F1F4 0%, #A5B4FC 100%)'
+                          : 'linear-gradient(135deg, #18181B 0%, #6366F1 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
                       }}>
-                        Potomac Analyst Chat
+                        Potomac Analyst
                       </h2>
                       <p style={{
-                        fontSize: '14px', color: T.muted,
-                        lineHeight: 1.75, maxWidth: '420px', margin: '0 auto',
+                        fontSize: '15px', color: T.muted,
+                        lineHeight: 1.7, maxWidth: '440px', margin: '0 auto',
+                        fontWeight: 400,
                       }}>
-                        Advanced AFL generation, strategy analysis, and trading guidance — ask anything.
+                        Your intelligent assistant for AFL generation, strategy analysis, and market insights.
                       </p>
                     </div>
 
-                    {/* Suggestion chips */}
+                    {/* Modern suggestion chips */}
                     <Suggestions className="justify-center">
                       <Suggestion suggestion="Generate a moving average crossover AFL" onClick={(s) => setInput(s)} />
                       <Suggestion suggestion="Explain RSI divergence strategy" onClick={(s) => setInput(s)} />
@@ -1602,13 +1680,13 @@ export function ChatPage() {
                     </Suggestions>
 
                     <span style={{
-                      fontFamily: "'DM Mono', monospace",
-                      fontSize: '9.5px', letterSpacing: '0.1em',
-                      color: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.22)',
+                      fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+                      fontSize: '10px', letterSpacing: '0.08em',
+                      color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)',
                       textTransform: 'uppercase' as const,
+                      fontWeight: 500,
                     }}>
-                      Select a suggestion or type below
-                    </span>
+                      Select a suggestion or start typing
                   </div>
                 </ConversationEmptyState>
               ) : (
@@ -1722,20 +1800,24 @@ export function ChatPage() {
           </div>
         )}
 
-        {/* ── Prompt Input ───────────────────────────────────────────────────── */}
-        <div style={{
-          padding: isMobile ? '12px 14px 14px' : '14px 24px 18px',
-          flexShrink: 0,
-          background: isDark
-            ? 'linear-gradient(to top, rgba(8,8,9,0.98) 0%, rgba(8,8,9,0.92) 100%)'
-            : 'linear-gradient(to top, rgba(245,245,246,0.98) 0%, rgba(245,245,246,0.92) 100%)',
-          borderTop: `1px solid ${T.border}`,
-          backdropFilter: 'blur(12px)',
-        }}>
-          {/* Thin blue accent line above input */}
+        {/* ── Prompt Input — Modern Frosted Glass ───────────────────────────── */}
+        <div 
+          className="chat-input-container"
+          style={{
+            padding: isMobile ? '16px 16px 20px' : '20px 28px 24px',
+            flexShrink: 0,
+            background: isDark
+              ? 'linear-gradient(to top, rgba(12, 12, 14, 0.95) 0%, rgba(12, 12, 14, 0.85) 100%)'
+              : 'linear-gradient(to top, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.8) 100%)',
+            borderTop: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          }}
+        >
+          {/* Modern gradient accent line */}
           <div style={{
-            height: '1px', marginBottom: '12px',
-            background: 'linear-gradient(90deg, transparent 0%, rgba(96,165,250,0.35) 40%, rgba(96,165,250,0.12) 70%, transparent 100%)',
+            height: '2px', marginBottom: '16px', borderRadius: '1px',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(99, 102, 241, 0.5) 30%, rgba(139, 92, 246, 0.4) 70%, transparent 100%)',
           }} />
           <div style={{ maxWidth: '820px', margin: '0 auto' }}>
             <TooltipProvider>
