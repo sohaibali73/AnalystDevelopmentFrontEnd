@@ -196,14 +196,17 @@ export function ChatSkillSelector({
           cursor: disabled ? 'not-allowed' : 'pointer',
           color: hasActiveSkill ? T.accent : T.muted,
           opacity: disabled ? 0.4 : 1,
-          transition: 'all .15s',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           whiteSpace: 'nowrap',
+          boxShadow: open || hasActiveSkill ? `0 0 0 2px rgba(254, 192, 15, 0.1)` : 'none',
         }}
         onMouseEnter={(e) => {
           if (!disabled && !open && !hasActiveSkill) {
             e.currentTarget.style.background = T.bgHover;
             e.currentTarget.style.borderColor = T.accentBorder;
             e.currentTarget.style.color = T.accent;
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = `0 2px 6px rgba(254, 192, 15, 0.15)`;
           }
         }}
         onMouseLeave={(e) => {
@@ -211,6 +214,8 @@ export function ChatSkillSelector({
             e.currentTarget.style.background = 'none';
             e.currentTarget.style.borderColor = T.border;
             e.currentTarget.style.color = T.muted;
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
           }
         }}
       >
@@ -253,7 +258,8 @@ export function ChatSkillSelector({
             zIndex: 10000,
             display: 'flex',
             flexDirection: 'column',
-            animation: 'chat-fadeIn 0.15s ease-out',
+            animation: 'skill-panel-open 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+            backdropFilter: 'blur(0px)',
           }}
         >
           {/* Header */}
@@ -325,9 +331,10 @@ export function ChatSkillSelector({
               padding: '0 10px 8px',
               overflowX: 'auto',
               flexShrink: 0,
+              animation: 'skill-pills-slide 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards',
             }}
           >
-            {categories.map((cat) => {
+            {categories.map((cat, idx) => {
               const isActive = cat === activeCategory;
               const isAll = cat === 'ALL';
               const catColor = isAll ? null : getCategoryColor(cat);
@@ -364,8 +371,20 @@ export function ChatSkillSelector({
                         : catColor?.text || T.pillActiveText
                       : T.muted,
                     whiteSpace: 'nowrap',
-                    transition: 'all .15s',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     flexShrink: 0,
+                    animation: `skill-pill-enter 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+                    animationDelay: `${idx * 0.03}s`,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = `0 2px 6px rgba(254, 192, 15, 0.1)`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   {isAll ? 'ALL' : getCategoryLabel(cat)}
@@ -383,7 +402,7 @@ export function ChatSkillSelector({
             }}
           >
             {loading ? (
-              // Shimmer loading
+              // Shimmer loading with staggered animation
               Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
@@ -391,6 +410,8 @@ export function ChatSkillSelector({
                     padding: '10px',
                     borderRadius: '8px',
                     marginBottom: '2px',
+                    animation: `skill-item-skeleton 0.3s ease-out forwards`,
+                    animationDelay: `${i * 0.05}s`,
                   }}
                 >
                   <div
@@ -399,10 +420,11 @@ export function ChatSkillSelector({
                       width: '60%',
                       borderRadius: '4px',
                       background: isDark
-                        ? 'rgba(255,255,255,0.06)'
-                        : 'rgba(0,0,0,0.06)',
+                        ? 'rgba(254, 192, 15, 0.06)'
+                        : 'rgba(254, 192, 15, 0.05)',
                       marginBottom: '6px',
-                      animation: 'chat-shimmer 1.5s ease-in-out infinite',
+                      animation: 'skill-shimmer 1.8s ease-in-out infinite',
+                      animationDelay: `${i * 0.1}s`,
                     }}
                   />
                   <div
@@ -411,9 +433,10 @@ export function ChatSkillSelector({
                       width: '80%',
                       borderRadius: '4px',
                       background: isDark
-                        ? 'rgba(255,255,255,0.04)'
-                        : 'rgba(0,0,0,0.04)',
-                      animation: 'chat-shimmer 1.5s ease-in-out infinite 0.1s',
+                        ? 'rgba(254, 192, 15, 0.04)'
+                        : 'rgba(254, 192, 15, 0.03)',
+                      animation: 'skill-shimmer 1.8s ease-in-out infinite',
+                      animationDelay: `${i * 0.1 + 0.2}s`,
                     }}
                   />
                 </div>
@@ -430,7 +453,7 @@ export function ChatSkillSelector({
                 {fetched ? 'No skills found' : 'Failed to load skills'}
               </div>
             ) : (
-              filteredSkills.map((skill) => {
+              filteredSkills.map((skill, idx) => {
                 const isSelected = skill.slug === forcedSkillSlug;
                 const catColor = getCategoryColor(skill.category);
                 return (
@@ -450,16 +473,20 @@ export function ChatSkillSelector({
                       background: isSelected ? T.accentBg : 'none',
                       cursor: 'pointer',
                       textAlign: 'left' as const,
-                      transition: 'all .15s',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      animation: `skill-item-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+                      animationDelay: `${idx * 0.02}s`,
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) {
                         e.currentTarget.style.background = T.bgHover;
+                        e.currentTarget.style.transform = 'translateX(2px)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) {
                         e.currentTarget.style.background = 'none';
+                        e.currentTarget.style.transform = 'translateX(0)';
                       }
                     }}
                   >
@@ -525,12 +552,16 @@ export function ChatSkillSelector({
                       </div>
                     </div>
 
-                    {/* Check icon */}
+                    {/* Check icon with animation */}
                     {isSelected && (
                       <Check
                         size={14}
                         color={T.accent}
-                        style={{ flexShrink: 0, marginTop: 2 }}
+                        style={{ 
+                          flexShrink: 0, 
+                          marginTop: 2,
+                          animation: 'skill-check-pulse 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                        }}
                       />
                     )}
                   </button>

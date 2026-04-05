@@ -47,6 +47,7 @@ export function SkillResultCard(props: SkillResultCardProps) {
         fontSize: '13px',
         marginTop: '8px',
         maxWidth: '700px',
+        animation: 'skill-result-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <Zap size={16} />
@@ -93,33 +94,52 @@ export function SkillResultCard(props: SkillResultCardProps) {
     <div style={{
       borderRadius: '12px',
       overflow: 'hidden',
-      border: '1px solid rgba(96,165,250,0.25)',
+      border: '1px solid rgba(254, 192, 15, 0.25)',
       maxWidth: '750px',
       marginTop: '8px',
-      background: 'linear-gradient(135deg, rgba(96,165,250,0.06) 0%, rgba(139,92,246,0.04) 100%)',
-    }}>
+      background: 'linear-gradient(135deg, rgba(254, 192, 15, 0.06) 0%, rgba(254, 192, 15, 0.03) 100%)',
+      animation: 'skill-result-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    }}
+    onMouseEnter={(e) => {
+      if (e.currentTarget instanceof HTMLElement) {
+        e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.4)';
+        e.currentTarget.style.boxShadow = '0 4px 16px rgba(254, 192, 15, 0.1)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
+      }
+    }}
+    onMouseLeave={(e) => {
+      if (e.currentTarget instanceof HTMLElement) {
+        e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.25)';
+        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.transform = 'translateY(0)';
+      }
+    }}
+    >
       {/* Header */}
       <div style={{
-        padding: '12px 16px',
-        background: 'linear-gradient(135deg, rgba(96,165,250,0.12) 0%, rgba(139,92,246,0.08) 100%)',
+        padding: '14px 16px',
+        background: 'linear-gradient(135deg, rgba(254, 192, 15, 0.08) 0%, rgba(254, 192, 15, 0.04) 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderBottom: '1px solid rgba(96,165,250,0.15)',
+        borderBottom: '1px solid rgba(254, 192, 15, 0.15)',
+        transition: 'all 0.2s ease',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Sparkles size={16} color="#60A5FA" />
-          <span style={{ fontWeight: 700, fontSize: '13px', color: '#60A5FA' }}>
+          <Sparkles size={16} color="#FEC00F" style={{ animation: 'skill-spark 0.6s ease-in-out infinite' }} />
+          <span style={{ fontWeight: 700, fontSize: '13px', color: '#FEC00F' }}>
             {props.skill_name || props.skill || 'Skill Result'}
           </span>
           <span style={{
             fontSize: '9px',
             fontWeight: 700,
-            padding: '2px 6px',
+            padding: '3px 6px',
             borderRadius: '4px',
-            backgroundColor: 'rgba(96,165,250,0.15)',
-            color: '#93C5FD',
+            backgroundColor: 'rgba(254, 192, 15, 0.15)',
+            color: '#FEC00F',
             letterSpacing: '0.5px',
+            animation: 'skill-badge-pulse 2s ease-in-out infinite',
           }}>
             SKILL
           </span>
@@ -137,9 +157,25 @@ export function SkillResultCard(props: SkillResultCardProps) {
           )}
           <button
             onClick={() => setExpanded(!expanded)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', padding: '2px' }}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              color: 'rgba(255,255,255,0.5)', 
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+              e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'none';
+              e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+            }}
           >
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expanded ? <ChevronUp size={14} style={{ transition: 'transform 0.2s ease' }} /> : <ChevronDown size={14} style={{ transition: 'transform 0.2s ease' }} />}
           </button>
         </div>
       </div>
