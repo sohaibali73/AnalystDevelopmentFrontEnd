@@ -1266,7 +1266,7 @@ export function ChatPage() {
       );
     }
 
-    // ── ASSISTANT message ──────────────────────────────────────────────────
+    // ── ASSISTANT message ───────────��──────────────────────────────────────
     return (
       <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', gap: '12px', padding: '4px 0' }}>
         {/* Avatar */}
@@ -1687,7 +1687,7 @@ export function ChatPage() {
                       fontWeight: 500,
                     }}>
                       Select a suggestion or start typing
-                  </div>
+                    </span>
                 </ConversationEmptyState>
               ) : (
                 <>
