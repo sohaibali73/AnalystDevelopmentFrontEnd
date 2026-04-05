@@ -118,18 +118,18 @@ export default function DeckGeneratorPage() {
     }
   };
 
-  // ── Styles ─────────────────────────────────────────────────────────────
+  // ── Styles now using CSS variables from ThemeContext ───────────────────
 
   const colors = {
-    bg: isDark ? '#1a1a1a' : '#ffffff',
-    cardBg: isDark ? '#242424' : '#f9fafb',
-    border: isDark ? '#333333' : '#e5e7eb',
-    text: isDark ? '#f5f5f5' : '#111827',
-    textMuted: isDark ? '#9ca3af' : '#6b7280',
-    inputBg: isDark ? '#1e1e1e' : '#ffffff',
-    inputBorder: isDark ? '#404040' : '#d1d5db',
-    accent: '#FEC00F',
-    accentHover: '#e5ad0e',
+    bg: 'var(--bg)',
+    cardBg: 'var(--bg-card)',
+    border: 'var(--border)',
+    text: 'var(--text)',
+    textMuted: 'var(--text-muted)',
+    inputBg: 'var(--bg-raised)',
+    inputBorder: 'var(--border)',
+    accent: 'var(--accent)',
+    accentHover: 'var(--accent)',
     accentText: '#212121',
     errorBg: isDark ? 'rgba(220,38,38,0.1)' : '#fef2f2',
     errorText: isDark ? '#fca5a5' : '#dc2626',

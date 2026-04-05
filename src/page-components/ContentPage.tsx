@@ -57,15 +57,15 @@ export default function ContentPage() {
       title: 'Reverse Engineer',
       description: 'Convert strategy logic and descriptions directly into working AFL code.',
       href: '/reverse-engineer',
-      color: '#FEC00F',
+      color: 'var(--accent)',
     },
   ];
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: isDark ? '#080809' : '#F5F5F6',
-      color: isDark ? '#EFEFEF' : '#0A0A0B',
+      background: 'var(--bg)',
+      color: 'var(--text)',
       fontFamily: "'Instrument Sans', sans-serif",
       padding: '40px 20px',
     }}>
@@ -84,7 +84,7 @@ export default function ContentPage() {
           <div style={{
             width: '6px',
             height: '24px',
-            background: 'linear-gradient(to bottom, #FEC00F, rgba(254,192,15,0.2))',
+            background: 'linear-gradient(to bottom, var(--accent), var(--accent-glow))',
             borderRadius: '3px',
           }} />
           <span style={{
@@ -102,7 +102,7 @@ export default function ContentPage() {
           fontSize: '42px',
           fontWeight: 800,
           marginBottom: '16px',
-          background: 'linear-gradient(135deg, #FEC00F, #A78BFA)',
+          background: 'linear-gradient(135deg, var(--accent), #A78BFA)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}>

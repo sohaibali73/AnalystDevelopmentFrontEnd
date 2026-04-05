@@ -2,18 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  ArrowLeft, 
-  Mail, 
-  Loader2, 
+import {
+  ArrowLeft,
+  Mail,
+  Loader2,
   AlertCircle,
   CheckCircle,
-  Key
+  Key,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
-// Use logo from public directory (Next.js serves from /public)
-const logo = '/potomac-icon.png';
+const logoSrc = '/potomac-icon.png';
 
 export function ForgotPasswordPage() {
   const { resolvedTheme } = useTheme();
@@ -22,23 +21,13 @@ export function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  // FIXED: SSR-safe - don't access window in useState initializer
   const [isMobile, setIsMobile] = useState(false);
-  const [isSmallMobile, setIsSmallMobile] = useState(false);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-      setIsSmallMobile(window.innerWidth < 768);
-    };
-
-    handleResize(); // Call immediately to set initial values
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
     window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,24 +36,16 @@ export function ForgotPasswordPage() {
       setError('Please enter your email address');
       return;
     }
-
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email address');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
       // TODO: Implement actual password reset API call
-      // const response = await apiClient.requestPasswordReset(email);
-      
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send reset email. Please try again.');
@@ -73,276 +54,231 @@ export function ForgotPasswordPage() {
     }
   };
 
+  // Frosted glass styles — identical to LoginPage / RegisterPage
+  const glassCard = {
+    background: isDark
+      ? 'rgba(255, 255, 255, 0.03)'
+      : 'rgba(255, 255, 255, 0.7)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
+    borderRadius: '24px',
+    boxShadow: isDark
+      ? '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+      : '0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '14px 16px 14px 48px',
+    fontSize: '15px',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontWeight: 500,
+    color: isDark ? '#FAFAFA' : '#0A0A0B',
+    background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+    border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+    borderRadius: '12px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    boxSizing: 'border-box' as const,
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: 600,
+    color: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+    marginBottom: '8px',
+    fontFamily: "'Inter', system-ui, sans-serif",
+  };
+
   return (
     <div style={{
       minHeight: '100dvh',
-      backgroundColor: resolvedTheme === 'dark' ? '#0A0A0B' : '#ffffff',
       display: 'flex',
-      fontFamily: "'Quicksand', sans-serif",
-      flexDirection: isMobile ? 'column' : 'row',
-      WebkitUserSelect: 'none',
-      WebkitTouchCallout: 'none',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: isMobile ? '24px 16px' : '40px',
+      background: isDark
+        ? 'linear-gradient(135deg, #0A0A0B 0%, #141419 50%, #0A0A0B 100%)'
+        : 'linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 50%, #F8FAFC 100%)',
+      position: 'relative',
+      overflow: 'hidden',
+      fontFamily: "'Inter', system-ui, sans-serif",
     }}>
-      {/* Left Side - Branding */}
+
+      {/* Animated background orbs */}
       <div style={{
-        flex: isMobile ? undefined : 1,
-        background: isDark 
-          ? 'linear-gradient(135deg, #1A1A1D 0%, #0A0A0B 50%, #1A1A1D 100%)'
-          : 'linear-gradient(160deg, #fdf8ef 0%, #fefcf7 40%, #f5f0e8 100%)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: isSmallMobile ? '40px 24px' : '60px',
+        position: 'absolute',
+        top: '10%',
+        left: '10%',
+        width: '400px',
+        height: '400px',
+        borderRadius: '50%',
+        background: isDark
+          ? 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%)',
+        filter: 'blur(60px)',
+        animation: 'float1 8s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '10%',
+        right: '10%',
+        width: '350px',
+        height: '350px',
+        borderRadius: '50%',
+        background: isDark
+          ? 'radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%)',
+        filter: 'blur(60px)',
+        animation: 'float2 10s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '500px',
+        height: '500px',
+        borderRadius: '50%',
+        background: isDark
+          ? 'radial-gradient(circle, rgba(254, 192, 15, 0.08) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(254, 192, 15, 0.1) 0%, transparent 70%)',
+        filter: 'blur(80px)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Main Card */}
+      <div style={{
+        ...glassCard,
+        width: '100%',
+        maxWidth: '440px',
+        padding: isMobile ? '32px 24px' : '48px 40px',
         position: 'relative',
-        overflow: 'hidden',
-        minHeight: isMobile ? 'auto' : '100dvh',
-        paddingTop: isMobile ? '20px' : '60px',
-        paddingBottom: isMobile ? '30px' : '0',
+        zIndex: 1,
       }}>
-        {/* Background Pattern */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundImage: `
-            radial-gradient(circle at 20% 50%, rgba(254, 192, 15, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(254, 192, 15, 0.05) 0%, transparent 40%)
-          `,
-          pointerEvents: 'none',
-        }} />
 
-        {/* Grid Lines */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundImage: `
-            linear-gradient(rgba(254, 192, 15, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(254, 192, 15, 0.03) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px',
-          pointerEvents: 'none',
-        }} />
-
-        {/* Content */}
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '500px' }}>
-          {/* Logo */}
-          <div style={{
-            width: '100px',
-            height: '100px',
-            borderRadius: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 32px',
-            overflow: 'hidden',
-          }}>
-            <img 
-              src={logo} 
-              alt="Analyst Logo" 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'contain' 
-              }} 
-            />
-          </div>
-
-          <h1 style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: '48px',
-            fontWeight: 700,
-            color: isDark ? '#FFFFFF' : '#1a1a1a',
-            letterSpacing: '4px',
-            marginBottom: '8px',
-          }}>
-            ANALYST
-          </h1>
-          <p style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            fontSize: '16px',
-            fontWeight: 500,
-            color: '#FEC00F',
-            letterSpacing: '8px',
-            marginBottom: '24px',
-          }}>
-            BY POTOMAC
-          </p>
-          <p style={{
-            color: isDark ? '#9E9E9E' : '#666666',
-            fontSize: '16px',
-            lineHeight: 1.7,
-            marginBottom: '48px',
-          }}>
-            Secure password recovery<br />
-            Get back to analyzing and optimizing your strategies.
-          </p>
-
-          {/* Security Feature */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            padding: '20px 24px',
-            backgroundColor: 'rgba(254, 192, 15, 0.05)',
-            border: '1px solid rgba(254, 192, 15, 0.1)',
-            borderRadius: '12px',
-          }}>
-            <Key size={28} color="#FEC00F" />
-            <div style={{ textAlign: 'left' }}>
-              <p style={{ color: isDark ? '#E0E0E0' : '#333333', fontSize: '14px', fontWeight: 600, margin: 0 }}>
-                Secure Password Reset
-              </p>
-              <p style={{ color: isDark ? '#9E9E9E' : '#666666', fontSize: '12px', margin: '4px 0 0 0' }}>
-                We'll send you a secure link to reset your password
+        {!success ? (
+          <>
+            {/* Logo & Header */}
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '18px',
+                background: isDark
+                  ? 'linear-gradient(135deg, rgba(254, 192, 15, 0.15) 0%, rgba(254, 192, 15, 0.05) 100%)'
+                  : 'linear-gradient(135deg, rgba(254, 192, 15, 0.2) 0%, rgba(254, 192, 15, 0.08) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                border: `1px solid ${isDark ? 'rgba(254, 192, 15, 0.2)' : 'rgba(254, 192, 15, 0.3)'}`,
+                boxShadow: '0 8px 24px rgba(254, 192, 15, 0.15)',
+              }}>
+                <img
+                  src={logoSrc}
+                  alt="Analyst Logo"
+                  style={{ width: '44px', height: '44px', objectFit: 'contain' }}
+                />
+              </div>
+              <h1 style={{
+                fontFamily: "'Syne', sans-serif",
+                fontSize: '30px',
+                fontWeight: 700,
+                color: isDark ? '#FAFAFA' : '#0A0A0B',
+                letterSpacing: '-0.02em',
+                margin: '0 0 6px',
+              }}>
+                Forgot Password?
+              </h1>
+              <p style={{
+                fontSize: '14px',
+                color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                margin: 0,
+              }}>
+                No worries — we&apos;ll send you a reset link.
               </p>
             </div>
-          </div>
-        </div>
 
-        {/* Bottom Text */}
-        <p style={{
-          position: 'absolute',
-          bottom: '32px',
-          color: '#757575',
-          fontSize: '12px',
-        }}>
-          © 2026 Potomac Fund Management. All rights reserved.
-        </p>
-      </div>
-
-      {/* Right Side - Reset Form */}
-      <div style={{
-        width: isMobile ? '100%' : '500px',
-        backgroundColor: isDark ? '#121212' : '#ffffff',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        padding: isSmallMobile ? '32px 24px' : '60px',
-        borderLeft: isMobile ? 'none' : `1px solid ${isDark ? '#2A2A2A' : '#e0e0e0'}`,
-        borderTop: isMobile ? `1px solid ${isDark ? '#2A2A2A' : '#e0e0e0'}` : 'none',
-        minHeight: isMobile ? 'auto' : '100dvh',
-        paddingBottom: isSmallMobile ? 'max(32px, env(safe-area-inset-bottom))' : '60px',
-      }}>
-        <div style={{ maxWidth: '360px', margin: '0 auto', width: '100%' }}>
-          {/* Back Button */}
-          <Link
-            href="/login"
-            style={{
-              display: 'inline-flex',
+            {/* Secure reset info chip */}
+            <div style={{
+              display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              color: '#FEC00F',
-              fontSize: '14px',
-              fontWeight: 600,
-              textDecoration: 'none',
-              marginBottom: '32px',
-              transition: 'opacity 0.2s',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-          >
-            <ArrowLeft size={18} />
-            Back to Login
-          </Link>
-
-          {!success ? (
-            <>
-              <h2 style={{
-                fontFamily: "'Rajdhani', sans-serif",
-                fontSize: '28px',
-                fontWeight: 700,
-                color: isDark ? '#FFFFFF' : '#1a1a1a',
-                letterSpacing: '2px',
-                marginBottom: '8px',
-              }}>
-                FORGOT PASSWORD?
-              </h2>
+              gap: '12px',
+              padding: '12px 16px',
+              background: isDark ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.06)',
+              border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.15)'}`,
+              borderRadius: '12px',
+              marginBottom: '24px',
+            }}>
+              <Key size={18} color="#6366F1" style={{ flexShrink: 0 }} />
               <p style={{
-                color: isDark ? '#757575' : '#666666',
-                fontSize: '14px',
-                marginBottom: '40px',
-                lineHeight: 1.6,
+                fontSize: '13px',
+                color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.55)',
+                margin: 0,
+                lineHeight: 1.5,
               }}>
-                No worries! Enter your email address and we'll send you a link to reset your password.
+                A secure link will be sent to your email address.
               </p>
+            </div>
 
-              {/* Error Message */}
-              {error && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '14px 16px',
-                  backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                  border: '1px solid rgba(220, 38, 38, 0.3)',
-                  borderRadius: '10px',
-                  marginBottom: '24px',
+            {/* Error Message */}
+            {error && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 14px',
+                background: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                borderRadius: '10px',
+                marginBottom: '20px',
+              }}>
+                <AlertCircle size={18} color="#EF4444" />
+                <p style={{
+                  color: '#EF4444',
+                  fontSize: '13px',
+                  margin: 0,
+                  fontWeight: 500,
                 }}>
-                  <AlertCircle size={20} color="#DC2626" />
-                  <p style={{ color: '#DC2626', fontSize: '13px', margin: 0 }}>{error}</p>
-                </div>
-              )}
+                  {error}
+                </p>
+              </div>
+            )}
 
-              <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* Email Field */}
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{
-                    display: 'block',
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: isDark ? '#FFFFFF' : '#1a1a1a',
-                    letterSpacing: '1px',
-                    marginBottom: '8px',
-                  }}>
-                    EMAIL ADDRESS
-                  </label>
+                <div>
+                  <label style={labelStyle}>Email Address</label>
                   <div style={{ position: 'relative' }}>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      style={{
-                        width: '100%',
-                        height: '52px',
-                        padding: '0 16px 0 48px',
-                        backgroundColor: isDark ? '#1E1E1E' : '#f5f5f5',
-                        border: `1px solid ${isDark ? '#2A2A2A' : '#d0d0d0'}`,
-                        borderRadius: '10px',
-                        color: isDark ? '#FFFFFF' : '#1a1a1a',
-                        fontSize: '16px',
-                        fontFamily: "'Quicksand', sans-serif",
-                        outline: 'none',
-                        transition: 'border-color 0.2s, box-shadow 0.2s',
-                        boxSizing: 'border-box',
-                        WebkitAppearance: 'none',
-                        appearance: 'none',
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#FEC00F';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(254, 192, 15, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#2A2A2A';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
                     <Mail
-                      size={20}
-                      color="#757575"
+                      size={18}
                       style={{
                         position: 'absolute',
                         left: '16px',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        pointerEvents: 'none',
+                        color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.35)',
+                      }}
+                    />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                      placeholder="you@example.com"
+                      style={inputStyle}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#6366F1';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.15)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+                        e.target.style.boxShadow = 'none';
                       }}
                     />
                   </div>
@@ -354,185 +290,231 @@ export function ForgotPasswordPage() {
                   disabled={loading}
                   style={{
                     width: '100%',
-                    height: '52px',
-                    backgroundColor: loading ? '#424242' : '#FEC00F',
+                    padding: '14px 24px',
+                    marginTop: '4px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: '#FFFFFF',
+                    background: loading
+                      ? isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                      : 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
                     border: 'none',
-                    borderRadius: '10px',
-                    color: loading ? '#757575' : '#0A0A0B',
-                    fontSize: '14px',
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontWeight: 700,
-                    letterSpacing: '1px',
+                    borderRadius: '12px',
                     cursor: loading ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '10px',
-                    transition: 'all 0.2s',
-                    boxShadow: loading ? 'none' : '0 4px 20px rgba(254, 192, 15, 0.3)',
+                    gap: '8px',
+                    boxShadow: loading ? 'none' : '0 4px 16px rgba(99, 102, 241, 0.3)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 16px rgba(99, 102, 241, 0.3)';
+                    }
                   }}
                 >
                   {loading ? (
                     <>
-                      <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                      SENDING...
+                      <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                      Sending...
                     </>
                   ) : (
                     <>
-                      <Mail size={20} />
-                      SEND RESET LINK
+                      <Mail size={18} />
+                      Send Reset Link
                     </>
                   )}
                 </button>
-              </form>
-            </>
-          ) : (
-            <>
-              {/* Success State */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-              }}>
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                  border: '2px solid rgba(34, 197, 94, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '24px',
-                }}>
-                  <CheckCircle size={40} color="#22C55E" />
-                </div>
-
-                <h2 style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontSize: '28px',
-                  fontWeight: 700,
-                  color: isDark ? '#FFFFFF' : '#1a1a1a',
-                  letterSpacing: '2px',
-                  marginBottom: '12px',
-                }}>
-                  CHECK YOUR EMAIL
-                </h2>
-
-                <p style={{
-                  color: isDark ? '#9E9E9E' : '#666666',
-                  fontSize: '14px',
-                  lineHeight: 1.7,
-                  marginBottom: '32px',
-                }}>
-                  We've sent a password reset link to<br />
-                  <span style={{ color: '#FEC00F', fontWeight: 600 }}>{email}</span>
-                </p>
-
-                <div style={{
-                  width: '100%',
-                  padding: '16px',
-                  backgroundColor: 'rgba(254, 192, 15, 0.05)',
-                  border: '1px solid rgba(254, 192, 15, 0.1)',
-                  borderRadius: '10px',
-                  marginBottom: '32px',
-                }}>
-                  <p style={{
-                    color: '#E0E0E0',
-                    fontSize: '13px',
-                    lineHeight: 1.6,
-                    margin: 0,
-                  }}>
-                    <strong>Didn't receive the email?</strong><br />
-                    Check your spam folder or{' '}
-                    <button
-                      onClick={() => setSuccess(false)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#FEC00F',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                        padding: 0,
-                        fontFamily: "'Quicksand', sans-serif",
-                        fontSize: '13px',
-                      }}
-                    >
-                      try again
-                    </button>
-                  </p>
-                </div>
-
-                <Link
-                  href="/login"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '12px 24px',
-                    backgroundColor: 'transparent',
-                    border: '1px solid #2A2A2A',
-                    borderRadius: '10px',
-                    color: '#FFFFFF',
-                    fontSize: '14px',
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontWeight: 600,
-                    letterSpacing: '1px',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#FEC00F';
-                    e.currentTarget.style.backgroundColor = 'rgba(254, 192, 15, 0.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#2A2A2A';
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <ArrowLeft size={18} />
-                  BACK TO LOGIN
-                </Link>
               </div>
-            </>
-          )}
+            </form>
 
-          {/* Additional Help */}
-          {!success && (
+            {/* Divider */}
             <div style={{
-              marginTop: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              margin: '28px 0',
+            }}>
+              <div style={{ flex: 1, height: '1px', background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }} />
+              <span style={{ fontSize: '12px', color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)' }}>
+                Remember your password?
+              </span>
+              <div style={{ flex: 1, height: '1px', background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }} />
+            </div>
+
+            {/* Back to Login */}
+            <Link
+              href="/login"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '14px 24px',
+                fontSize: '15px',
+                fontWeight: 600,
+                color: isDark ? '#FAFAFA' : '#0A0A0B',
+                background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+                border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+                borderRadius: '12px',
+                textDecoration: 'none',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)';
+                e.currentTarget.style.borderColor = '#6366F1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)';
+                e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+              }}
+            >
+              <ArrowLeft size={18} />
+              Back to Sign In
+            </Link>
+          </>
+        ) : (
+          /* ── Success State ── */
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            {/* Success icon */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.08)',
+              border: '2px solid rgba(34, 197, 94, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '24px',
+              boxShadow: '0 8px 24px rgba(34, 197, 94, 0.15)',
+            }}>
+              <CheckCircle size={40} color="#22C55E" />
+            </div>
+
+            <h2 style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: '26px',
+              fontWeight: 700,
+              color: isDark ? '#FAFAFA' : '#0A0A0B',
+              letterSpacing: '-0.02em',
+              margin: '0 0 12px',
+            }}>
+              Check Your Inbox
+            </h2>
+
+            <p style={{
+              fontSize: '14px',
+              color: isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(0, 0, 0, 0.55)',
+              lineHeight: 1.7,
+              marginBottom: '28px',
+            }}>
+              We&apos;ve sent a password reset link to{' '}
+              <span style={{ color: '#6366F1', fontWeight: 600 }}>{email}</span>
+            </p>
+
+            {/* Tip box */}
+            <div style={{
+              width: '100%',
               padding: '16px',
-              backgroundColor: 'rgba(254, 192, 15, 0.05)',
-              border: '1px solid rgba(254, 192, 15, 0.1)',
-              borderRadius: '10px',
+              background: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+              border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
+              borderRadius: '12px',
+              marginBottom: '28px',
+              textAlign: 'left',
             }}>
               <p style={{
-                color: '#9E9E9E',
-                fontSize: '12px',
+                fontSize: '13px',
+                color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
                 lineHeight: 1.6,
                 margin: 0,
               }}>
-                <strong style={{ color: '#E0E0E0' }}>Need help?</strong><br />
-                Contact our support team at{' '}
-                <a
-                  href="mailto:support@potomac.com"
+                <strong style={{ color: isDark ? 'rgba(255, 255, 255, 0.75)' : 'rgba(0, 0, 0, 0.7)' }}>
+                  Didn&apos;t receive it?
+                </strong>{' '}Check your spam folder or{' '}
+                <button
+                  onClick={() => { setSuccess(false); setEmail(''); }}
                   style={{
-                    color: '#FEC00F',
-                    textDecoration: 'none',
+                    background: 'none',
+                    border: 'none',
+                    color: '#6366F1',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontSize: '13px',
+                    textDecoration: 'underline',
                   }}
                 >
-                  support@potomac.com
-                </a>
+                  try again
+                </button>
+                .
               </p>
             </div>
-          )}
-        </div>
+
+            <Link
+              href="/login"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '14px 24px',
+                fontSize: '15px',
+                fontWeight: 600,
+                color: '#FFFFFF',
+                background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+                border: 'none',
+                borderRadius: '12px',
+                textDecoration: 'none',
+                boxShadow: '0 4px 16px rgba(99, 102, 241, 0.3)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(99, 102, 241, 0.3)';
+              }}
+            >
+              <ArrowLeft size={18} />
+              Back to Sign In
+            </Link>
+          </div>
+        )}
+
+        {/* Footer */}
+        <p style={{
+          textAlign: 'center',
+          fontSize: '12px',
+          color: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
+          marginTop: '28px',
+        }}>
+          2026 Potomac Fund Management. All rights reserved.
+        </p>
       </div>
 
-      {/* CSS Animation */}
+      {/* CSS Animations */}
       <style>{`
+        @keyframes float1 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(30px, -30px); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-20px, 20px); }
+        }
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
@@ -541,6 +523,5 @@ export function ForgotPasswordPage() {
     </div>
   );
 }
-
 
 export default ForgotPasswordPage;

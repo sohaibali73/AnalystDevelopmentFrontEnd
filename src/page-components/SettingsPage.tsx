@@ -158,7 +158,7 @@ function SectionHead({ label }: { label: string }) {
 
 export function SettingsPage() {
   const router = useRouter();
-  const { theme, setTheme, themeStyle, setThemeStyle, resolvedTheme, setAccentColor } = useTheme();
+  const { theme, setTheme, themeStyle, setThemeStyle, resolvedTheme, accentColor, setAccentColor } = useTheme();
   const { setFontSize } = useFontSize();
   const { isMobile, isTablet } = useResponsive();
   const [activeSection, setActiveSection] = useState('profile');
@@ -207,22 +207,7 @@ export function SettingsPage() {
     setSettings(prev => ({ ...prev, appearance: { ...prev.appearance, theme } }));
   }, [theme]);
 
-  /* ── Dashboard-style CSS vars ── */
-  const cssVars: React.CSSProperties = {
-    ['--accent' as any]: '#FEC00F',
-    ['--accent-dim' as any]: isDark ? 'rgba(254,192,15,0.08)' : 'rgba(254,192,15,0.07)',
-    ['--bg' as any]: isDark ? '#080809' : '#F5F5F6',
-    ['--bg-card' as any]: isDark ? '#0D0D10' : '#FFFFFF',
-    ['--bg-card-hover' as any]: isDark ? '#121216' : '#F9F9FA',
-    ['--bg-raised' as any]: isDark ? '#111115' : '#FAFAFA',
-    ['--border' as any]: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-    ['--text' as any]: isDark ? '#EFEFEF' : '#0A0A0B',
-    ['--text-muted' as any]: isDark ? '#606068' : '#808088',
-    ['--text-dim' as any]: isDark ? '#2E2E36' : '#D8D8DC',
-    ['--shadow-card' as any]: isDark
-      ? '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)'
-      : '0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.06)',
-  };
+  /* CSS variables are now set globally by ThemeContext */
 
   const handleSave = async () => {
     setSaving(true);
@@ -250,6 +235,8 @@ export function SettingsPage() {
   const updateApiKeys = (f: string, v: string) => setSettings(p => ({ ...p, apiKeys: { ...p.apiKeys, [f]: v } }));
   const updateAppearance = (f: string, v: string) => {
     setSettings(p => ({ ...p, appearance: { ...p.appearance, [f]: v } }));
+    // Immediately apply theme changes for instant feedback
+    if (f === 'theme') setTheme(v as 'light' | 'dark' | 'system');
     if (f === 'accentColor') setAccentColor(v);
     if (f === 'fontSize') setFontSize(v as 'small' | 'medium' | 'large');
   };
@@ -294,17 +281,14 @@ export function SettingsPage() {
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
       <div style={{
-        ...cssVars,
         minHeight: '100vh',
-        background: isDark
-          ? 'radial-gradient(ellipse 120% 60% at 50% -10%, rgba(254,192,15,0.04) 0%, transparent 60%), var(--bg)'
-          : 'radial-gradient(ellipse 120% 60% at 50% -10%, rgba(254,192,15,0.06) 0%, transparent 60%), var(--bg)',
+        background: `radial-gradient(ellipse 120% 60% at 50% -10%, var(--accent-dim) 0%, transparent 60%), var(--bg)`,
         fontFamily: "'Instrument Sans', sans-serif",
         color: 'var(--text)',
       }}>
 
         {/* ── Top accent bar ── */}
-        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent 0%, #FEC00F 40%, rgba(254,192,15,0.3) 60%, transparent 100%)', opacity: 0.5 }} />
+        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent 0%, var(--accent) 40%, var(--accent-glow) 60%, transparent 100%)', opacity: 0.5 }} />
 
         {/* ── Hero Header ── */}
         <div className="sa0" style={{ padding: isMobile ? '40px 20px 32px' : '56px 52px 44px', maxWidth: '1360px', margin: '0 auto' }}>
@@ -315,8 +299,8 @@ export function SettingsPage() {
             border: '1px solid rgba(254,192,15,0.2)',
             borderRadius: '100px', padding: '5px 14px 5px 10px', marginBottom: '24px',
           }}>
-            <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#FEC00F', animation: 'settings-pulse 2.4s ease-in-out infinite' }} />
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9.5px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#FEC00F' }}>
+            <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)', animation: 'settings-pulse 2.4s ease-in-out infinite' }} />
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9.5px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)' }}>
               Configuration · Active
             </span>
           </div>
@@ -326,7 +310,7 @@ export function SettingsPage() {
             fontFamily: "'Syne', sans-serif", fontSize: isMobile ? '36px' : '52px',
             fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.04, color: 'var(--text)', marginBottom: '12px',
           }}>
-            <span style={{ color: '#FEC00F' }}>Settings</span>
+            <span style={{ color: 'var(--accent)' }}>Settings</span>
             <span style={{ display: 'block', fontWeight: 400, fontSize: isMobile ? '18px' : '24px', color: 'var(--text-muted)', marginTop: '6px', letterSpacing: '-0.01em' }}>
               Manage your account, appearance, and preferences.
             </span>
@@ -351,11 +335,11 @@ export function SettingsPage() {
                     borderRadius: '9px', cursor: 'pointer',
                     fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600,
                     letterSpacing: '0.06em', textTransform: 'uppercase',
-                    color: isActive ? '#FEC00F' : 'var(--text)',
-                    boxShadow: isActive ? '0 4px 20px rgba(254,192,15,0.1)' : 'var(--shadow-card)',
+                    color: isActive ? 'var(--accent)' : 'var(--text)',
+                    boxShadow: isActive ? '0 4px 20px var(--accent-dim)' : 'var(--shadow-card)',
                     transition: 'all .22s ease',
                   }}
-                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.borderColor = 'rgba(254,192,15,0.3)'; e.currentTarget.style.color = '#FEC00F'; }}}
+                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--accent)'; }}}
                   onMouseLeave={e => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)'; }}}
                 >
                   <div style={{
@@ -406,7 +390,7 @@ export function SettingsPage() {
                       {settings.profile.email || 'your@email.com'}
                     </p>
                     {settings.profile.nickname && (
-                      <span style={{ display: 'inline-block', marginTop: '12px', padding: '4px 12px', borderRadius: '100px', fontSize: '10px', fontWeight: 600, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FEC00F', background: 'rgba(254,192,15,0.1)', border: '1px solid rgba(254,192,15,0.2)' }}>
+                      <span style={{ display: 'inline-block', marginTop: '12px', padding: '4px 12px', borderRadius: '100px', fontSize: '10px', fontWeight: 600, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--border-hover)' }}>
                         {settings.profile.nickname}
                       </span>
                     )}
@@ -424,18 +408,18 @@ export function SettingsPage() {
                       <div>
                         <FieldLabel>FULL NAME</FieldLabel>
                         <input type="text" value={settings.profile.name} onChange={e => updateProfile('name', e.target.value)}
-                          style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = '#FEC00F'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
+                          style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
                       </div>
                       <div>
                         <FieldLabel>NICKNAME</FieldLabel>
                         <input type="text" value={settings.profile.nickname} onChange={e => updateProfile('nickname', e.target.value)} placeholder="What should we call you?"
-                          style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = '#FEC00F'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
+                          style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
                       </div>
                     </div>
                     <div>
                       <FieldLabel>EMAIL ADDRESS</FieldLabel>
                       <input type="email" value={settings.profile.email} onChange={e => updateProfile('email', e.target.value)}
-                        style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = '#FEC00F'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
+                        style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
                     </div>
                   </div>
                 </div>
@@ -481,7 +465,7 @@ export function SettingsPage() {
                     <input type={showClaudeKey ? 'text' : 'password'} value={settings.apiKeys.claudeApiKey}
                       onChange={e => updateApiKeys('claudeApiKey', e.target.value)} placeholder="sk-ant-..."
                       style={{ ...inputStyle, paddingRight: '48px' }}
-                      onFocus={e => e.currentTarget.style.borderColor = '#FEC00F'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
+                      onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
                     <button type="button" onClick={() => setShowClaudeKey(!showClaudeKey)}
                       style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px' }}>
                       {showClaudeKey ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -511,7 +495,7 @@ export function SettingsPage() {
                     <input type={showTavilyKey ? 'text' : 'password'} value={settings.apiKeys.tavilyApiKey}
                       onChange={e => updateApiKeys('tavilyApiKey', e.target.value)} placeholder="tvly-..."
                       style={{ ...inputStyle, paddingRight: '48px' }}
-                      onFocus={e => e.currentTarget.style.borderColor = '#FEC00F'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
+                      onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
                     <button type="button" onClick={() => setShowTavilyKey(!showTavilyKey)}
                       style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px' }}>
                       {showTavilyKey ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -631,7 +615,7 @@ export function SettingsPage() {
                 <FieldLabel>ACCENT COLOR</FieldLabel>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '14px' }}>
                   {accentColors.map(c => {
-                    const isSel = settings.appearance.accentColor === c.value;
+                    const isSel = accentColor === c.value;
                     return (
                       <button key={c.value} onClick={() => updateAppearance('accentColor', c.value)} title={c.label}
                         style={{
@@ -662,14 +646,14 @@ export function SettingsPage() {
                     return (
                       <button key={size} onClick={() => updateAppearance('fontSize', size)}
                         style={{
-                          padding: '12px 28px', background: isSel ? '#FEC00F' : 'var(--bg-raised)',
-                          border: isSel ? '1px solid #FEC00F' : '1px solid var(--border)',
+                          padding: '12px 28px', background: isSel ? 'var(--accent)' : 'var(--bg-raised)',
+                          border: isSel ? '1px solid var(--accent)' : '1px solid var(--border)',
                           borderRadius: '10px', cursor: 'pointer',
                           fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 700,
                           color: isSel ? '#09090B' : 'var(--text)',
                           letterSpacing: '0.08em', textTransform: 'uppercase',
                           transition: 'all 0.2s ease',
-                          boxShadow: isSel ? '0 4px 16px rgba(254,192,15,0.3)' : 'none',
+                          boxShadow: isSel ? '0 4px 16px var(--accent-glow)' : 'none',
                         }}>
                         {size}
                       </button>
@@ -714,7 +698,7 @@ export function SettingsPage() {
                       <button onClick={() => updateNotifications(item.key, !isOn)} aria-label={`Toggle ${item.label}`}
                         style={{
                           width: '48px', height: '26px',
-                          backgroundColor: isOn ? '#FEC00F' : isDark ? 'rgba(255,255,255,0.08)' : '#D1D5DB',
+                          backgroundColor: isOn ? 'var(--accent)' : isDark ? 'rgba(255,255,255,0.08)' : '#D1D5DB',
                           borderRadius: '13px', border: 'none', cursor: 'pointer', position: 'relative',
                           transition: 'background-color 0.2s ease', flexShrink: 0,
                           boxShadow: isOn ? '0 2px 8px rgba(254,192,15,0.3)' : 'none',
@@ -751,11 +735,11 @@ export function SettingsPage() {
                   <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>Change Password</span>
                 </div>
                 <div style={{ display: 'grid', gap: '14px', maxWidth: '480px' }}>
-                  <input type="password" placeholder="Current password" style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = '#FEC00F'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
-                  <input type="password" placeholder="New password" style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = '#FEC00F'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
-                  <input type="password" placeholder="Confirm new password" style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = '#FEC00F'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
+                  <input type="password" placeholder="Current password" style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
+                  <input type="password" placeholder="New password" style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
+                  <input type="password" placeholder="Confirm new password" style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
                   <button style={{
-                    width: 'fit-content', padding: '12px 28px', background: '#FEC00F', border: 'none',
+                    width: 'fit-content', padding: '12px 28px', background: 'var(--accent)', border: 'none',
                     borderRadius: '10px', color: '#09090B', fontFamily: "'Syne', sans-serif",
                     fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
                     cursor: 'pointer', boxShadow: '0 4px 16px rgba(254,192,15,0.3)', transition: 'all 0.2s ease', marginTop: '4px',
@@ -823,17 +807,17 @@ export function SettingsPage() {
                   gridColumn: isMobile ? '1' : '1 / -1',
                 }}>
                   <div className="shimmer-layer" />
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, #FEC00F, transparent)' }} />
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, var(--accent), transparent)' }} />
                   <div style={{ position: 'absolute', bottom: '-60px', right: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(254,192,15,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
                   <div style={{ position: 'absolute', top: '-60px', left: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(167,139,250,0.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-                  <h2 className="stat-num-glow" style={{ fontFamily: "'Syne', sans-serif", fontSize: isMobile ? '28px' : '40px', fontWeight: 800, color: '#FEC00F', letterSpacing: '-0.02em', marginBottom: '8px', lineHeight: 1.1 }}>
+                  <h2 className="stat-num-glow" style={{ fontFamily: "'Syne', sans-serif", fontSize: isMobile ? '28px' : '40px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.02em', marginBottom: '8px', lineHeight: 1.1 }}>
                     BREAK THE STATUS QUO
                   </h2>
                   <p style={{ fontFamily: "'Syne', sans-serif", fontSize: isMobile ? '14px' : '16px', fontWeight: 600, color: 'var(--text)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '24px' }}>
                     Built to Conquer Risk<span style={{ verticalAlign: 'super', fontSize: '8px' }}>&reg;</span>
                   </p>
-                  <div style={{ width: '48px', height: '2px', backgroundColor: '#FEC00F', margin: '0 auto 24px auto' }} />
+                  <div style={{ width: '48px', height: '2px', backgroundColor: 'var(--accent)', margin: '0 auto 24px auto' }} />
                   <p style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 600, marginBottom: '4px' }}>Developed by Sohaib Ali</p>
                   <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
                     {'© Copyright 2026 \u2014 All Rights Reserved'}
@@ -849,14 +833,14 @@ export function SettingsPage() {
                   padding: '24px', boxShadow: 'var(--shadow-card)', position: 'relative', overflow: 'hidden',
                 }}>
                   <div className="shimmer-layer" />
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #FEC00F, transparent)', opacity: 0.6 }} />
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, var(--accent), transparent)', opacity: 0.6 }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Version</p>
-                      <p className="stat-num-glow" style={{ fontFamily: "'DM Mono', monospace", fontSize: '28px', fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1 }}>RC 2.0</p>
-                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.05em', marginTop: '6px' }}>Release Candidate 2.0</p>
+                      <p className="stat-num-glow" style={{ fontFamily: "'DM Mono', monospace", fontSize: '28px', fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1 }}>RC 3.0</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.05em', marginTop: '6px' }}>Release Candidate 3.0</p>
                     </div>
-                    <span style={{ padding: '4px 12px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', color: '#FCD34D', background: 'rgba(252,211,77,0.1)', border: '1px solid rgba(252,211,77,0.3)' }}>RC 2</span>
+                    <span style={{ padding: '4px 12px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--border-hover)' }}>RC 3</span>
                   </div>
                 </div>
 
@@ -923,7 +907,7 @@ export function SettingsPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '10px',
                   padding: '15px 32px',
-                  background: saved ? '#34D399' : '#FEC00F',
+                  background: saved ? '#34D399' : 'var(--accent)',
                   color: '#09090B', border: 'none', borderRadius: '10px',
                   fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 700,
                   letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',

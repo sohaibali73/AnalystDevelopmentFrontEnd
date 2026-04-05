@@ -83,39 +83,27 @@ export function ChatSidebar({
       )
     : conversations;
 
-  // Modern color palette
+  // Theme-aware color palette using CSS variables
   const modernColors = {
     // Base surfaces
-    sidebarBg: isDark 
-      ? 'rgba(12, 12, 14, 0.85)'
-      : 'rgba(255, 255, 255, 0.75)',
+    sidebarBg: 'var(--bg-card)',
     cardBg: isDark
       ? 'rgba(255, 255, 255, 0.03)'
       : 'rgba(0, 0, 0, 0.02)',
-    cardHover: isDark
-      ? 'rgba(99, 102, 241, 0.08)'
-      : 'rgba(99, 102, 241, 0.06)',
-    cardActive: isDark
-      ? 'rgba(99, 102, 241, 0.15)'
-      : 'rgba(99, 102, 241, 0.12)',
+    cardHover: 'var(--accent-dim)',
+    cardActive: 'var(--accent-dim)',
     // Borders
-    border: isDark
-      ? 'rgba(255, 255, 255, 0.06)'
-      : 'rgba(0, 0, 0, 0.06)',
-    borderHover: isDark
-      ? 'rgba(99, 102, 241, 0.3)'
-      : 'rgba(99, 102, 241, 0.25)',
-    borderActive: isDark
-      ? 'rgba(99, 102, 241, 0.5)'
-      : 'rgba(99, 102, 241, 0.4)',
+    border: 'var(--border)',
+    borderHover: 'var(--border-hover)',
+    borderActive: 'var(--accent)',
     // Text
-    text: isDark ? '#F1F1F4' : '#18181B',
-    textSecondary: isDark ? '#A1A1AA' : '#71717A',
-    textMuted: isDark ? '#71717A' : '#A1A1AA',
+    text: 'var(--text)',
+    textSecondary: 'var(--text-muted)',
+    textMuted: 'var(--text-muted)',
     // Accent
-    accent: '#6366F1',
-    accentLight: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
-    accentGlow: 'rgba(99, 102, 241, 0.4)',
+    accent: 'var(--accent)',
+    accentLight: 'var(--accent-dim)',
+    accentGlow: 'var(--accent-glow)',
     // Status
     success: '#22C55E',
     error: '#EF4444',
@@ -289,13 +277,13 @@ export function ChatSidebar({
             fontWeight: 600,
             fontSize: '13px',
             letterSpacing: '-0.01em',
-            color: isCurrentConversationBlank ? 'rgba(255, 255, 255, 0.5)' : '#ffffff',
+            color: isCurrentConversationBlank ? 'rgba(255, 255, 255, 0.5)' : '#0A0A0B',
             background: isCurrentConversationBlank 
-              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.4) 100%)'
-              : 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+              ? 'var(--accent-dim)'
+              : 'var(--accent)',
             boxShadow: isCurrentConversationBlank 
               ? 'none'
-              : '0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+              : '0 4px 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
             fontFamily: "'Inter', system-ui, sans-serif",
             opacity: isCurrentConversationBlank ? 0.7 : 1,
@@ -303,13 +291,13 @@ export function ChatSidebar({
           onMouseEnter={(e) => {
             if (!isCurrentConversationBlank) {
               e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.boxShadow = '0 8px 24px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
             }
           }}
           onMouseLeave={(e) => {
             if (!isCurrentConversationBlank) {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+              e.currentTarget.style.boxShadow = '0 4px 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
             }
           }}
         >
@@ -494,7 +482,7 @@ export function ChatSidebar({
                   height: '36px',
                   borderRadius: '10px',
                   background: isSelected
-                    ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
+                    ? 'var(--accent)'
                     : isDark
                       ? 'rgba(255, 255, 255, 0.05)'
                       : 'rgba(0, 0, 0, 0.04)',
@@ -504,7 +492,7 @@ export function ChatSidebar({
                   flexShrink: 0,
                   transition: 'all 0.2s ease',
                   boxShadow: isSelected
-                    ? '0 4px 12px rgba(99, 102, 241, 0.3)'
+                    ? '0 4px 12px var(--accent-glow)'
                     : 'none',
                 }}>
                   <MessageSquare

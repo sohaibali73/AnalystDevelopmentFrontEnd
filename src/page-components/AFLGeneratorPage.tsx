@@ -140,26 +140,26 @@ export function AFLGeneratorPage() {
     try { return localStorage.getItem('auth_token') || ''; } catch { return ''; }
   };
 
-  // Colors - Enhanced blue/teal palette
+  // Theme-aware colors using CSS variables
   const colors = useMemo(() => ({
-    background: isDark ? '#0A0A0A' : '#FAFAFA',
-    sidebar: isDark ? '#111111' : '#FFFFFF',
-    cardBg: isDark ? '#161616' : '#FFFFFF',
-    inputBg: isDark ? '#1A1A1A' : '#F5F5F5',
-    border: isDark ? '#2A2A2A' : '#E5E5E5',
-    borderLight: isDark ? '#1F1F1F' : '#F0F0F0',
-    text: isDark ? '#FFFFFF' : '#0A0A0A',
-    textMuted: isDark ? '#A0A0A0' : '#737373',
-    textSubtle: isDark ? '#666666' : '#A3A3A3',
-    primaryBlue: '#60A5FA',
-    primaryBlueHover: '#93C5FD',
-    primaryViolet: '#A78BFA',
-    primaryVioletHover: '#C084FC',
+    background: 'var(--bg)',
+    sidebar: 'var(--bg-card)',
+    cardBg: 'var(--bg-card)',
+    inputBg: 'var(--bg-raised)',
+    border: 'var(--border)',
+    borderLight: 'var(--border)',
+    text: 'var(--text)',
+    textMuted: 'var(--text-muted)',
+    textSubtle: 'var(--text-muted)',
+    primaryBlue: 'var(--accent)',
+    primaryBlueHover: 'var(--accent)',
+    primaryViolet: 'var(--accent)',
+    primaryVioletHover: 'var(--accent)',
     darkGray: '#1A1A1A',
     codePanelBg: isDark ? '#0D0D0D' : '#FAFAFA',
-    hoverBg: isDark ? '#1A1A1A' : '#F5F5F5',
-    activeBg: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)',
-    accentGlow: isDark ? 'rgba(96,165,250,0.3)' : 'rgba(96,165,250,0.15)',
+    hoverBg: 'var(--bg-card-hover)',
+    activeBg: 'var(--accent-dim)',
+    accentGlow: 'var(--accent-glow)',
   }), [isDark]);
 
   // AI SDK useChat
@@ -643,8 +643,8 @@ export function AFLGeneratorPage() {
           alignItems: 'center', 
           justifyContent: 'space-between',
           background: isDark 
-            ? 'linear-gradient(135deg, rgba(96,165,250,0.03) 0%, rgba(96,165,250,0.01) 100%)'
-            : 'linear-gradient(135deg, rgba(96,165,250,0.04) 0%, rgba(96,165,250,0.01) 100%)'
+            ? 'linear-gradient(135deg, var(--accent-dim) 0%, transparent 100%)'
+            : 'linear-gradient(135deg, var(--accent-dim) 0%, transparent 100%)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
@@ -655,7 +655,7 @@ export function AFLGeneratorPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(96,165,250,0.2)'
+              boxShadow: '0 2px 8px var(--accent-glow)'
             }}>
               <Code2 size={18} color="#1A1A1A" strokeWidth={2.5} />
             </div>
@@ -708,7 +708,7 @@ export function AFLGeneratorPage() {
               width: '100%', 
               padding: '12px', 
               background: streamMessages.length === 0
-                ? `linear-gradient(135deg, rgba(96,165,250,0.4) 0%, rgba(147,197,253,0.4) 100%)`
+                ? `linear-gradient(135deg, var(--accent-glow) 0%, var(--accent-dim) 100%)`
                 : `linear-gradient(135deg, ${colors.primaryBlue} 0%, ${colors.primaryBlueHover} 100%)`, 
               border: 'none', 
               borderRadius: '10px', 
@@ -722,20 +722,20 @@ export function AFLGeneratorPage() {
               fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
               fontSize: '13px', 
               transition: 'all 0.2s ease', 
-              boxShadow: streamMessages.length === 0 ? 'none' : '0 2px 8px rgba(96,165,250,0.25)',
+              boxShadow: streamMessages.length === 0 ? 'none' : '0 2px 8px var(--accent-glow)',
               letterSpacing: '0.3px',
               opacity: streamMessages.length === 0 ? 0.7 : 1
             }} 
             onMouseOver={(e) => { 
               if (streamMessages.length > 0) {
                 e.currentTarget.style.transform = 'translateY(-1px)'; 
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(96,165,250,0.35)'; 
+                e.currentTarget.style.boxShadow = '0 4px 12px var(--accent-glow)'; 
               }
             }} 
             onMouseOut={(e) => { 
               if (streamMessages.length > 0) {
                 e.currentTarget.style.transform = 'translateY(0)'; 
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(96,165,250,0.25)'; 
+                e.currentTarget.style.boxShadow = '0 2px 8px var(--accent-glow)'; 
               }
             }}
           >
@@ -1503,8 +1503,8 @@ export function AFLGeneratorPage() {
             alignItems: 'center', 
             justifyContent: 'space-between',
             background: isDark 
-              ? 'linear-gradient(135deg, rgba(96,165,250,0.03) 0%, rgba(96,165,250,0.01) 100%)'
-              : 'linear-gradient(135deg, rgba(96,165,250,0.04) 0%, rgba(96,165,250,0.01) 100%)'
+              ? 'linear-gradient(135deg, var(--accent-dim) 0%, transparent 100%)'
+              : 'linear-gradient(135deg, var(--accent-dim) 0%, transparent 100%)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
@@ -1874,7 +1874,7 @@ export function AFLGeneratorPage() {
                 {isCompositeTab && strategies.length > 0 && (
                   <div style={{
                     padding: '8px 20px',
-                    backgroundColor: isDark ? 'rgba(96,165,250,0.05)' : 'rgba(96,165,250,0.04)',
+                    backgroundColor: isDark ? 'var(--accent-dim)' : 'var(--accent-dim)',
                     borderBottom: `1px solid ${colors.borderLight}`,
                     display: 'flex',
                     alignItems: 'center',
@@ -1984,7 +1984,7 @@ export function AFLGeneratorPage() {
             <div style={{
               padding: '12px 20px',
               borderTop: `1px solid ${colors.border}`,
-              backgroundColor: isDark ? 'rgba(96,165,250,0.02)' : 'rgba(96,165,250,0.03)',
+              backgroundColor: isDark ? 'var(--accent-dim)' : 'var(--accent-dim)',
               display: 'flex',
               alignItems: 'center',
               gap: '10px',

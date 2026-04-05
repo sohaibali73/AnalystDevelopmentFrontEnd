@@ -306,6 +306,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Helper function to convert hex to rgba
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 // Helper function to apply theme style
 function applyThemeStyle(mode: 'light' | 'dark', style: ThemeStyle, accentColor: string) {
   const root = document.documentElement;
@@ -315,8 +323,11 @@ function applyThemeStyle(mode: 'light' | 'dark', style: ThemeStyle, accentColor:
     root.style.setProperty(key, value);
   });
   
-  // Override accent color if custom
-  if (accentColor && style === 'default') {
+  // Always apply custom accent color if provided (works for all theme styles)
+  if (accentColor) {
     root.style.setProperty('--accent', accentColor);
+    root.style.setProperty('--accent-dim', hexToRgba(accentColor, 0.08));
+    root.style.setProperty('--accent-glow', hexToRgba(accentColor, 0.3));
+    root.style.setProperty('--border-hover', hexToRgba(accentColor, 0.4));
   }
 }
