@@ -108,7 +108,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div style={{
       display: 'flex',
       minHeight: '100vh',
-      backgroundColor: '#0a0a0a',
+      backgroundColor: 'var(--bg)',
       fontFamily: "'Rajdhani', sans-serif",
       position: 'relative',
     }}>
@@ -120,10 +120,10 @@ export function MainLayout({ children }: MainLayoutProps) {
           left: 0,
           right: 0,
           height: '64px',
-          background: 'rgba(26, 26, 26, 0.8)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(212, 169, 68, 0.1)',
+           background: 'rgba(13, 13, 16, 0.6)',
+           backdropFilter: 'blur(20px)',
+           WebkitBackdropFilter: 'blur(20px)',
+           borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -139,9 +139,9 @@ export function MainLayout({ children }: MainLayoutProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'rgba(212, 169, 68, 0.1)',
-              border: '1px solid rgba(212, 169, 68, 0.2)',
-              boxShadow: '0 0 20px rgba(212, 169, 68, 0.15)',
+               background: 'var(--accent-dim)',
+               border: '1px solid var(--border)',
+               boxShadow: '0 0 20px var(--accent-glow)',
             }}>
               <img 
                 src={logo} 
@@ -150,7 +150,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   width: '100%', 
                   height: '100%', 
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 0 8px rgba(212, 169, 68, 0.4))',
+                 filter: 'drop-shadow(0 0 8px var(--accent-glow))',
                 }} 
               />
             </div>
@@ -160,7 +160,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               fontSize: '18px',
               color: '#ffffff',
               letterSpacing: '2px',
-              textShadow: '0 0 20px rgba(212, 169, 68, 0.4)',
+               textShadow: '0 0 20px var(--accent-glow)',
             }}>
               POTOMAC ANALYST
             </span>
@@ -169,9 +169,9 @@ export function MainLayout({ children }: MainLayoutProps) {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             style={{
-              background: 'rgba(212, 169, 68, 0.1)',
-              border: '1px solid rgba(212, 169, 68, 0.2)',
-              color: '#D4A944',
+               background: 'var(--accent-dim)',
+               border: '1px solid var(--border)',
+               color: 'var(--accent)',
               cursor: 'pointer',
               padding: '12px',
               display: 'flex',
@@ -183,11 +183,11 @@ export function MainLayout({ children }: MainLayoutProps) {
               minHeight: '48px',
             }}
             onMouseEnter={(e) => { 
-              e.currentTarget.style.background = 'rgba(212, 169, 68, 0.2)';
-              e.currentTarget.style.boxShadow = '0 0 20px rgba(212, 169, 68, 0.3)';
+                 e.currentTarget.style.background = 'var(--accent-dim)';
+                 e.currentTarget.style.boxShadow = '0 0 20px var(--accent-glow)';
             }}
             onMouseLeave={(e) => { 
-              e.currentTarget.style.background = 'rgba(212, 169, 68, 0.1)';
+                 e.currentTarget.style.background = 'transparent';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
