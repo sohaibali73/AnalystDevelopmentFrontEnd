@@ -176,66 +176,37 @@ export function ChatSidebar({
 
       {/* Actions */}
       <div className="p-4 flex flex-col gap-3">
-        <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
-          <button
-            onClick={isCurrentConversationEmpty ? undefined : onNewConversation}
-            disabled={isCurrentConversationEmpty}
-            title={isCurrentConversationEmpty ? 'Start a conversation to enable new chat' : 'Start a new conversation'}
-            className="w-full py-3 border-none rounded-lg flex items-center justify-center gap-2 font-bold text-sm transition-all"
-            style={{
-              backgroundColor: isCurrentConversationEmpty ? colors.textMuted + '33' : colors.primaryYellow,
-              color: isCurrentConversationEmpty ? colors.textMuted : colors.darkGray,
-              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
-              boxShadow: isCurrentConversationEmpty ? 'none' : '0 2px 8px rgba(254, 192, 15, 0.2)',
-              fontWeight: 600,
-              letterSpacing: '0.02em',
-              cursor: isCurrentConversationEmpty ? 'not-allowed' : 'pointer',
-              opacity: isCurrentConversationEmpty ? 0.5 : 1,
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-            onMouseOver={(e) => {
-              if (!isCurrentConversationEmpty) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(254, 192, 15, 0.3)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!isCurrentConversationEmpty) {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(254, 192, 15, 0.2)';
-              }
-            }}
-          >
-            <Plus size={18} /> New Chat
-          </button>
-          
-          {/* Tooltip for disabled state */}
-          {isCurrentConversationEmpty && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 'calc(100% + 8px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                backgroundColor: isDark ? '#0A0A0B' : '#212121',
-                color: colors.primaryYellow,
-                padding: '6px 10px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-                zIndex: 1000,
-                border: `1px solid rgba(254, 192, 15, 0.3)`,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-                animation: 'empty-chat-tooltip-fade 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-                letterSpacing: '0.02em',
-              }}
-            >
-              Start a conversation first
-            </div>
-          )}
-        </div>
+        <button
+          onClick={isCurrentConversationEmpty ? undefined : onNewConversation}
+          disabled={isCurrentConversationEmpty}
+          title={isCurrentConversationEmpty ? 'Start a conversation to enable new chat' : 'Start a new conversation'}
+          className="w-full py-3 border-none rounded-lg flex items-center justify-center gap-2 font-bold text-sm transition-all"
+          style={{
+            backgroundColor: isCurrentConversationEmpty ? colors.textMuted + '33' : colors.primaryYellow,
+            color: isCurrentConversationEmpty ? colors.textMuted : colors.darkGray,
+            fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+            boxShadow: isCurrentConversationEmpty ? 'none' : '0 2px 8px rgba(254, 192, 15, 0.2)',
+            fontWeight: 600,
+            letterSpacing: '0.02em',
+            cursor: isCurrentConversationEmpty ? 'not-allowed' : 'pointer',
+            opacity: isCurrentConversationEmpty ? 0.5 : 1,
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+          onMouseOver={(e) => {
+            if (!isCurrentConversationEmpty) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(254, 192, 15, 0.3)';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!isCurrentConversationEmpty) {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(254, 192, 15, 0.2)';
+            }
+          }}
+        >
+          <Plus size={18} /> New Chat
+        </button>
 
         {/* Search */}
         <div className="relative">
