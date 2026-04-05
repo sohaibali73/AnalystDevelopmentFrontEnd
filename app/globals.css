@@ -165,6 +165,21 @@
   }
 }
 
+/* ==============================
+   Empty Conversation Logic
+   ============================== */
+
+@keyframes empty-chat-tooltip-fade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* Animation utility classes */
 .animate-shimmer {
   animation: shimmer 2s infinite;

@@ -1546,6 +1546,7 @@ export function ChatPage() {
         onRecheckConnection={recheckConnection}
         onConversationsUpdate={setConversations}
         onSelectedUpdate={setSelectedConversation}
+        isCurrentConversationEmpty={streamMessages.length === 0 && status !== 'submitted'}
       />
 
       {/* ── Main area ─────────────────────────────────────────────────────── */}
