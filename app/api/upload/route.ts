@@ -54,6 +54,10 @@ export async function POST(req: NextRequest) {
 
     let response: Response;
     try {
+      // Add 60 second timeout for upload
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
       response = await fetch(
         `${BACKEND_URL}/upload/conversations/${conversationId}`,
         {
@@ -62,9 +66,25 @@ export async function POST(req: NextRequest) {
             ...(authHeader && { 'Authorization': authHeader }),
           },
           body: formData,
+          signal: controller.signal,
         }
       );
+      
+      clearTimeout(timeoutId);
     } catch (fetchErr) {
+      const errMsg = fetchErr instanceof Error ? fetchErr.message : 'Unknown error';
+      if (errMsg.includes('aborted') || errMsg.includes('abort')) {
+        return NextResponse.json(
+          { detail: 'Upload timed out. The server is taking too long to respond.' },
+          { status: 504 }
+        );
+      }
+      if (errMsg.includes('ECONNRESET') || errMsg.includes('socket hang up')) {
+        return NextResponse.json(
+          { detail: 'Connection to backend was reset. Please try again.' },
+          { status: 502 }
+        );
+      }
       return NextResponse.json(
         { detail: 'Cannot connect to the backend upload service. Please try again later.' },
         { status: 502 }
