@@ -1,8 +1,9 @@
-﻿'use client'
+'use client'
 
 import React, { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useResearcher } from '../hooks/useResearcher';
+import { useTheme } from '@/contexts/ThemeContext';
 import CompanyResearchTerminal from '../components/researcher/CompanyResearchTerminal';
 
 export const CompanyResearch: React.FC = () => {
@@ -19,8 +20,8 @@ export const CompanyResearch: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 text-green-400 font-mono">
-        <div className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+      <div className="min-h-screen font-mono" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
+        <div className="border-b backdrop-blur-xl" style={{ borderColor: 'var(--border)', backgroundColor: 'rgba(13, 13, 16, 0.6)' }}>
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center space-x-4">
               <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
@@ -49,8 +50,8 @@ export const CompanyResearch: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-950 text-green-400 font-mono">
-        <div className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+      <div className="min-h-screen font-mono" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
+        <div className="border-b backdrop-blur-xl" style={{ borderColor: 'var(--border)', backgroundColor: 'rgba(13, 13, 16, 0.6)' }}>
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center space-x-4">
               <div className="w-3 h-3 bg-red-400 rounded-full"></div>
@@ -82,8 +83,8 @@ export const CompanyResearch: React.FC = () => {
 
   if (!companyData) {
     return (
-      <div className="min-h-screen bg-gray-950 text-green-400 font-mono">
-        <div className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+      <div className="min-h-screen font-mono" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
+        <div className="border-b backdrop-blur-xl" style={{ borderColor: 'var(--border)', backgroundColor: 'rgba(13, 13, 16, 0.6)' }}>
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center space-x-4">
               <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>

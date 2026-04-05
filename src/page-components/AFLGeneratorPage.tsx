@@ -625,7 +625,9 @@ export function AFLGeneratorPage() {
       {/* SIDEBAR */}
       <div style={{ 
         width: sidebarCollapsed ? '0px' : '280px', 
-        backgroundColor: colors.sidebar, 
+        backgroundColor: 'rgba(13, 13, 16, 0.6)', 
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderRight: sidebarCollapsed ? 'none' : `1px solid ${colors.border}`, 
         display: 'flex', 
         flexDirection: 'column', 
