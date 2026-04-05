@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * ChatSidebar — Conversation list sidebar with search, rename, delete.
- * Extracted from ChatPage.tsx for separation of concerns.
+ * ChatSidebar — Modern frosted glass conversation list sidebar with search, rename, delete.
+ * Redesigned with contemporary visual elements and clean aesthetic.
  */
 
 import React, { useState } from 'react';
 import {
   Plus, MessageSquare, Trash2, ChevronLeft,
-  Search, Pencil, X, Wifi, WifiOff,
+  Search, Pencil, X, Wifi, WifiOff, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Shimmer } from '@/components/ai-elements/shimmer';
@@ -58,6 +58,7 @@ export function ChatSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [hoveredConvId, setHoveredConvId] = useState<string | null>(null);
 
   const handleRename = (conv: ConversationType, newTitle: string) => {
     const title = newTitle || conv.title || 'New Conversation';
@@ -80,254 +81,602 @@ export function ChatSidebar({
       )
     : conversations;
 
+  // Modern color palette
+  const modernColors = {
+    // Base surfaces
+    sidebarBg: isDark 
+      ? 'rgba(12, 12, 14, 0.85)'
+      : 'rgba(255, 255, 255, 0.75)',
+    cardBg: isDark
+      ? 'rgba(255, 255, 255, 0.03)'
+      : 'rgba(0, 0, 0, 0.02)',
+    cardHover: isDark
+      ? 'rgba(99, 102, 241, 0.08)'
+      : 'rgba(99, 102, 241, 0.06)',
+    cardActive: isDark
+      ? 'rgba(99, 102, 241, 0.15)'
+      : 'rgba(99, 102, 241, 0.12)',
+    // Borders
+    border: isDark
+      ? 'rgba(255, 255, 255, 0.06)'
+      : 'rgba(0, 0, 0, 0.06)',
+    borderHover: isDark
+      ? 'rgba(99, 102, 241, 0.3)'
+      : 'rgba(99, 102, 241, 0.25)',
+    borderActive: isDark
+      ? 'rgba(99, 102, 241, 0.5)'
+      : 'rgba(99, 102, 241, 0.4)',
+    // Text
+    text: isDark ? '#F1F1F4' : '#18181B',
+    textSecondary: isDark ? '#A1A1AA' : '#71717A',
+    textMuted: isDark ? '#71717A' : '#A1A1AA',
+    // Accent
+    accent: '#6366F1',
+    accentLight: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+    accentGlow: 'rgba(99, 102, 241, 0.4)',
+    // Status
+    success: '#22C55E',
+    error: '#EF4444',
+  };
+
   return (
     <div
       style={{
-        width: sidebarCollapsed ? '0px' : '280px',
-        backgroundColor: colors.sidebar,
-        borderRight: sidebarCollapsed ? 'none' : `1px solid ${colors.border}`,
+        width: sidebarCollapsed ? '0px' : '300px',
+        background: modernColors.sidebarBg,
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderRight: sidebarCollapsed ? 'none' : `1px solid ${modernColors.border}`,
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         overflow: 'hidden',
-        transition: 'width 0.3s ease',
+        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         flexShrink: 0,
+        position: 'relative',
       }}
     >
+      {/* Subtle gradient overlay */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '200px',
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, transparent 100%)'
+          : 'linear-gradient(180deg, rgba(99, 102, 241, 0.05) 0%, transparent 100%)',
+        pointerEvents: 'none',
+      }} />
+
       {/* Header */}
       <div
-        className="px-5 py-6 flex items-center justify-between flex-shrink-0"
         style={{
-          borderBottom: `2px solid ${colors.primaryYellow}`,
-          backgroundColor: isDark
-            ? 'rgba(254, 192, 15, 0.05)'
-            : 'rgba(254, 192, 15, 0.08)',
+          padding: '20px 20px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+          position: 'relative',
+          zIndex: 1,
         }}
       >
-        <div className="flex items-center gap-3">
-          <img src={logo} alt="Logo" className="w-8 h-8" />
-          <h2
-            className="m-0 text-sm font-bold uppercase tracking-wider"
-            style={{
-              fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
-              color: colors.text,
-            }}
-          >
-            CHATS
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            onClick={onRecheckConnection}
-            title={
-              connStatus === 'connected'
-                ? 'API Connected'
-                : connStatus === 'disconnected'
-                  ? 'API Disconnected — click to retry'
-                  : 'Checking...'
-            }
-            className="cursor-pointer flex items-center"
-          >
-            {connStatus === 'connected' ? (
-              <Wifi size={14} color="#22c55e" />
-            ) : connStatus === 'disconnected' ? (
-              <WifiOff size={14} color="#ef4444" />
-            ) : (
-              <Wifi size={14} color={colors.textMuted} style={{ opacity: 0.5 }} />
-            )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: isDark
+              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))'
+              : 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1))',
+            border: `1px solid ${modernColors.borderHover}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: isDark
+              ? '0 4px 12px rgba(99, 102, 241, 0.2)'
+              : '0 4px 12px rgba(99, 102, 241, 0.15)',
+          }}>
+            <img src={logo} alt="Logo" style={{ width: '22px', height: '22px' }} />
           </div>
-          <button
-            onClick={onCollapse}
-            className="bg-transparent border-none cursor-pointer p-1"
-          >
-            <ChevronLeft size={16} color={colors.textMuted} />
-          </button>
+          <div>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: '15px',
+                fontWeight: 600,
+                color: modernColors.text,
+                letterSpacing: '-0.01em',
+                fontFamily: "'Inter', system-ui, sans-serif",
+              }}
+            >
+              Conversations
+            </h2>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginTop: '2px',
+            }}>
+              <div
+                onClick={onRecheckConnection}
+                title={
+                  connStatus === 'connected'
+                    ? 'Connected'
+                    : connStatus === 'disconnected'
+                      ? 'Disconnected — click to retry'
+                      : 'Checking...'
+                }
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: connStatus === 'connected' 
+                    ? modernColors.success 
+                    : connStatus === 'disconnected'
+                      ? modernColors.error
+                      : modernColors.textMuted,
+                  boxShadow: connStatus === 'connected'
+                    ? `0 0 8px ${modernColors.success}`
+                    : 'none',
+                }} />
+                <span style={{
+                  fontSize: '11px',
+                  color: modernColors.textMuted,
+                  fontWeight: 500,
+                }}>
+                  {connStatus === 'connected' ? 'Online' : connStatus === 'disconnected' ? 'Offline' : 'Checking'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* Actions */}
-      <div className="p-4 flex flex-col gap-2.5">
         <button
-          onClick={onNewConversation}
-          className="w-full py-3 border-none rounded-xl cursor-pointer flex items-center justify-center gap-2 font-bold text-sm transition-all"
+          onClick={onCollapse}
           style={{
-            backgroundColor: colors.primaryYellow,
-            color: colors.darkGray,
-            fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
-            boxShadow: '0 2px 8px rgba(254, 192, 15, 0.2)',
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            background: modernColors.cardBg,
+            border: `1px solid ${modernColors.border}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: modernColors.textSecondary,
+            transition: 'all 0.2s ease',
           }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(254, 192, 15, 0.3)';
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = modernColors.cardHover;
+            e.currentTarget.style.borderColor = modernColors.borderHover;
+            e.currentTarget.style.color = modernColors.text;
           }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(254, 192, 15, 0.2)';
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = modernColors.cardBg;
+            e.currentTarget.style.borderColor = modernColors.border;
+            e.currentTarget.style.color = modernColors.textSecondary;
           }}
         >
-          <Plus size={18} /> New Chat
+          <ChevronLeft size={16} />
         </button>
+      </div>
 
-        {/* Search */}
-        <div className="relative">
+      {/* New Chat Button */}
+      <div style={{ padding: '0 16px 12px', position: 'relative', zIndex: 1 }}>
+        <button
+          onClick={onNewConversation}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            fontWeight: 600,
+            fontSize: '13px',
+            letterSpacing: '-0.01em',
+            color: '#ffffff',
+            background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+            boxShadow: '0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+          }}
+        >
+          <Sparkles size={16} />
+          New Conversation
+        </button>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: '0 16px 16px', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+        }}>
           <Search
-            size={14}
-            color={colors.textMuted}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2"
+            size={15}
+            color={modernColors.textMuted}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              pointerEvents: 'none',
+            }}
           />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search chats..."
-            className="w-full py-2 pr-2.5 pl-8 text-xs outline-none transition-colors"
+            placeholder="Search conversations..."
             style={{
-              backgroundColor: colors.inputBg,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-              color: colors.text,
-              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
-              boxSizing: 'border-box',
+              width: '100%',
+              padding: '10px 36px 10px 38px',
+              fontSize: '13px',
+              fontWeight: 500,
+              borderRadius: '10px',
+              border: `1px solid ${modernColors.border}`,
+              background: modernColors.cardBg,
+              color: modernColors.text,
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              fontFamily: "'Inter', system-ui, sans-serif",
             }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = colors.primaryYellow)}
-            onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = modernColors.borderHover;
+              e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)';
+              e.currentTarget.style.boxShadow = `0 0 0 3px ${modernColors.accentLight}`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = modernColors.border;
+              e.currentTarget.style.background = modernColors.cardBg;
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer p-0.5"
+              style={{
+                position: 'absolute',
+                right: '10px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '5px',
+                background: modernColors.cardHover,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: modernColors.textMuted,
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = modernColors.accent;
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = modernColors.cardHover;
+                e.currentTarget.style.color = modernColors.textMuted;
+              }}
             >
-              <X size={12} color={colors.textMuted} />
+              <X size={12} />
             </button>
           )}
         </div>
       </div>
 
       {/* Conversation list */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3" style={{ minHeight: 0 }}>
+      <div 
+        style={{ 
+          flex: 1, 
+          overflowY: 'auto', 
+          padding: '0 12px 16px',
+          position: 'relative',
+          zIndex: 1,
+        }}
+        className="modern-scrollbar"
+      >
         {loadingConversations ? (
-          <div className="space-y-3 px-2 py-4">
+          <div style={{ padding: '12px 8px' }}>
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-2">
-                <div className="w-4 h-4 rounded bg-muted animate-pulse" />
-                <Shimmer duration={2 + i * 0.3} className="text-xs">
-                  Loading conversations...
-                </Shimmer>
+              <div 
+                key={i} 
+                style={{
+                  padding: '14px 12px',
+                  marginBottom: '6px',
+                  borderRadius: '10px',
+                  background: modernColors.cardBg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                }} />
+                <div style={{ flex: 1 }}>
+                  <Shimmer duration={1.5 + i * 0.2} className="text-xs">
+                    Loading...
+                  </Shimmer>
+                </div>
               </div>
             ))}
           </div>
         ) : filtered.length === 0 && searchQuery.trim() ? (
           <div
-            className="text-center p-5 text-xs"
-            style={{ color: colors.textMuted }}
+            style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: modernColors.textMuted,
+            }}
           >
-            No chats matching &quot;{searchQuery}&quot;
+            <Search size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+            <p style={{ 
+              fontSize: '13px', 
+              fontWeight: 500,
+              margin: 0,
+              fontFamily: "'Inter', system-ui, sans-serif",
+            }}>
+              No results for &quot;{searchQuery}&quot;
+            </p>
           </div>
         ) : (
-          filtered.map((conv) => (
-            <div
-              key={conv.id}
-              onClick={() => {
-                if (renamingId !== conv.id) onSelectConversation(conv);
-              }}
-              className="mb-1 rounded-[10px] cursor-pointer text-[13px] flex items-center gap-2 transition-all"
-              style={{
-                padding: '10px 12px',
-                backgroundColor:
-                  selectedConversation?.id === conv.id
-                    ? 'rgba(254, 192, 15, 0.15)'
-                    : 'transparent',
-                border:
-                  selectedConversation?.id === conv.id
-                    ? `2px solid ${colors.primaryYellow}`
-                    : '1px solid transparent',
-                color: colors.text,
-                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
-              }}
-              onMouseOver={(e) => {
-                if (selectedConversation?.id !== conv.id) {
-                  e.currentTarget.style.backgroundColor = isDark
-                    ? 'rgba(254, 192, 15, 0.05)'
-                    : 'rgba(254, 192, 15, 0.08)';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (selectedConversation?.id !== conv.id) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }
-              }}
-            >
-              <MessageSquare
-                size={14}
-                className="flex-shrink-0"
-                style={{
-                  color:
-                    selectedConversation?.id === conv.id
-                      ? colors.primaryYellow
-                      : colors.textMuted,
+          filtered.map((conv, index) => {
+            const isSelected = selectedConversation?.id === conv.id;
+            const isHovered = hoveredConvId === conv.id;
+            
+            return (
+              <div
+                key={conv.id}
+                onClick={() => {
+                  if (renamingId !== conv.id) onSelectConversation(conv);
                 }}
-              />
-
-              {renamingId === conv.id ? (
-                <input
-                  autoFocus
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleRename(conv, renameValue);
-                    if (e.key === 'Escape') setRenamingId(null);
-                  }}
-                  onBlur={() => handleRename(conv, renameValue)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 text-[13px] px-2 py-1 outline-none min-w-0"
-                  style={{
-                    background: colors.inputBg,
-                    border: `2px solid ${colors.primaryYellow}`,
-                    borderRadius: '4px',
-                    color: colors.text,
-                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
-                  }}
-                />
-              ) : (
-                <span
-                  className="overflow-hidden text-ellipsis whitespace-nowrap flex-1"
-                  style={{
-                    fontWeight: selectedConversation?.id === conv.id ? 600 : 400,
-                  }}
-                >
-                  {stripSystemInstructions(conv.title || 'New Conversation')}
-                </span>
-              )}
-
-              {renamingId !== conv.id && (
-                <div className="flex gap-0.5 opacity-50">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setRenamingId(conv.id);
-                      setRenameValue(conv.title || '');
+                onMouseEnter={() => setHoveredConvId(conv.id)}
+                onMouseLeave={() => setHoveredConvId(null)}
+                style={{
+                  marginBottom: '4px',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  background: isSelected 
+                    ? modernColors.cardActive
+                    : isHovered
+                      ? modernColors.cardHover
+                      : 'transparent',
+                  border: isSelected
+                    ? `1px solid ${modernColors.borderActive}`
+                    : `1px solid transparent`,
+                  transform: isHovered && !isSelected ? 'translateX(4px)' : 'none',
+                  animation: `fadeInSlide 0.3s ease-out ${index * 0.03}s both`,
+                }}
+              >
+                {/* Icon */}
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: isSelected
+                    ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
+                    : isDark
+                      ? 'rgba(255, 255, 255, 0.05)'
+                      : 'rgba(0, 0, 0, 0.04)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease',
+                  boxShadow: isSelected
+                    ? '0 4px 12px rgba(99, 102, 241, 0.3)'
+                    : 'none',
+                }}>
+                  <MessageSquare
+                    size={16}
+                    style={{
+                      color: isSelected 
+                        ? '#ffffff'
+                        : modernColors.textSecondary,
                     }}
-                    className="bg-transparent border-none cursor-pointer p-1"
-                    title="Rename"
-                  >
-                    <Pencil size={12} color={colors.textMuted} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteConversation(conv.id);
-                    }}
-                    className="bg-transparent border-none cursor-pointer p-1"
-                    title="Delete"
-                  >
-                    <Trash2 size={12} color={colors.textMuted} />
-                  </button>
+                  />
                 </div>
-              )}
-            </div>
-          ))
+
+                {/* Title */}
+                {renamingId === conv.id ? (
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRename(conv, renameValue);
+                      if (e.key === 'Escape') setRenamingId(null);
+                    }}
+                    onBlur={() => handleRename(conv, renameValue)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      flex: 1,
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      border: `2px solid ${modernColors.accent}`,
+                      background: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.9)',
+                      color: modernColors.text,
+                      outline: 'none',
+                      minWidth: 0,
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                    }}
+                  />
+                ) : (
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      margin: 0,
+                      fontSize: '13px',
+                      fontWeight: isSelected ? 600 : 500,
+                      color: isSelected ? modernColors.text : modernColors.textSecondary,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                      letterSpacing: '-0.01em',
+                    }}>
+                      {stripSystemInstructions(conv.title || 'New Conversation')}
+                    </p>
+                    {conv.updated_at && (
+                      <p style={{
+                        margin: '2px 0 0',
+                        fontSize: '11px',
+                        color: modernColors.textMuted,
+                        fontWeight: 400,
+                      }}>
+                        {new Date(conv.updated_at).toLocaleDateString(undefined, { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Actions */}
+                {renamingId !== conv.id && (isHovered || isSelected) && (
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '4px',
+                    opacity: isHovered ? 1 : 0.7,
+                    transition: 'opacity 0.15s ease',
+                  }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenamingId(conv.id);
+                        setRenameValue(conv.title || '');
+                      }}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: modernColors.textMuted,
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = modernColors.cardHover;
+                        e.currentTarget.style.color = modernColors.text;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = modernColors.textMuted;
+                      }}
+                      title="Rename"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteConversation(conv.id);
+                      }}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: modernColors.textMuted,
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                        e.currentTarget.style.color = modernColors.error;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = modernColors.textMuted;
+                      }}
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
+
+      {/* Footer gradient */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '40px',
+        background: isDark
+          ? 'linear-gradient(0deg, rgba(12, 12, 14, 0.95) 0%, transparent 100%)'
+          : 'linear-gradient(0deg, rgba(255, 255, 255, 0.85) 0%, transparent 100%)',
+        pointerEvents: 'none',
+      }} />
+
+      <style>{`
+        @keyframes fadeInSlide {
+          from {
+            opacity: 0;
+            transform: translateX(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        .modern-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .modern-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .modern-scrollbar::-webkit-scrollbar-thumb {
+          background: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+          border-radius: 3px;
+        }
+        .modern-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
+        }
+      `}</style>
     </div>
   );
 }

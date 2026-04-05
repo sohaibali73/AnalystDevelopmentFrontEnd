@@ -37,6 +37,11 @@ function getCategoryStyle(category: string): React.CSSProperties {
 }
 
 export function KnowledgeBaseResults(props: KnowledgeBaseResultsProps) {
+  // Don't render the card when KB was searched but found nothing — avoids
+  // noisy "0 found" cards appearing on every unrelated message.
+  const results = props.results || [];
+  if (!props.error && results.length === 0) return null;
+
   if (!props.success && props.error) {
     return (
       <div
@@ -60,8 +65,6 @@ export function KnowledgeBaseResults(props: KnowledgeBaseResultsProps) {
       </div>
     );
   }
-
-  const results = props.results || [];
 
   return (
     <div

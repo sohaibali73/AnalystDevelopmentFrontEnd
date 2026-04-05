@@ -156,12 +156,12 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow: 'visible' }}>
       <defs>
-        <linearGradient id={`sg-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`sg-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.2" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={areaPath} fill={`url(#sg-${color.replace('#','')})`} />
+      <path d={areaPath} fill={`url(#sg-${color.replace('#', '')})`} />
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -241,11 +241,11 @@ export default function DashboardPage() {
         );
         setRecentChats(agentChats.slice(0, 5));
         setStats(prev => ({ ...prev, conversations: agentChats.length }));
-      } catch {}
+      } catch { }
       try {
         const docs = await apiClient.getDocuments();
         setStats(prev => ({ ...prev, documents: (docs || []).length }));
-      } catch {}
+      } catch { }
     })();
   }, []);
 
@@ -333,13 +333,13 @@ export default function DashboardPage() {
 
       <div style={{
         ...cssVars,
-        minHeight: '100vh',
+        minHeight: 'auto',
         background: isDark
           ? 'radial-gradient(ellipse 120% 60% at 60% -10%, rgba(254,192,15,0.04) 0%, transparent 60%), var(--bg)'
           : 'radial-gradient(ellipse 120% 60% at 60% -10%, rgba(254,192,15,0.06) 0%, transparent 60%), var(--bg)',
         fontFamily: "'Instrument Sans', sans-serif",
         color: 'var(--text)',
-        
+
       }}>
 
         {/* ── Top bar ── */}
@@ -573,10 +573,10 @@ export default function DashboardPage() {
           {/* Quick actions */}
           <div className="da2" style={{ display: 'flex', gap: '10px', marginBottom: '52px', flexWrap: 'wrap' as const }}>
             {[
-              { label: 'New Chat',     icon: Plus,     href: '/chat',      bg: 'rgba(167,139,250,0.1)', color: '#A78BFA' },
-              { label: 'Generate AFL', icon: Code2,    href: '/afl',       bg: 'rgba(96,165,250,0.1)',  color: '#60A5FA' },
-              { label: 'Upload Doc',   icon: FileText, href: '/knowledge', bg: 'rgba(52,211,153,0.1)',  color: '#34D399' },
-              { label: 'Backtest',     icon: BarChart2, href: '/backtest', bg: 'rgba(251,146,60,0.1)',  color: '#FB923C' },
+              { label: 'New Chat', icon: Plus, href: '/chat', bg: 'rgba(167,139,250,0.1)', color: '#A78BFA' },
+              { label: 'Generate AFL', icon: Code2, href: '/afl', bg: 'rgba(96,165,250,0.1)', color: '#60A5FA' },
+              { label: 'Upload Doc', icon: FileText, href: '/knowledge', bg: 'rgba(52,211,153,0.1)', color: '#34D399' },
+              { label: 'Backtest', icon: BarChart2, href: '/backtest', bg: 'rgba(251,146,60,0.1)', color: '#FB923C' },
             ].map(({ label, icon: Icon, href, bg, color }) => (
               <div
                 key={href}
@@ -720,7 +720,7 @@ export default function DashboardPage() {
                       e.currentTarget.style.boxShadow = isDark
                         ? '0 24px 56px rgba(0,0,0,0.6), 0 0 0 1px rgba(254,192,15,0.3), 0 0 40px rgba(254,192,15,0.2)'
                         : '0 16px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(254,192,15,0.3), 0 0 40px rgba(254,192,15,0.1)';
-                      e.currentTarget.style.background = isDark 
+                      e.currentTarget.style.background = isDark
                         ? 'linear-gradient(180deg, rgba(254,192,15,0.05), rgba(254,192,15,0.02))'
                         : 'linear-gradient(180deg, rgba(254,192,15,0.04), rgba(254,192,15,0.02))';
                     }}
@@ -752,10 +752,10 @@ export default function DashboardPage() {
                     }} />
 
                     {/* Icon + sparkline row */}
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'flex-start', 
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
                       marginBottom: '24px',
                       position: 'relative' as const,
                       zIndex: 1,
@@ -812,14 +812,14 @@ export default function DashboardPage() {
                     }}>
                       {feat.description}
                     </p>
-                    
+
                     {/* Enhanced CTA with gradient border */}
                     <div style={{
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
+                      display: 'inline-flex',
+                      alignItems: 'center',
                       gap: '8px',
                       fontFamily: "'DM Mono', monospace",
-                      fontSize: '10px', 
+                      fontSize: '10px',
                       letterSpacing: '0.12em',
                       textTransform: 'uppercase' as const,
                       color: feat.color,
@@ -978,9 +978,9 @@ export default function DashboardPage() {
 
               {[
                 { label: 'Total Conversations', value: stats.conversations, valueColor: 'var(--text)' },
-                { label: 'Documents Indexed',   value: stats.documents,    valueColor: 'var(--text)' },
-                { label: 'Platform Status',      value: 'Online',          valueColor: '#34D399' },
-                { label: 'AI Engine',            value: 'Active',          valueColor: '#FEC00F' },
+                { label: 'Documents Indexed', value: stats.documents, valueColor: 'var(--text)' },
+                { label: 'Platform Status', value: 'Online', valueColor: '#34D399' },
+                { label: 'AI Engine', value: 'Active', valueColor: '#FEC00F' },
               ].map(({ label, value, valueColor }, idx, arr) => (
                 <div key={label} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
