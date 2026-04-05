@@ -837,10 +837,10 @@ export function SettingsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Version</p>
-                      <p className="stat-num-glow" style={{ fontFamily: "'DM Mono', monospace", fontSize: '28px', fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1 }}>RC 2.0</p>
-                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.05em', marginTop: '6px' }}>Release Candidate 2.0</p>
+                      <p className="stat-num-glow" style={{ fontFamily: "'DM Mono', monospace", fontSize: '28px', fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1 }}>RC 3.0</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.05em', marginTop: '6px' }}>Release Candidate 3.0</p>
                     </div>
-                    <span style={{ padding: '4px 12px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', color: '#FCD34D', background: 'rgba(252,211,77,0.1)', border: '1px solid rgba(252,211,77,0.3)' }}>RC 2</span>
+                    <span style={{ padding: '4px 12px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--border-hover)' }}>RC 3</span>
                   </div>
                 </div>
 
