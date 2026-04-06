@@ -43,6 +43,17 @@ import { logger } from './logger';
 
 const API_BASE_URL = getApiUrl();
 
+/**
+ * Absolutize a download URL from the backend.
+ * The backend emits relative paths like /files/{uuid}/download.
+ * These must be resolved against API_BASE_URL so they point to Railway,
+ * not to the Next.js frontend server.
+ */
+function absDownloadUrl(url: string | undefined): string {
+  if (!url) return '';
+  return url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
+}
+
 class APIClient {
   private token: string | null = null;
 
@@ -529,7 +540,9 @@ class APIClient {
                   if (Array.isArray(parsed)) {
                     const item = parsed[0];
                     if (item?.type === 'file_download') {
-                      options?.onFileDownload?.(item.file_id, item.filename, item.download_url, item.file_type, item.size_kb ?? 0);
+                      // Absolutize download_url — backend returns relative paths like
+                      // /files/{uuid}/download which must resolve to Railway, not Next.js.
+                      options?.onFileDownload?.(item.file_id, item.filename, absDownloadUrl(item.download_url), item.file_type, item.size_kb ?? 0);
                     } else if (item?.skill_status) {
                       options?.onSkillStatus?.(item.skill_status, item.skill_slug ?? '');
                     } else {
@@ -763,7 +776,9 @@ class APIClient {
                   if (Array.isArray(parsed)) {
                     const item = parsed[0];
                     if (item?.type === 'file_download') {
-                      options?.onFileDownload?.(item.file_id, item.filename, item.download_url, item.file_type, item.size_kb ?? 0);
+                      // Absolutize download_url — backend returns relative paths like
+                      // /files/{uuid}/download which must resolve to Railway, not Next.js.
+                      options?.onFileDownload?.(item.file_id, item.filename, absDownloadUrl(item.download_url), item.file_type, item.size_kb ?? 0);
                     } else if (item?.skill_status) {
                       options?.onSkillStatus?.(item.skill_status, item.skill_slug ?? '');
                     } else {
@@ -1335,7 +1350,9 @@ class APIClient {
   }
 
   async generateContent(prompt: string, contentType: string, title?: string) {
-    return this.request<any>('/api/content/generate', 'POST', {
+    // FIXED: was '/api/content/generate' which caused double /api/ prefix when
+    // request() prepends API_BASE_URL. Backend route is /content/generate.
+    return this.request<any>('/content/generate', 'POST', {
       prompt,
       title,
       content_type: contentType

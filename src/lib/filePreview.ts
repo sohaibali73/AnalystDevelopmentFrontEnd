@@ -37,7 +37,8 @@ export function getFileExtension(filename: string): string {
 
 export function isSupportedForPreview(filename: string): boolean {
   const ext = getFileExtension(filename);
-  return ['pdf', 'docx', 'doc', 'csv', 'xlsx', 'xls', 'txt', 'md', 'json', 'html', 'htm', 'xml'].includes(ext);
+  // pptx/ppt are handled by ChatFilePreviewModal — include them here for consistency
+  return ['pdf', 'docx', 'doc', 'csv', 'xlsx', 'xls', 'pptx', 'ppt', 'txt', 'md', 'json', 'html', 'htm', 'xml'].includes(ext);
 }
 
 // ─── Blob/URL helpers ────────────────────────────────────────────────────────
