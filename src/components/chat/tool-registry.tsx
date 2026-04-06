@@ -319,24 +319,24 @@ function renderInvokeSkill(
   else if (INVOKE_QUANT_SLUGS.has(slug))     Component = SkillResultCard;
   else                                       Component = SkillResultCard;
 
-  // If we found a specific component, use it
-  if (Component) {
-    switch (part.state) {
-      case 'input-streaming':
-      case 'input-available':
-        return <ToolLoading key={pIdx} toolName={displaySlug} input={part.input} />;
-      case 'output-available':
-        return (
-          <Component
-            key={pIdx}
-            {...(typeof part.output === 'object' && part.output ? part.output : {})}
-          />
-        );
-      case 'output-error':
-        return <ToolError key={pIdx} toolName={displaySlug} errorText={part.errorText} />;
-      default:
-        return null;
-    }
+  // Always use SkillResultCard for ALL skills - FAST & CLEAN
+  switch (part.state) {
+    case 'input-streaming':
+    case 'input-available':
+      return <ToolLoading key={pIdx} toolName={displaySlug} input={part.input} />;
+    case 'output-available':
+      return (
+        <SkillResultCard
+          key={pIdx}
+          skill={slug}
+          skill_name={displaySlug}
+          {...(typeof part.output === 'object' && part.output ? part.output : {})}
+        />
+      );
+    case 'output-error':
+      return <ToolError key={pIdx} toolName={displaySlug} errorText={part.errorText} />;
+    default:
+      return null;
   }
 
   // ── File-producing skills → DocumentGenerationCard (fallback) ────────────
