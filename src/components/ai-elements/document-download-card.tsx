@@ -244,8 +244,7 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
           const { renderAsync } = await import('docx-preview');
           docxContainerRef.current.innerHTML = '';
           await renderAsync(blob, docxContainerRef.current, undefined, {
-            className:       'docx-preview-body',
-            injectFonts:     true,
+            className:                   'docx-preview-body',
             ignoreLastRenderedPageBreak: false,
           });
         }
