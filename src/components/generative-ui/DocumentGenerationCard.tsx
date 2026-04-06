@@ -507,26 +507,29 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     }
   }, [previewOpen, isComplete, downloadUrl, fileType, loadPreview]);
 
-  // ── Theme tokens ───────────────────────────────────────────────────────────
-  const cardBg    = isDark ? '#111114' : '#FAFAFA';
-  const borderCol = isDark ? `${meta.color}28` : `${meta.color}1A`;
-  const textColor = isDark ? '#F0F0F0' : '#111111';
-  const mutedCol  = isDark ? '#7A7A88' : '#6B7280';
-  const trackCol  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-  const metaBg    = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)';
-  const metaBdr   = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+   // ── Theme tokens ───────────────────────────────────────────────────────────
+   const cardBg    = isDark ? 'rgba(17, 17, 20, 0.85)' : 'rgba(250, 250, 250, 0.85)';
+   const borderCol = isDark ? `${meta.color}28` : `${meta.color}1A`;
+   const textColor = isDark ? '#F0F0F0' : '#111111';
+   const mutedCol  = isDark ? '#7A7A88' : '#6B7280';
+   const trackCol  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+   const metaBg    = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)';
+   const metaBdr   = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-  return (
-    <div style={{
-      marginTop: '12px',
-      borderRadius: '14px',
-      border: `1px solid ${borderCol}`,
-      backgroundColor: cardBg,
-      overflow: 'hidden',
-      fontFamily: "'Instrument Sans', sans-serif",
-      boxShadow: isDark ? `0 4px 20px ${meta.color}12` : `0 4px 20px ${meta.color}0A`,
-    }}>
+   // ── Render ─────────────────────────────────────────────────────────────────
+   return (
+     <div style={{
+       marginTop: '12px',
+       borderRadius: '16px',
+       border: `1px solid ${borderCol}`,
+       backgroundColor: cardBg,
+       overflow: 'hidden',
+       fontFamily: "'Instrument Sans', sans-serif",
+       boxShadow: isDark ? `0 8px 32px ${meta.color}20` : `0 8px 32px ${meta.color}12`,
+       backdropFilter: 'blur(20px) saturate(180%)',
+       WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+       animation: 'docGenSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+     }}>
 
       {/* Accent bar */}
       <div style={{
