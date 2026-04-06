@@ -317,6 +317,7 @@ function renderInvokeSkill(
   else if (INVOKE_DCF_SLUGS.has(slug))       Component = DCFModelCard;
   else if (INVOKE_BACKTEST_SLUGS.has(slug))  Component = SkillResultCard;
   else if (INVOKE_QUANT_SLUGS.has(slug))     Component = SkillResultCard;
+  else                                       Component = SkillResultCard;
 
   // If we found a specific component, use it
   if (Component) {

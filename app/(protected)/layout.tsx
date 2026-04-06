@@ -13,7 +13,6 @@ export default function ProtectedLayout({
     <ProtectedRoute>
       <ProcessManagerProvider>
         <MainLayout>{children}</MainLayout>
-        <ProcessManagerWidget />
       </ProcessManagerProvider>
     </ProtectedRoute>
   );
