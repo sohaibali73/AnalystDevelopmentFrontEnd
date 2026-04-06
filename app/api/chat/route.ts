@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
                   break;
                 }
 
-                case '2': { // Data (artifacts, conversation metadata)
+                case '2': { // Data (artifacts, file downloads, skill status, conversation metadata)
                   if (textStarted) {
                     await writeSSE({ type: 'text-end', id: textId });
                     textStarted = false;
@@ -213,13 +213,23 @@ export async function POST(req: NextRequest) {
                   }
                   if (Array.isArray(parsed)) {
                     for (const item of parsed) {
-                      if (item && item.type === 'artifact') {
+                      if (!item) continue;
+                      if (item.type === 'artifact') {
                         await writeSSE({
                           type: 'data-artifact',
                           id: item.id || `artifact-${Date.now()}`,
                           data: item,
                         });
-                      } else if (item && item.conversation_id) {
+                      } else if (item.type === 'file_download') {
+                        // File download card — wrap in array so frontend's
+                        // Array.isArray(dataPart?.data) unwraps correctly
+                        await writeSSE({ type: 'data-file_download', data: [item] });
+                      } else if (item.skill_status) {
+                        // Skill execution status ("Creating Word document…")
+                        await writeSSE({ type: 'data-skill_status', data: [item] });
+                      } else if (item.skill_heartbeat) {
+                        // Keep-alive heartbeat — no need to forward to client
+                      } else if (item.conversation_id) {
                         await writeSSE({ type: 'data-conversation', data: item });
                       }
                     }
