@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Frosted Glass Backdrop Filter Support */
+@supports (backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px)) {
+  .backdrop-blur-xl {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+}
+
 /* ==============================
    Custom Animations
    ============================== */
