@@ -64,6 +64,7 @@ import {
   ChatSkillSelector,
   HTMLArtifactPreview,
   ChatAgentSettings,
+  API_BASE_URL_CHAT,
   type ChatPreviewFile,
 } from '@/components/chat';
 import {
@@ -782,7 +783,15 @@ export function ChatPage() {
             description: 'Click to download',
             action: {
               label: 'Download',
-              onClick: () => window.open(item.download_url, '_blank'),
+              onClick: () => {
+                // download_url from the backend is a relative path like
+                // /files/{uuid}/download — resolve it against the Railway origin.
+                const rawUrl: string = item.download_url || '';
+                const absUrl = rawUrl.startsWith('/')
+                  ? `${(process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app').replace(/\/+$/, '')}${rawUrl}`
+                  : rawUrl;
+                window.open(absUrl, '_blank');
+              },
             },
             duration: 10000,
           });
@@ -1248,8 +1257,30 @@ export function ChatPage() {
           }
           return null;
         }
-        case 'data-file-download':
-          return part.data ? <DocumentDownloadCard key={pIdx} output={{ document_id: part.data.file_id || part.data.document_id, filename: part.data.filename, download_url: part.data.download_url, doc_type: part.data.file_type || part.data.doc_type, file_size_kb: part.data.size_kb || part.data.file_size_kb, tool: part.data.tool_name || part.data.tool, title: part.data.filename || part.data.title || 'Generated File', success: true }} onPreview={(file) => setPreviewChatFile(file)} /> : null;
+        case 'data-file-download': {
+          if (!part.data) return null;
+          // Absolutize download_url — backend returns relative paths like /files/{uuid}/download
+          const rawDlUrl: string = part.data.download_url || '';
+          const absDlUrl = rawDlUrl.startsWith('/')
+            ? `${API_BASE_URL_CHAT}${rawDlUrl}`
+            : rawDlUrl;
+          return (
+            <DocumentDownloadCard
+              key={pIdx}
+              output={{
+                document_id: part.data.file_id || part.data.document_id,
+                filename:    part.data.filename,
+                download_url: absDlUrl,
+                doc_type:    part.data.file_type || part.data.doc_type,
+                file_size_kb: part.data.size_kb || part.data.file_size_kb,
+                tool:        part.data.tool_name || part.data.tool,
+                title:       part.data.filename || part.data.title || 'Generated File',
+                success:     true,
+              }}
+              onPreview={(file) => setPreviewChatFile(file)}
+            />
+          );
+        }
         default:
           if (part.type?.startsWith('data-') && part.data?.content && part.data?.artifactType) {
             const { artifactType: artType, content: artCode, language, title } = part.data;

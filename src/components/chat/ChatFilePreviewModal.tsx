@@ -66,10 +66,16 @@ function loadScript(src: string): Promise<void> {
 
 async function fetchFileBlob(file: ChatPreviewFile, signal?: AbortSignal): Promise<Blob> {
   if (file.url) {
+    // Relative paths like /files/{uuid}/download come from the backend and must
+    // be prefixed with the API base URL so they resolve to Railway, not the
+    // Next.js frontend server.
+    const absoluteUrl = file.url.startsWith('/')
+      ? `${API_BASE_URL_CHAT}${file.url}`
+      : file.url;
     // Include auth for same-origin API URLs; skip for external CDN/S3 links
-    const isSameOrigin = file.url.startsWith(API_BASE_URL_CHAT);
+    const isSameOrigin = absoluteUrl.startsWith(API_BASE_URL_CHAT);
     const headers: HeadersInit = isSameOrigin ? { Authorization: `Bearer ${getAuthToken()}` } : {};
-    const resp = await fetch(file.url, { headers, signal });
+    const resp = await fetch(absoluteUrl, { headers, signal });
     if (!resp.ok) throw new Error(`HTTP ${resp.status} — ${resp.statusText}`);
     return resp.blob();
   }
