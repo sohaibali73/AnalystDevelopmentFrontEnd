@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, MessageSquare, Paperclip, Trash2, ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Pencil, X, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Download, Code2, PanelRightClose, PanelRightOpen, Settings2, Zap, Layers, Sparkles, Check } from 'lucide-react';
+import { Plus, MessageSquare, Paperclip, Trash2, ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Pencil, X, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Download, Code2, PanelRightClose, PanelRightOpen, Settings2, Zap, Layers, Sparkles, Check, FileText, FileSpreadsheet, ImageIcon } from 'lucide-react';
 import { FadeIn, AnimatedCard, AnimatedListItem, StaggerContainer, StaggerItem, Glow, AnimatedProgress, Pulse } from '@/components/AnimatedComponents';
 import { renderToolPart } from '@/components/chat/tool-registry';
 import { Switch } from '@/components/ui/switch';
@@ -44,21 +44,98 @@ import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineRea
 
 const logo = '/potomac-icon.png';
 
+// Helper to get file extension
+function getFileExtension(filename: string): string {
+  const match = filename.match(/\.([a-zA-Z0-9]+)$/i);
+  return match ? match[1].toLowerCase() : '';
+}
+
+// Helper to get file icon based on extension
+function getFileTypeIcon(filename: string) {
+  const ext = getFileExtension(filename);
+  if (['pdf', 'doc', 'docx', 'rtf'].includes(ext)) return FileText;
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return FileSpreadsheet;
+  if (['json', 'xml', 'html', 'md', 'txt', 'afl'].includes(ext)) return Code2;
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return ImageIcon;
+  return FileText;
+}
+
 // Component to display file attachments inside PromptInput - Claude/ChatGPT style
-function AttachmentsDisplay() {
+function AttachmentsDisplay({ isDark }: { isDark: boolean }) {
   const attachments = usePromptInputAttachments();
   if (attachments.files.length === 0) return null;
+  
   return (
     <PromptInputHeader>
-      <Attachments variant="inline">
-        {attachments.files.map((file) => (
-          <Attachment key={file.id} data={file} onRemove={() => attachments.remove(file.id)}>
-            <AttachmentPreview />
-            <span className="truncate max-w-32 text-xs">{file.filename || 'file'}</span>
-            <AttachmentRemove />
-          </Attachment>
-        ))}
-      </Attachments>
+      <div style={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: '8px',
+        padding: '8px 0',
+      }}>
+        {attachments.files.map((file) => {
+          const fname = file.filename || 'file';
+          const Icon = getFileTypeIcon(fname);
+          
+          return (
+            <div
+              key={file.id}
+              className="group"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 10px 6px 8px',
+                borderRadius: '8px',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
+                maxWidth: '200px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Icon size={14} style={{ flexShrink: 0, opacity: 0.6 }} />
+              <span style={{ 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap',
+                fontFamily: "'Inter', system-ui, sans-serif",
+              }}>
+                {fname}
+              </span>
+              <button
+                onClick={() => attachments.remove(file.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '4px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+                  marginLeft: '2px',
+                  transition: 'opacity 0.15s, background 0.15s',
+                }}
+                onMouseEnter={e => { 
+                  e.currentTarget.style.opacity = '1'; 
+                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+                }}
+                onMouseLeave={e => { 
+                  e.currentTarget.style.opacity = '0.7'; 
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </PromptInputHeader>
   );
 }
@@ -211,12 +288,26 @@ export function AFLGeneratorPage() {
       let extractedStrategyType: string | undefined;
 
       for (const part of parts) {
+        // Handle direct AFL tool
         if (part.type === 'tool-generate_afl_code' && part.state === 'output-available') {
           const aflCode = (part as any).output?.code || (part as any).output?.afl_code;
           if (aflCode) {
             extractedCode = aflCode;
             extractedDescription = (part as any).output?.description;
             extractedStrategyType = (part as any).output?.strategy_type;
+            break;
+          }
+        }
+        // Handle invoke_skill which wraps AFL code generation
+        if (part.type === 'tool-invoke_skill' && part.state === 'output-available') {
+          const output = (part as any).output;
+          // Check for AFL code in various possible locations
+          const aflCode = output?.afl_code || output?.code || output?.fixed_code || 
+                         output?.result?.afl_code || output?.result?.code;
+          if (aflCode) {
+            extractedCode = aflCode;
+            extractedDescription = output?.description || output?.result?.description;
+            extractedStrategyType = output?.strategy_type || output?.result?.strategy_type;
             break;
           }
         }
@@ -652,7 +743,7 @@ export function AFLGeneratorPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h2 style={{ 
-                  fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
+                  fontFamily: "'Syne', sans-serif", 
                   fontSize: '13px', 
                   fontWeight: 700, 
                   color: colors.text, 
@@ -680,7 +771,7 @@ export function AFLGeneratorPage() {
                 </motion.span>
               </div>
               <p style={{
-                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                fontFamily: "'Inter', system-ui, sans-serif",
                 fontSize: '10px',
                 color: colors.textMuted,
                 margin: 0,
@@ -734,7 +825,7 @@ export function AFLGeneratorPage() {
               gap: '8px', 
               fontWeight: 700, 
               color: streamMessages.length === 0 ? 'rgba(26, 26, 26, 0.5)' : colors.darkGray, 
-              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+              fontFamily: "'Inter', system-ui, sans-serif", 
               fontSize: '13px', 
               boxShadow: streamMessages.length === 0 ? 'none' : '0 2px 8px var(--accent-glow)',
               letterSpacing: '0.3px',
@@ -760,7 +851,7 @@ export function AFLGeneratorPage() {
                 fontSize: '12px', 
                 outline: 'none', 
                 boxSizing: 'border-box', 
-                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                fontFamily: "'Inter', system-ui, sans-serif", 
                 transition: 'all 0.2s ease' 
               }}
                 onFocus={(e) => { 
@@ -843,7 +934,7 @@ export function AFLGeneratorPage() {
                   padding: '40px 20px', 
                   color: colors.textMuted, 
                   fontSize: '12px',
-                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif"
+                  fontFamily: "'Inter', system-ui, sans-serif"
                 }}>
                   No strategies matching "{searchQuery}"
                 </div>
@@ -856,7 +947,7 @@ export function AFLGeneratorPage() {
                   padding: '40px 20px', 
                   color: colors.textMuted, 
                   fontSize: '12px',
-                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   lineHeight: 1.6
                 }}>
                   No strategies yet.<br/>Click "New Strategy" to begin
@@ -890,7 +981,7 @@ export function AFLGeneratorPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '10px', 
-                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                  fontFamily: "'Inter', system-ui, sans-serif", 
                   transition: 'background-color 0.2s ease, border-color 0.2s ease',
                   position: 'relative'
                 }} 
@@ -957,7 +1048,7 @@ export function AFLGeneratorPage() {
                       padding: '6px 8px', 
                       outline: 'none', 
                       minWidth: 0, 
-                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" 
+                      fontFamily: "'Inter', system-ui, sans-serif" 
                     }}
                   />
                 ) : (
@@ -1083,7 +1174,7 @@ export function AFLGeneratorPage() {
             <span style={{ 
               fontSize: '11px', 
               color: colors.textMuted, 
-              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+              fontFamily: "'Inter', system-ui, sans-serif",
               fontWeight: 600,
               letterSpacing: '0.5px',
               textTransform: 'uppercase'
@@ -1097,7 +1188,7 @@ export function AFLGeneratorPage() {
                 border: `1.5px solid ${colors.primaryBlue}`,
                 backgroundColor: colors.activeBg,
                 color: colors.primaryBlue,
-                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                fontFamily: "'Inter', system-ui, sans-serif",
                 letterSpacing: '0.3px'
               }}
             >
@@ -1134,7 +1225,7 @@ export function AFLGeneratorPage() {
                 fontSize: '11px',
                 color: compositeMode ? colors.primaryBlue : colors.textMuted,
                 fontWeight: compositeMode ? 600 : 500,
-                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                fontFamily: "'Inter', system-ui, sans-serif",
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
                 letterSpacing: '0.3px'
@@ -1158,7 +1249,7 @@ export function AFLGeneratorPage() {
                 gap: '6px', 
                 color: codePanelOpen ? colors.primaryBlue : colors.textMuted, 
                 fontSize: '11px', 
-                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                fontFamily: "'Inter', system-ui, sans-serif", 
                 transition: 'all 0.2s ease',
                 fontWeight: 600,
                 letterSpacing: '0.3px'
@@ -1229,7 +1320,7 @@ export function AFLGeneratorPage() {
                   <div className="flex flex-col items-center gap-6" style={{ padding: '20px', maxWidth: '600px' }}>
                     <div className="space-y-2 text-center">
                       <h3 style={{ 
-                        fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
+                        fontFamily: "'Syne', sans-serif", 
                         fontSize: '24px', 
                         fontWeight: 700, 
                         color: colors.text, 
@@ -1239,7 +1330,7 @@ export function AFLGeneratorPage() {
                         Build Professional Trading Strategies
                       </h3>
                       <p style={{ 
-                        fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                        fontFamily: "'Inter', system-ui, sans-serif", 
                         fontSize: '14px', 
                         color: colors.textMuted, 
                         margin: '4px 0', 
@@ -1322,7 +1413,7 @@ export function AFLGeneratorPage() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif"
+            fontFamily: "'Inter', system-ui, sans-serif"
           }}>
             <span>{pageError || chatError?.message || 'An error occurred'}</span>
             <div className="flex gap-2">
@@ -1339,7 +1430,7 @@ export function AFLGeneratorPage() {
                   alignItems: 'center',
                   gap: '4px',
                   backgroundColor: 'transparent',
-                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   fontWeight: 600,
                   transition: 'all 0.2s ease'
                 }}
@@ -1477,7 +1568,7 @@ export function AFLGeneratorPage() {
                   });
                 }}
               >
-                <AttachmentsDisplay />
+                <AttachmentsDisplay isDark={isDark} />
                 <PromptInputTextarea
                   value={input}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
@@ -1565,7 +1656,7 @@ export function AFLGeneratorPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <h3 style={{ 
-                    fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
+                    fontFamily: "'Syne', sans-serif", 
                     fontSize: '13px', 
                     fontWeight: 700, 
                     color: colors.text, 
@@ -1598,7 +1689,7 @@ export function AFLGeneratorPage() {
                   <span style={{ 
                     fontSize: '10px', 
                     color: colors.textMuted, 
-                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" 
+                    fontFamily: "'Inter', system-ui, sans-serif" 
                   }}>
                     {strategies.length} {strategies.length === 1 ? 'strategy' : 'strategies'}
                   </span>
@@ -1606,7 +1697,7 @@ export function AFLGeneratorPage() {
                   <span style={{ 
                     fontSize: '10px', 
                     color: colors.textMuted, 
-                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                    fontFamily: "'Inter', system-ui, sans-serif",
                     textTransform: 'capitalize'
                   }}>
                     {strategyType} Strategy
@@ -1745,7 +1836,7 @@ export function AFLGeneratorPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                      fontFamily: "'Inter', system-ui, sans-serif",
                       transition: 'all 0.2s ease',
                       whiteSpace: 'nowrap',
                       letterSpacing: '0.3px'
@@ -1798,7 +1889,7 @@ export function AFLGeneratorPage() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                        fontFamily: "'Inter', system-ui, sans-serif",
                         transition: 'all 0.2s ease',
                         whiteSpace: 'nowrap',
                         letterSpacing: '0.3px'
@@ -1883,7 +1974,7 @@ export function AFLGeneratorPage() {
                     <label style={{ 
                       fontSize: '10px', 
                       color: colors.textMuted, 
-                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                      fontFamily: "'Inter', system-ui, sans-serif", 
                       fontWeight: 600, 
                       textTransform: 'uppercase', 
                       letterSpacing: '0.5px',
@@ -1908,7 +1999,7 @@ export function AFLGeneratorPage() {
                         color: colors.text, 
                         fontSize: '12px', 
                         outline: 'none', 
-                        fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                        fontFamily: "'Inter', system-ui, sans-serif", 
                         boxSizing: 'border-box',
                         transition: 'all 0.2s ease'
                       }}
@@ -1943,7 +2034,7 @@ export function AFLGeneratorPage() {
                     <span style={{ 
                       fontSize: '10px', 
                       color: colors.textMuted, 
-                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                      fontFamily: "'Inter', system-ui, sans-serif",
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px'
@@ -2013,7 +2104,7 @@ export function AFLGeneratorPage() {
                 </div>
                 <div className="text-center" style={{ maxWidth: '300px' }}>
                   <h4 style={{
-                    fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                    fontFamily: "'Syne', sans-serif",
                     fontSize: '16px',
                     fontWeight: 700,
                     color: colors.text,
@@ -2026,7 +2117,7 @@ export function AFLGeneratorPage() {
                     fontSize: '13px', 
                     color: colors.textMuted, 
                     textAlign: 'center', 
-                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
+                    fontFamily: "'Inter', system-ui, sans-serif", 
                     lineHeight: 1.6,
                     margin: 0
                   }}>
@@ -2066,7 +2157,7 @@ export function AFLGeneratorPage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                  fontFamily: "'Inter', system-ui, sans-serif",
                   transition: 'all 0.2s ease',
                   letterSpacing: '0.3px'
                 }}
@@ -2085,7 +2176,7 @@ export function AFLGeneratorPage() {
               <span style={{ 
                 fontSize: '10px', 
                 color: colors.textSubtle, 
-                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif" 
+                fontFamily: "'Inter', system-ui, sans-serif" 
               }}>
                 or use auto-template above
               </span>
@@ -2130,7 +2221,7 @@ export function AFLGeneratorPage() {
                       backgroundColor: 'transparent',
                       color: colors.textMuted,
                       cursor: 'pointer',
-                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                      fontFamily: "'Inter', system-ui, sans-serif",
                       transition: 'all 0.2s ease',
                       letterSpacing: '0.3px'
                     }}
