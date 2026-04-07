@@ -51,6 +51,7 @@ import {
 } from '@/components/generative-ui';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
+import AFLGenerationCard from '@/components/generative-ui/AFLGenerationCard';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
 
@@ -347,8 +348,9 @@ function renderInvokeSkill(
     output.afl_code ||
     output.fixed_code ||
     output.strategy_type ||
-    (output.valid !== undefined && output.errors !== undefined) ||
-    (output.explanation && output.code)
+    output.data?.afl_code ||
+    output.data?.filename?.endsWith('.afl') ||
+    (output.filename && output.filename.endsWith('.afl'))
   );
 
   // ── Check if output looks like DCF model result ────────────────────────────
@@ -368,6 +370,24 @@ function renderInvokeSkill(
     (output.title && output.theme && output.download_url)
   );
 
+  // ── AFL skills → AFLGenerationCard (ALL states for proper lifecycle) ────────
+  // This renders the full generation experience with loading animation and code preview
+  if (INVOKE_AFL_SLUGS.has(slug) || looksLikeAFLOutput) {
+    return (
+      <AFLGenerationCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'afl_generation'}
+        input={part.input}
+        output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
   // ── Analysis/Research skills → specific cards (check FIRST) ─────────────
   // Also detect card type from output shape as fallback when slug is missing
   let Component: React.ComponentType<any> = SkillResultCard;
@@ -375,7 +395,6 @@ function renderInvokeSkill(
   if (INVOKE_RESEARCH_SLUGS.has(slug))                Component = FinancialResearchCard;
   else if (INVOKE_BUBBLE_SLUGS.has(slug))             Component = BubbleDetectorCard;
   else if (INVOKE_DOC_INTERPRETER_SLUGS.has(slug))    Component = DocInterpreterCard;
-  else if (INVOKE_AFL_SLUGS.has(slug) || looksLikeAFLOutput)    Component = AFLGenerateCard;
   else if (INVOKE_DCF_SLUGS.has(slug) || looksLikeDCFOutput)    Component = DCFModelCard;
   else if (INVOKE_BACKTEST_SLUGS.has(slug))           Component = SkillResultCard;
   else if (INVOKE_QUANT_SLUGS.has(slug))              Component = SkillResultCard;
@@ -542,16 +561,26 @@ function renderDynamicTool(
   if (part.state === 'output-available' && typeof part.output === 'object' && part.output) {
     const out = part.output as any;
 
-    // ── AFL code output detection ────────────────────────────────────────────
+    // ── AFL code output detection → use rich AFLGenerationCard ─────────────────
     if (
       out.afl_code ||
       out.fixed_code ||
-      out.strategy_type ||
-      (out.valid !== undefined && out.errors !== undefined) ||
-      (out.explanation && out.code) ||
+      out.data?.afl_code ||
+      out.data?.filename?.endsWith('.afl') ||
+      (out.filename && out.filename.endsWith('.afl')) ||
       /afl|amibroker/.test(toolName)
     ) {
-      return <AFLGenerateCard key={pIdx} {...out} />;
+      return (
+        <AFLGenerationCard
+          key={pIdx}
+          toolCallId={part.toolCallId || `dynamic_${pIdx}`}
+          toolName={toolName}
+          input={part.input}
+          output={out}
+          state={part.state as any}
+          errorText={part.errorText}
+        />
+      );
     }
 
     // ── DCF model output detection ───────────────────────────────────────────

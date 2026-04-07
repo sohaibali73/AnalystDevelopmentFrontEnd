@@ -113,6 +113,9 @@ export { default as PersistentGenerationCard } from './PersistentGenerationCard'
 // NEW: Document Generation Card with real progress tracking (DOCX, PPTX, XLSX, PDF, AFL, Datapack)
 export { default as DocumentGenerationCard } from './DocumentGenerationCard';
 
+// NEW: AFL Generation Card with code preview and download (amibroker-afl-developer skill)
+export { default as AFLGenerationCard } from './AFLGenerationCard';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SKILL EXECUTION RESULT CARDS
 // Generative UI components for Claude Custom Beta Skills
