@@ -104,7 +104,7 @@ export function AFLGeneratorPage() {
   // Code panel state
   const [codePanelOpen, setCodePanelOpen] = useState(!isMobile);
   const [generatedCode, setGeneratedCode] = useState('');
-  const [strategyType, setStrategyType] = useState<'standalone' | 'entry' | 'exit'>('standalone');
+  const [strategyType] = useState<'standalone'>('standalone');
   const [showSettings, setShowSettings] = useState(false);
   const [backtestSettings, setBacktestSettings] = useState({
     initial_equity: 100000,
@@ -174,6 +174,7 @@ export function AFLGeneratorPage() {
       },
       body: () => ({
         conversationId: conversationIdRef.current,
+        skill_slug: 'amibroker_afl_developer', // Force AFL skill for this page
       }),
     }),
     onFinish: () => {
@@ -1099,6 +1100,7 @@ export function AFLGeneratorPage() {
           backgroundColor: colors.background, 
           flexShrink: 0 
         }}>
+          {/* Strategy Type Label - Standalone only */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ 
               fontSize: '11px', 
@@ -1107,45 +1109,22 @@ export function AFLGeneratorPage() {
               fontWeight: 600,
               letterSpacing: '0.5px',
               textTransform: 'uppercase'
-            }}>Strategy Type</span>
-            {(['standalone', 'entry', 'exit'] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => setStrategyType(type)}
-                style={{
-                  padding: '6px 14px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  borderRadius: '8px',
-                  border: strategyType === type
-                    ? `1.5px solid ${colors.primaryBlue}`
-                    : `1px solid ${colors.border}`,
-                  backgroundColor: strategyType === type
-                    ? colors.activeBg
-                    : 'transparent',
-                  color: strategyType === type ? colors.primaryBlue : colors.textMuted,
-                  cursor: 'pointer',
-                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
-                  textTransform: 'capitalize',
-                  transition: 'all 0.2s ease',
-                  letterSpacing: '0.3px'
-                }}
-                onMouseOver={(e) => {
-                  if (strategyType !== type) {
-                    e.currentTarget.style.backgroundColor = colors.hoverBg;
-                    e.currentTarget.style.borderColor = colors.primaryBlue + '80';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (strategyType !== type) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.borderColor = colors.border;
-                  }
-                }}
-              >
-                {type}
-              </button>
-            ))}
+            }}>Strategy</span>
+            <span
+              style={{
+                padding: '6px 14px',
+                fontSize: '11px',
+                fontWeight: 600,
+                borderRadius: '8px',
+                border: `1.5px solid ${colors.primaryBlue}`,
+                backgroundColor: colors.activeBg,
+                color: colors.primaryBlue,
+                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                letterSpacing: '0.3px'
+              }}
+            >
+              Standalone
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* Composite Model Toggle */}
