@@ -47,17 +47,12 @@ export function useMessageCache() {
       /* storage full, ignore */
     }
 
-    // Layer 3: localStorage (rich parts only — for artifact/tool survival)
+    // Layer 3: localStorage (all parts — for tool UI survival on full reload)
     try {
       const partsCache: Record<string, any[]> = {};
       messages.forEach((m: any) => {
-        if (m.parts?.length > 0) {
-          const hasRichParts = m.parts.some(
-            (p: any) => p.type !== 'text' && p.type !== 'step-start',
-          );
-          if (hasRichParts) {
-            partsCache[m.id] = m.parts;
-          }
+        if (m.id && m.parts?.length > 0) {
+          partsCache[m.id] = m.parts;
         }
       });
 
@@ -119,16 +114,19 @@ export function useMessageCache() {
 
   /**
    * Save only the parts cache (used during onFinish to persist streamed parts).
+   * Saves ALL messages that have any parts — including pure text ones — so that
+   * tool-invocation parts (type='tool-invocation', state='output-available') are
+   * captured and survive a full page reload.
    */
   const savePartsToCache = useCallback((conversationId: string, messages: any[]) => {
     try {
       const partsCache: Record<string, any[]> = {};
       messages.forEach((m: any) => {
-        if (m.parts?.length > 0) {
-          const hasRichParts = m.parts.some((p: any) => p.type !== 'text');
-          if (hasRichParts) {
-            partsCache[m.id] = m.parts;
-          }
+        if (m.id && m.parts?.length > 0) {
+          // Save parts for any message that has tool, reasoning, or source parts.
+          // Also save if it has ANY part — the overhead is negligible and ensures
+          // nothing is lost on reload.
+          partsCache[m.id] = m.parts;
         }
       });
       if (Object.keys(partsCache).length > 0) {
@@ -139,7 +137,13 @@ export function useMessageCache() {
             JSON.stringify({ ...existing, ...partsCache }),
           );
         } catch {
-          localStorage.setItem(`chat_parts_${conversationId}`, JSON.stringify(partsCache));
+          // Quota exceeded — try storing just the most recent N messages
+          try {
+            const recent = Object.fromEntries(Object.entries(partsCache).slice(-20));
+            localStorage.setItem(`chat_parts_${conversationId}`, JSON.stringify(recent));
+          } catch {
+            /* give up gracefully */
+          }
         }
       }
     } catch {

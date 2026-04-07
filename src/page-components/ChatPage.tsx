@@ -799,14 +799,22 @@ export function ChatPage() {
       }
     },
     onFinish: ({ message }) => {
-      setSkillStatus(null); // Clear skill status when response completes
+      setSkillStatus(null);
       const convId = conversationIdRef.current;
       justFinishedStreamRef.current = convId;
       setTimeout(() => {
         if (justFinishedStreamRef.current === convId) justFinishedStreamRef.current = null;
       }, 30000);
 
-      if (convId) savePartsToCache(convId, [...streamMessages, message]);
+      if (convId) {
+        const allMsgs = [...streamMessages, message];
+        console.log('[v0] onFinish: saving parts for', allMsgs.length, 'messages, tool parts in last msg=', message.parts?.filter((p: any) => isToolPart(p.type)).length);
+        allMsgs.forEach((m: any) => {
+          const toolP = m.parts?.filter((p: any) => isToolPart(p.type)) || [];
+          if (toolP.length > 0) console.log('[v0]  msg', m.id, 'has', toolP.length, 'tool parts:', toolP.map((p: any) => `${p.type}/${p.toolName}/${p.state}`).join(', '));
+        });
+        savePartsToCache(convId, allMsgs);
+      }
 
       loadConversations();
       if (voiceMode && message.role === 'assistant') {
@@ -846,6 +854,7 @@ export function ChatPage() {
     if (newConvId) {
       try {
         const stored = localStorage.getItem(`file_dl_${newConvId}`);
+        console.log('[v0] conversation switch: file_dl keys=', stored ? Object.keys(JSON.parse(stored)).length : 0);
         if (stored) setFileDownloadEvents(JSON.parse(stored));
         else setFileDownloadEvents({});
       } catch { setFileDownloadEvents({}); }
@@ -872,8 +881,13 @@ export function ChatPage() {
   // ── Message cache sync (live during streaming) ─────────────────────────────
   useEffect(() => {
     const convId = conversationIdRef.current;
-    if (convId && streamMessages.length > 0) saveToCache(convId, streamMessages);
-  }, [streamMessages, saveToCache]);
+    if (convId && streamMessages.length > 0) {
+      saveToCache(convId, streamMessages);
+      // Also persist parts on every update so tool output-available state is
+      // captured immediately and survives a page reload mid-stream.
+      savePartsToCache(convId, streamMessages);
+    }
+  }, [streamMessages, saveToCache, savePartsToCache]);
 
   // ── Auto-scroll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -994,15 +1008,46 @@ export function ChatPage() {
       if (conversationIdRef.current !== conversationId) return;
 
       const cachedParts = loadPartsCache(conversationId);
-      const newMessages = data.map((m: any) => ({
-        id: m.id, role: m.role, content: m.content || '',
-        parts: cachedParts[m.id] || m.metadata?.parts || [{ type: 'text', text: m.content || '' }],
-        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
-      }));
+      const newMessages = data.map((m: any) => {
+        const localParts: any[] | undefined = cachedParts[m.id];
+        const serverParts: any[] | undefined = m.metadata?.parts;
+        const fallbackParts = [{ type: 'text', text: m.content || '' }];
+        // Prefer locally-cached parts (have the correct state values).
+        // If we must use server parts, normalize AI SDK v3 state names
+        // ('call' → 'input-available', 'result' → 'output-available') so
+        // tool-registry renders DocumentGenerationCard correctly.
+        const rawParts = localParts ?? serverParts ?? fallbackParts;
+        const parts = rawParts.map((p: any) => {
+          if (!p || p.type !== 'tool-invocation') return p;
+          const stateMap: Record<string, string> = {
+            'call':           'input-available',
+            'partial-call':   'input-streaming',
+            'result':         'output-available',
+          };
+          const normalizedState = stateMap[p.state] ?? p.state;
+          // Also normalise the toolInvocation sub-object if present
+          const toolInvocation = p.toolInvocation
+            ? { ...p.toolInvocation, state: stateMap[p.toolInvocation.state] ?? p.toolInvocation.state }
+            : undefined;
+          return { ...p, state: normalizedState, ...(toolInvocation ? { toolInvocation } : {}) };
+        });
+        return {
+          id: m.id,
+          role: m.role,
+          content: m.content || '',
+          parts,
+          createdAt: m.created_at ? new Date(m.created_at) : new Date(),
+        };
+      });
 
       if (newMessages.length > 0) {
         setMessages(newMessages as any);
         saveToCache(conversationId, newMessages);
+        // Re-persist parts under real server IDs (temp streaming IDs like
+        // "msg-1234567890" are never found on reload; this ensures the real
+        // UUID is stored so the next reload hits localStorage instead of falling
+        // back to server parts).
+        savePartsToCache(conversationId, newMessages);
       }
     } catch (error: any) {
       console.warn('Failed to load messages:', error);
@@ -1125,7 +1170,7 @@ export function ChatPage() {
       ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '';
 
-    // ── Content renderer (same logic, just extracted) ──────────────────────
+    // ── Content renderer (same logic, just extracted) ────────────────────��─
     const renderParts = () => {
       // Deduplicate tool parts by toolCallId — keep the last (most complete) state
       // to prevent duplicate cards when both input-available + output-available
@@ -1590,7 +1635,7 @@ export function ChatPage() {
         onSelectedUpdate={setSelectedConversation}
       />
 
-      {/* ── Main area ─────────────────────────────────────────────────────── */}
+      {/* ── Main area ─────────────────────────────────��───────────────────── */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         minWidth: 0, overflow: 'hidden', height: '100%',
