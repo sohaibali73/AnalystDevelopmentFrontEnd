@@ -307,10 +307,26 @@ function renderInvokeSkill(
   const slug = rawSlug.toLowerCase().replace(/-/g, '_');
   const displaySlug = rawSlug || 'invoke_skill';
 
+  // ── Check if output looks like a document generation result ─────────────
+  // This helps restore the correct card after page refresh even if skill_slug
+  // was not properly persisted in the input.
+  const output = part.output || externalOutput;
+  const looksLikeDocumentOutput = output && (
+    output.download_url ||
+    output.downloadUrl ||
+    output.file_url ||
+    output.file_id ||
+    output.fileId ||
+    output.document_id ||
+    output.presentation_id ||
+    (output.filename && /\.(docx|pptx|xlsx|pdf)$/i.test(output.filename))
+  );
+
   // ── File-producing skills → DocumentGenerationCard (ALL states) ─────────
   // This MUST come before the early-return switch below so the rich generation
   // animation is shown for DOCX / PPTX / XLSX / datapack skills.
-  if (INVOKE_FILE_SLUGS.has(slug)) {
+  // Also render DocumentGenerationCard if the output looks like a document result.
+  if (INVOKE_FILE_SLUGS.has(slug) || (part.state === 'output-available' && looksLikeDocumentOutput)) {
     return (
       <DocumentGenerationCard
         key={pIdx}

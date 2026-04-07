@@ -990,15 +990,19 @@ export function ChatPage() {
           // If we have a database result, merge it into the part
           if (dbResult && dbResult.state === 'completed') {
             const mergedOutput = dbResult.output || p.output || p.result || p.toolInvocation?.result;
+            // CRITICAL: Also merge the input from dbResult to preserve skill_slug for document generation
+            const mergedInput = { ...(p.input || {}), ...(dbResult.input || {}) };
             return {
               ...p,
               state: 'output-available',
+              input: mergedInput,
               output: mergedOutput,
               result: mergedOutput,
               toolInvocation: p.toolInvocation ? {
                 ...p.toolInvocation,
                 state: 'output-available',
                 result: mergedOutput,
+                args: mergedInput,
               } : undefined,
             };
           }
