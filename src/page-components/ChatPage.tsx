@@ -872,8 +872,13 @@ export function ChatPage() {
   // ── Message cache sync (live during streaming) ─────────────────────────────
   useEffect(() => {
     const convId = conversationIdRef.current;
-    if (convId && streamMessages.length > 0) saveToCache(convId, streamMessages);
-  }, [streamMessages, saveToCache]);
+    if (convId && streamMessages.length > 0) {
+      saveToCache(convId, streamMessages);
+      // Also persist parts on every update so tool output-available state is
+      // captured immediately and survives a page reload mid-stream.
+      savePartsToCache(convId, streamMessages);
+    }
+  }, [streamMessages, saveToCache, savePartsToCache]);
 
   // ── Auto-scroll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -994,11 +999,26 @@ export function ChatPage() {
       if (conversationIdRef.current !== conversationId) return;
 
       const cachedParts = loadPartsCache(conversationId);
-      const newMessages = data.map((m: any) => ({
-        id: m.id, role: m.role, content: m.content || '',
-        parts: cachedParts[m.id] || m.metadata?.parts || [{ type: 'text', text: m.content || '' }],
-        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
-      }));
+      const newMessages = data.map((m: any) => {
+        // Prefer the locally-cached parts (which include tool-invocation state)
+        // over server metadata. This ensures DocumentGenerationCard and other rich
+        // tool UI survive a full page reload.
+        const localParts: any[] | undefined = cachedParts[m.id];
+        const serverParts: any[] | undefined = m.metadata?.parts;
+        const fallbackParts = [{ type: 'text', text: m.content || '' }];
+
+        // If we have locally cached parts, always use them — they contain the
+        // full output-available state which the server may not preserve.
+        const parts = localParts ?? serverParts ?? fallbackParts;
+
+        return {
+          id: m.id,
+          role: m.role,
+          content: m.content || '',
+          parts,
+          createdAt: m.created_at ? new Date(m.created_at) : new Date(),
+        };
+      });
 
       if (newMessages.length > 0) {
         setMessages(newMessages as any);
