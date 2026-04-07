@@ -4,7 +4,14 @@
  * FilePreviewService
  * 
  * Client-side document parsing for previewing files in the browser.
- * Supports: PDF, DOCX/DOC, CSV, XLSX/XLS, TXT, MD, JSON, HTML
+ * Supports: PDF, DOCX/DOC, PPTX/PPT, CSV, XLSX/XLS, TXT, MD, JSON, HTML
+ * 
+ * Libraries used:
+ *   - DOCX: docx-preview
+ *   - PPTX: @kandiforge/pptx-renderer
+ *   - XLSX: SheetJS (xlsx)
+ *   - PDF: pdfjs-dist
+ *   - CSV: PapaParse
  * 
  * No server changes required — all parsing happens in-browser.
  */
@@ -37,7 +44,6 @@ export function getFileExtension(filename: string): string {
 
 export function isSupportedForPreview(filename: string): boolean {
   const ext = getFileExtension(filename);
-  // pptx/ppt are handled by ChatFilePreviewModal — include them here for consistency
   return ['pdf', 'docx', 'doc', 'csv', 'xlsx', 'xls', 'pptx', 'ppt', 'txt', 'md', 'json', 'html', 'htm', 'xml'].includes(ext);
 }
 
@@ -95,28 +101,42 @@ export async function parsePdf(blob: Blob): Promise<ParsedDocument> {
   };
 }
 
-// ─── DOCX Parser (mammoth) ──────────────────────────────────────────────────
+// ─── DOCX Parser (docx-preview) ─────────────────────────────────────────────
 
 export async function parseDocx(blob: Blob): Promise<ParsedDocument> {
-  const mammoth = await import('mammoth');
-  const arrayBuffer = await blobToArrayBuffer(blob);
-  const result = await mammoth.convertToHtml({ arrayBuffer });
-  const html = result.value;
+  // docx-preview renders directly into a DOM element, so we create a temporary container
+  // and extract the HTML for preview
+  const { renderAsync } = await import('docx-preview');
   
-  // Also extract plain text for metadata
-  const textResult = await mammoth.extractRawText({ arrayBuffer });
-  const text = textResult.value;
-  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+  // Create a temporary container
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+  document.body.appendChild(container);
   
-  return {
-    type: 'html',
-    content: html,
-    metadata: {
-      wordCount,
-      charCount: text.length,
-      lineCount: text.split('\n').length,
-    },
-  };
+  try {
+    await renderAsync(blob, container, undefined, {
+      className: 'docx-preview-body',
+      ignoreLastRenderedPageBreak: false,
+    });
+    
+    const html = container.innerHTML;
+    
+    // Extract text for metadata
+    const text = container.textContent || '';
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    
+    return {
+      type: 'html',
+      content: html,
+      metadata: {
+        wordCount,
+        charCount: text.length,
+        lineCount: text.split('\n').length,
+      },
+    };
+  } finally {
+    document.body.removeChild(container);
+  }
 }
 
 // ─── CSV Parser (PapaParse) ─────────────────────────────────────────────────
@@ -241,6 +261,48 @@ export async function parseJson(blob: Blob): Promise<ParsedDocument> {
   }
 }
 
+// ─── PPTX Parser (@kandiforge/pptx-renderer) ────────────────────────────────
+
+export async function parsePptx(blob: Blob): Promise<ParsedDocument> {
+  const { renderPptx } = await import('@kandiforge/pptx-renderer');
+  const arrayBuffer = await blobToArrayBuffer(blob);
+  
+  // Create a temporary container
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+  document.body.appendChild(container);
+  
+  try {
+    await renderPptx(arrayBuffer, container, {
+      slideWidth: 960,
+      slideHeight: 540,
+    });
+    
+    // Extract rendered slides as HTML
+    const slideElements = container.querySelectorAll('.pptx-slide, [class*="slide"]');
+    const slidesHtml = slideElements.length > 0
+      ? Array.from(slideElements).map(el => el.outerHTML).join('\n')
+      : container.innerHTML;
+    
+    // Extract text for metadata
+    const text = container.textContent || '';
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    const slideCount = slideElements.length || 1;
+    
+    return {
+      type: 'html',
+      content: slidesHtml,
+      metadata: {
+        pages: slideCount,
+        wordCount,
+        charCount: text.length,
+      },
+    };
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
 // ─── HTML Parser ────────────────────────────────────────────────────────────
 
 export async function parseHtml(blob: Blob): Promise<ParsedDocument> {
@@ -279,6 +341,9 @@ export async function parseFileForPreview(
       case 'xlsx':
       case 'xls':
         return await parseExcel(blob);
+      case 'pptx':
+      case 'ppt':
+        return await parsePptx(blob);
       case 'txt':
       case 'md':
         return await parseText(blob);

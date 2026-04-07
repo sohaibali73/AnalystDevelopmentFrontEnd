@@ -6,11 +6,11 @@
  * Shows a generated file card with an inline collapsible preview panel.
  *
  * Preview engines (all client-side, zero server round-trips):
- *   DOCX  → docx-preview  (renderAsync into a ref'd <div>)
- *   PPTX  → PPTXjs CDN    (slide-by-slide HTML rendering)
- *   XLSX  → SheetJS        (sheet_to_html into a <div>)
+ *   DOCX  → docx-preview          (renderAsync into a ref'd <div>)
+ *   PPTX  → @kandiforge/pptx-renderer (slide-by-slide HTML rendering)
+ *   XLSX  → SheetJS (xlsx)        (sheet_to_html into a <div>)
  *   HTML  → sandboxed <iframe srcDoc>
- *   PDF   → pdfjs-dist     (canvas rendering)
+ *   PDF   → pdfjs-dist            (canvas rendering)
  *
  * Downloads always serve the original file type.
  */
@@ -253,31 +253,30 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
 
       // ─────────────────────── PPTX ────────────────────────────────────────
       if (ext === 'pptx' || ext === 'ppt') {
-        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/build/pptxjs.min.js');
-        const ab   = await blob.arrayBuffer();
-        const pptx = (window as any).pptx;
-
-        if (pptx?.slides2Html) {
-          const result = await pptx.slides2Html({ pptx: ab, slidesScale: 'fit' });
-          const slides: string[] = Array.isArray(result)
-            ? result.map((s: any) => (typeof s === 'string' ? s : s.html || String(s)))
-            : [typeof result === 'string' ? result : '<p>Could not parse slides</p>'];
+        const { renderPptx } = await import('@kandiforge/pptx-renderer');
+        const ab = await blob.arrayBuffer();
+        
+        // Create a temporary container for rendering
+        const container = document.createElement('div');
+        container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+        document.body.appendChild(container);
+        
+        try {
+          await renderPptx(ab, container, {
+            slideWidth: 960,
+            slideHeight: 540,
+          });
+          
+          // Extract rendered slides as HTML strings
+          const slideElements = container.querySelectorAll('.pptx-slide, [class*="slide"]');
+          const slides: string[] = slideElements.length > 0
+            ? Array.from(slideElements).map(el => el.outerHTML)
+            : [container.innerHTML || '<p>No slides found</p>'];
+          
           pptxSlidesRef.current = slides;
           setPreview({ status: 'pptx', slides, active: 0 });
-        } else {
-          // Fallback: jQuery + pptxjs legacy render
-          await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
-          const container = document.createElement('div');
-          container.style.display = 'none';
-          document.body.appendChild(container);
-          try {
-            await (window as any).pptxjs?.renderPptx({ pptx: ab, container });
-            const slides = Array.from(container.children).map(c => (c as HTMLElement).innerHTML);
-            pptxSlidesRef.current = slides;
-            setPreview({ status: 'pptx', slides: slides.length > 0 ? slides : ['<p>No slides found</p>'], active: 0 });
-          } finally {
-            document.body.removeChild(container);
-          }
+        } finally {
+          document.body.removeChild(container);
         }
         return;
       }

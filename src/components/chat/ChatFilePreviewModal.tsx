@@ -110,6 +110,8 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
 
   // DOCX
   const [docxHtml,    setDocxHtml]    = useState<string | null>(null);
+  const docxContainerRef = useRef<HTMLDivElement>(null);
+  const [docxRendered, setDocxRendered] = useState(false);
   // XLSX
   const [xlsxSheets,  setXlsxSheets]  = useState<string[]>([]);
   const [xlsxAllHtml, setXlsxAllHtml] = useState<string[]>([]);
@@ -165,15 +167,12 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
           objectUrl = URL.createObjectURL(blob);
           setBlobUrl(objectUrl);
 
-          // DOCX
+          // DOCX - using docx-preview
           if (DOCX_EXTENSIONS.includes(ext)) {
-            await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
             if (controller.signal.aborted) return;
-            const ab     = await blob.arrayBuffer();
-            const result = await (window as any).mammoth.convertToHtml({ arrayBuffer: ab });
-            if (controller.signal.aborted) return;
-            // mammoth returns "" for corrupt/empty docs — surface that explicitly
-            setDocxHtml(result.value || '<p style="opacity:.5">(Document appears to be empty)</p>');
+            // docx-preview renders directly into a container, we'll handle this in renderContent
+            // Just signal that DOCX is ready to be rendered
+            setDocxHtml('__DOCX_READY__');
           }
 
           // XLSX
@@ -192,34 +191,38 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
             setXlsxAllHtml(pages);
           }
 
-          // PPTX
+          // PPTX - using @kandiforge/pptx-renderer
           if (PPTX_EXTENSIONS.includes(ext)) {
-            await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/build/pptxjs.min.js');
             if (controller.signal.aborted) return;
             const ab = await blob.arrayBuffer();
             try {
-              const pptx = (window as any).pptx;
-              if (pptx && pptx.slides2Html) {
-                const result = await pptx.slides2Html({ pptx: ab, slidesScale: 'fit' });
-                if (controller.signal.aborted) return;
-                if (Array.isArray(result)) {
-                  setPptxSlides(result.map((s: any) => typeof s === 'string' ? s : s.html || String(s)));
-                } else if (typeof result === 'string') {
-                  setPptxSlides([result]);
-                } else {
-                  setPptxSlides(['<p>PPTX loaded but could not parse slides</p>']);
+              const { renderPptx } = await import('@kandiforge/pptx-renderer');
+              
+              // Create a temporary container for rendering
+              const container = document.createElement('div');
+              container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+              document.body.appendChild(container);
+              
+              try {
+                await renderPptx(ab, container, {
+                  slideWidth: 960,
+                  slideHeight: 540,
+                });
+                
+                if (controller.signal.aborted) {
+                  document.body.removeChild(container);
+                  return;
                 }
-              } else {
-                await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
-                if (controller.signal.aborted) return;
-                const container = document.createElement('div');
-                container.style.display = 'none';
-                document.body.appendChild(container);
-                try {
-                  await (window as any).pptxjs?.renderPptx({ pptx: ab, container });
-                  const slides = Array.from(container.children).map(c => (c as HTMLElement).innerHTML);
-                  setPptxSlides(slides.length > 0 ? slides : ['<p>No slides found</p>']);
-                } finally {
+                
+                // Extract rendered slides as HTML strings
+                const slideElements = container.querySelectorAll('.pptx-slide, [class*="slide"]');
+                const slides: string[] = slideElements.length > 0
+                  ? Array.from(slideElements).map(el => el.outerHTML)
+                  : [container.innerHTML || '<p>No slides found</p>'];
+                
+                setPptxSlides(slides);
+              } finally {
+                if (document.body.contains(container)) {
                   document.body.removeChild(container);
                 }
               }
@@ -293,6 +296,40 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imgLoaded]);
+
+  // ── docx-preview for DOCX files ──────────────────────────────────────────
+  useEffect(() => {
+    if (docxHtml !== '__DOCX_READY__' || !blobCache || !docxContainerRef.current || docxRendered) return;
+    
+    let cancelled = false;
+    
+    const renderDocx = async () => {
+      try {
+        const { renderAsync } = await import('docx-preview');
+        if (cancelled || !docxContainerRef.current) return;
+        
+        docxContainerRef.current.innerHTML = '';
+        await renderAsync(blobCache, docxContainerRef.current, undefined, {
+          className: 'docx-preview-body',
+          ignoreLastRenderedPageBreak: false,
+        });
+        
+        if (!cancelled) {
+          setDocxRendered(true);
+        }
+      } catch (err) {
+        console.error('docx-preview error:', err);
+        if (!cancelled && docxContainerRef.current) {
+          docxContainerRef.current.innerHTML = `<p style="color:#ef4444;padding:20px;">Failed to render document: ${err instanceof Error ? err.message : 'Unknown error'}</p>`;
+          setDocxRendered(true);
+        }
+      }
+    };
+    
+    renderDocx();
+    
+    return () => { cancelled = true; };
+  }, [docxHtml, blobCache, docxRendered]);
 
   // ── Download — reuse in-memory blob, no second network request ───────────
   const handleDownload = useCallback(async () => {
@@ -373,10 +410,10 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
       );
     }
 
-    // ── DOCX ───────────────────────────────────────────────────────────────
+    // ── DOCX (using docx-preview) ────────────────────────────────────────
     if (DOCX_EXTENSIONS.includes(ext)) {
-      // Blob loaded but mammoth still parsing
-      if (!docxHtml) {
+      // Waiting for docx-preview to render
+      if (!docxHtml || (docxHtml === '__DOCX_READY__' && !docxRendered)) {
         return (
           <div className="flex items-center justify-center flex-1 gap-2.5 p-10">
             <Loader2 size={22} color={colors.accent} className="animate-spin" />
@@ -385,24 +422,18 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
         );
       }
       return (
-        <div className="flex-1 overflow-auto" style={{ backgroundColor: isDark ? '#1a1a1a' : '#f0f0f0' }}>
+        <div className="flex-1 overflow-auto" style={{ backgroundColor: isDark ? '#1a1a1a' : '#fff' }}>
           <div
-            className="docx-body"
-            style={{ padding: '40px 60px', maxWidth: '820px', margin: '0 auto' }}
-            dangerouslySetInnerHTML={{ __html: docxHtml }}
+            ref={docxContainerRef}
+            className="docx-preview-container"
+            style={{ minHeight: '400px' }}
           />
           <style>{`
-            .docx-body h1{font-size:22px;font-weight:700;color:${colors.text};margin:0 0 14px}
-            .docx-body h2{font-size:18px;font-weight:700;color:${colors.text};margin:20px 0 8px}
-            .docx-body h3{font-size:15px;font-weight:700;color:${colors.text};margin:16px 0 6px}
-            .docx-body p{font-size:14px;line-height:1.7;color:${colors.text};margin:0 0 10px}
-            .docx-body table{border-collapse:collapse;width:100%;margin:14px 0}
-            .docx-body td,.docx-body th{border:1px solid ${colors.border};padding:6px 10px;font-size:13px;color:${colors.text}}
-            .docx-body th{background:${isDark ? '#2a2a2a' : '#f5f5f5'};font-weight:600}
-            .docx-body ul,.docx-body ol{padding-left:22px;margin:6px 0}
-            .docx-body li{font-size:14px;line-height:1.6;color:${colors.text}}
-            .docx-body img{max-width:100%;border-radius:4px}
-            .docx-body a{color:${colors.accent};text-decoration:underline}
+            .docx-preview-container { padding: 20px; }
+            .docx-preview-body { background: #fff; padding: 32px 48px; color: #111; font-size: 14px; line-height: 1.7; }
+            .docx-preview-body table { border-collapse: collapse; width: 100%; }
+            .docx-preview-body td, .docx-preview-body th { border: 1px solid #d1d5db; padding: 6px 10px; }
+            .docx-preview-body img { max-width: 100%; }
           `}</style>
         </div>
       );
