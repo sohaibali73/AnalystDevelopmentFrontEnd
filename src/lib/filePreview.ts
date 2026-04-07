@@ -6,6 +6,14 @@
  * Client-side document parsing for previewing files in the browser.
  * Supports: PDF, DOCX/DOC, CSV, XLSX/XLS, TXT, MD, JSON, HTML
  * 
+ * Libraries used:
+ *   - DOCX: docx-preview
+ *   - XLSX: SheetJS (xlsx)
+ *   - PDF: pdfjs-dist
+ *   - CSV: PapaParse
+ * 
+ * Note: PPTX preview is handled by UI components using PPTXjs CDN.
+ * 
  * No server changes required — all parsing happens in-browser.
  */
 
@@ -37,7 +45,6 @@ export function getFileExtension(filename: string): string {
 
 export function isSupportedForPreview(filename: string): boolean {
   const ext = getFileExtension(filename);
-  // pptx/ppt are handled by ChatFilePreviewModal — include them here for consistency
   return ['pdf', 'docx', 'doc', 'csv', 'xlsx', 'xls', 'pptx', 'ppt', 'txt', 'md', 'json', 'html', 'htm', 'xml'].includes(ext);
 }
 
@@ -95,28 +102,42 @@ export async function parsePdf(blob: Blob): Promise<ParsedDocument> {
   };
 }
 
-// ─── DOCX Parser (mammoth) ──────────────────────────────────────────────────
+// ─── DOCX Parser (docx-preview) ─────────────────────────────────────────────
 
 export async function parseDocx(blob: Blob): Promise<ParsedDocument> {
-  const mammoth = await import('mammoth');
-  const arrayBuffer = await blobToArrayBuffer(blob);
-  const result = await mammoth.convertToHtml({ arrayBuffer });
-  const html = result.value;
+  // docx-preview renders directly into a DOM element, so we create a temporary container
+  // and extract the HTML for preview
+  const { renderAsync } = await import('docx-preview');
   
-  // Also extract plain text for metadata
-  const textResult = await mammoth.extractRawText({ arrayBuffer });
-  const text = textResult.value;
-  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+  // Create a temporary container
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+  document.body.appendChild(container);
   
-  return {
-    type: 'html',
-    content: html,
-    metadata: {
-      wordCount,
-      charCount: text.length,
-      lineCount: text.split('\n').length,
-    },
-  };
+  try {
+    await renderAsync(blob, container, undefined, {
+      className: 'docx-preview-body',
+      ignoreLastRenderedPageBreak: false,
+    });
+    
+    const html = container.innerHTML;
+    
+    // Extract text for metadata
+    const text = container.textContent || '';
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    
+    return {
+      type: 'html',
+      content: html,
+      metadata: {
+        wordCount,
+        charCount: text.length,
+        lineCount: text.split('\n').length,
+      },
+    };
+  } finally {
+    document.body.removeChild(container);
+  }
 }
 
 // ─── CSV Parser (PapaParse) ─────────────────────────────────────────────────
@@ -241,6 +262,24 @@ export async function parseJson(blob: Blob): Promise<ParsedDocument> {
   }
 }
 
+// ─── PPTX Parser (not supported in browser - returns placeholder) ───────────
+// PPTX parsing requires server-side processing or CDN scripts loaded at runtime.
+// Use ChatFilePreviewModal or DocumentDownloadCard for PPTX preview which use PPTXjs CDN.
+
+export async function parsePptx(_blob: Blob): Promise<ParsedDocument> {
+  // PPTX parsing is handled by the UI components using PPTXjs CDN
+  // This function returns a placeholder - use the preview components instead
+  return {
+    type: 'html',
+    content: '<div style="padding:40px;text-align:center;color:#666;"><p>PPTX preview is available in the document viewer</p></div>',
+    metadata: {
+      pages: 0,
+      wordCount: 0,
+      charCount: 0,
+    },
+  };
+}
+
 // ─── HTML Parser ────────────────────────────────────────────────────────────
 
 export async function parseHtml(blob: Blob): Promise<ParsedDocument> {
@@ -279,6 +318,9 @@ export async function parseFileForPreview(
       case 'xlsx':
       case 'xls':
         return await parseExcel(blob);
+      case 'pptx':
+      case 'ppt':
+        return await parsePptx(blob);
       case 'txt':
       case 'md':
         return await parseText(blob);

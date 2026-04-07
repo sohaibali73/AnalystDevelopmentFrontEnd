@@ -6,11 +6,11 @@
  * Shows a generated file card with an inline collapsible preview panel.
  *
  * Preview engines (all client-side, zero server round-trips):
- *   DOCX  → docx-preview  (renderAsync into a ref'd <div>)
- *   PPTX  → PPTXjs CDN    (slide-by-slide HTML rendering)
- *   XLSX  → SheetJS        (sheet_to_html into a <div>)
+ *   DOCX  → docx-preview          (renderAsync into a ref'd <div>)
+ *   PPTX  → PPTXjs CDN            (slide-by-slide HTML rendering)
+ *   XLSX  → SheetJS (xlsx)        (sheet_to_html into a <div>)
  *   HTML  → sandboxed <iframe srcDoc>
- *   PDF   → pdfjs-dist     (canvas rendering)
+ *   PDF   → pdfjs-dist            (canvas rendering)
  *
  * Downloads always serve the original file type.
  */
@@ -253,31 +253,27 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
 
       // ─────────────────────── PPTX ────────────────────────────────────────
       if (ext === 'pptx' || ext === 'ppt') {
-        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/build/pptxjs.min.js');
-        const ab   = await blob.arrayBuffer();
-        const pptx = (window as any).pptx;
-
-        if (pptx?.slides2Html) {
-          const result = await pptx.slides2Html({ pptx: ab, slidesScale: 'fit' });
-          const slides: string[] = Array.isArray(result)
-            ? result.map((s: any) => (typeof s === 'string' ? s : s.html || String(s)))
-            : [typeof result === 'string' ? result : '<p>Could not parse slides</p>'];
-          pptxSlidesRef.current = slides;
-          setPreview({ status: 'pptx', slides, active: 0 });
-        } else {
-          // Fallback: jQuery + pptxjs legacy render
-          await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
-          const container = document.createElement('div');
-          container.style.display = 'none';
-          document.body.appendChild(container);
-          try {
-            await (window as any).pptxjs?.renderPptx({ pptx: ab, container });
-            const slides = Array.from(container.children).map(c => (c as HTMLElement).innerHTML);
+        await loadScript('https://cdn.jsdelivr.net/gh/nicam/pptxjs@main/dist/pptxjs.min.js');
+        const ab = await blob.arrayBuffer();
+        
+        try {
+          const pptx = (window as any).pptx;
+          if (pptx?.slides2Html) {
+            const result = await pptx.slides2Html({ pptx: ab, slidesScale: 'fit' });
+            const slides: string[] = Array.isArray(result)
+              ? result.map((s: any) => (typeof s === 'string' ? s : s.html || String(s)))
+              : [typeof result === 'string' ? result : '<p>Could not parse slides</p>'];
             pptxSlidesRef.current = slides;
-            setPreview({ status: 'pptx', slides: slides.length > 0 ? slides : ['<p>No slides found</p>'], active: 0 });
-          } finally {
-            document.body.removeChild(container);
+            setPreview({ status: 'pptx', slides, active: 0 });
+          } else {
+            // Fallback: just show a message that parsing failed
+            pptxSlidesRef.current = ['<div class="pptx-slide" style="padding:40px;text-align:center;color:#666;"><p>PPTX preview not available</p></div>'];
+            setPreview({ status: 'pptx', slides: pptxSlidesRef.current, active: 0 });
           }
+        } catch (parseError) {
+          console.error('PPTX parse error:', parseError);
+          pptxSlidesRef.current = ['<div style="padding:40px;color:#ef4444;">Failed to parse PPTX file</div>'];
+          setPreview({ status: 'pptx', slides: pptxSlidesRef.current, active: 0 });
         }
         return;
       }
@@ -344,18 +340,51 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
     // ── DOCX ──────────────────────────────────────────────────────────────
     if (preview.status === 'docx') {
       return (
-        <div className={`${panelBase}`}>
+        <div className={`${panelBase} bg-zinc-800/50`}>
           <style>{`
-            .docx-preview-body { padding: 32px 48px; background: #fff; color: #111; font-size: 14px; line-height: 1.7; }
-            .docx-preview-body table { border-collapse: collapse; width: 100%; }
-            .docx-preview-body td, .docx-preview-body th { border: 1px solid #d1d5db; padding: 6px 10px; }
-            .docx-preview-body img { max-width: 100%; }
+            .docx-preview-wrapper {
+              padding: 24px;
+              background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
+            }
+            .docx-preview-paper {
+              background: #fff;
+              border-radius: 4px;
+              box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+              max-height: 520px;
+              overflow-y: auto;
+            }
+            .docx-preview-body { 
+              padding: 48px 56px; 
+              background: #fff; 
+              color: #1a1a1a; 
+              font-size: 14px; 
+              line-height: 1.75;
+              min-height: 300px;
+            }
+            .docx-preview-body p { margin: 0 0 12px; }
+            .docx-preview-body h1 { font-size: 24px; font-weight: 700; margin: 0 0 16px; color: #111; }
+            .docx-preview-body h2 { font-size: 20px; font-weight: 600; margin: 24px 0 12px; color: #222; }
+            .docx-preview-body h3 { font-size: 16px; font-weight: 600; margin: 20px 0 10px; color: #333; }
+            .docx-preview-body table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+            .docx-preview-body td, .docx-preview-body th { 
+              border: 1px solid #e5e7eb; 
+              padding: 10px 14px; 
+              text-align: left;
+            }
+            .docx-preview-body th { background: #f9fafb; font-weight: 600; }
+            .docx-preview-body img { max-width: 100%; height: auto; border-radius: 4px; margin: 12px 0; }
+            .docx-preview-body ul, .docx-preview-body ol { padding-left: 24px; margin: 12px 0; }
+            .docx-preview-body li { margin: 6px 0; }
+            .docx-preview-body a { color: #2563eb; text-decoration: underline; }
+            /* Hide empty wrapper divs that docx-preview sometimes adds */
+            .docx-preview-body > section:empty,
+            .docx-preview-body > div:empty { display: none; }
           `}</style>
-          <div
-            ref={docxContainerRef}
-            className="max-h-[520px] overflow-y-auto"
-            style={{ background: '#fff' }}
-          />
+          <div className="docx-preview-wrapper">
+            <div className="docx-preview-paper">
+              <div ref={docxContainerRef} />
+            </div>
+          </div>
         </div>
       );
     }
@@ -363,18 +392,18 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
     // ── XLSX ──────────────────────────────────────────────────────────────
     if (preview.status === 'xlsx') {
       return (
-        <div className={`${panelBase} flex flex-col`}>
+        <div className={`${panelBase} flex flex-col bg-zinc-800/50`}>
           {/* Sheet tabs */}
           {preview.sheets.length > 1 && (
-            <div className="flex gap-1 p-2 border-b border-zinc-700/50 flex-wrap">
+            <div className="flex gap-2 p-3 border-b border-zinc-700/50 flex-wrap bg-zinc-900/50">
               {preview.sheets.map((name, idx) => (
                 <button
                   key={name}
                   onClick={() => setPreview({ ...preview, active: idx })}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                     idx === preview.active
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/40'
-                      : 'text-zinc-400 border border-zinc-700 hover:border-zinc-500'
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/40 shadow-sm'
+                      : 'text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800'
                   }`}
                 >
                   {name}
@@ -382,15 +411,35 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
               ))}
             </div>
           )}
-          <div
-            className="overflow-auto max-h-[480px] p-3"
-            style={{ background: '#fff' }}
-            dangerouslySetInnerHTML={{ __html: preview.pages[preview.active] ?? '' }}
-          />
+          <div className="p-5" style={{ background: 'linear-gradient(135deg, #27272a 0%, #18181b 100%)' }}>
+            <div
+              className="overflow-auto max-h-[480px] rounded-md"
+              style={{ 
+                background: '#fff',
+                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
+              }}
+              dangerouslySetInnerHTML={{ __html: preview.pages[preview.active] ?? '' }}
+            />
+          </div>
           <style>{`
-            #${xlsxTableId} { border-collapse: collapse; font-size: 12px; width: 100%; }
-            #${xlsxTableId} td, #${xlsxTableId} th { border: 1px solid #d1d5db; padding: 4px 8px; color: #111; white-space: nowrap; }
-            #${xlsxTableId} tr:first-child td { background: #f3f4f6; font-weight: 600; }
+            #${xlsxTableId} { 
+              border-collapse: collapse; 
+              font-size: 13px; 
+              width: 100%; 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+            #${xlsxTableId} td, #${xlsxTableId} th { 
+              border: 1px solid #e5e7eb; 
+              padding: 8px 12px; 
+              color: #1a1a1a; 
+              white-space: nowrap; 
+            }
+            #${xlsxTableId} tr:first-child td, #${xlsxTableId} th { 
+              background: #f3f4f6; 
+              font-weight: 600; 
+              color: #374151;
+            }
+            #${xlsxTableId} tr:hover td { background: #f9fafb; }
           `}</style>
         </div>
       );
@@ -400,34 +449,46 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
     if (preview.status === 'pptx') {
       const total = preview.slides.length;
       return (
-        <div className={`${panelBase} flex flex-col`}>
+        <div className={`${panelBase} flex flex-col bg-zinc-800/50`}>
           {/* Slide navigation */}
           {total > 1 && (
-            <div className="flex items-center justify-center gap-3 p-2 border-b border-zinc-700/50">
+            <div className="flex items-center justify-center gap-4 py-3 px-4 border-b border-zinc-700/50 bg-zinc-900/50">
               <button
                 onClick={() => setPreview({ ...preview, active: Math.max(0, preview.active - 1) })}
                 disabled={preview.active === 0}
-                className="p-1 rounded hover:bg-zinc-700 disabled:opacity-30 text-zinc-300"
+                className="p-1.5 rounded-md hover:bg-zinc-700 disabled:opacity-30 text-zinc-300 transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-xs text-zinc-400 font-medium min-w-[60px] text-center">
-                {preview.active + 1} / {total}
+              <span className="text-xs text-zinc-400 font-medium min-w-[70px] text-center">
+                Slide {preview.active + 1} of {total}
               </span>
               <button
                 onClick={() => setPreview({ ...preview, active: Math.min(total - 1, preview.active + 1) })}
                 disabled={preview.active === total - 1}
-                className="p-1 rounded hover:bg-zinc-700 disabled:opacity-30 text-zinc-300"
+                className="p-1.5 rounded-md hover:bg-zinc-700 disabled:opacity-30 text-zinc-300 transition-colors"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           )}
-          <div
-            className="overflow-auto max-h-[480px] flex items-center justify-center p-4"
-            style={{ background: '#1a1a1a' }}
-            dangerouslySetInnerHTML={{ __html: preview.slides[preview.active] ?? '' }}
-          />
+          <div className="p-6" style={{ background: 'linear-gradient(135deg, #27272a 0%, #18181b 100%)' }}>
+            <div 
+              className="overflow-auto max-h-[480px] rounded-md shadow-xl"
+              style={{ 
+                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
+              }}
+              dangerouslySetInnerHTML={{ __html: preview.slides[preview.active] ?? '' }}
+            />
+          </div>
+          <style>{`
+            .pptx-slide {
+              background: #fff !important;
+              padding: 40px 48px !important;
+              min-height: 360px;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+          `}</style>
         </div>
       );
     }
@@ -435,14 +496,20 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
     // ── HTML ──────────────────────────────────────────────────────────────
     if (preview.status === 'html') {
       return (
-        <div className={`${panelBase}`}>
-          <iframe
-            srcDoc={preview.content}
-            sandbox="allow-scripts allow-same-origin"
-            className="w-full border-none"
-            style={{ height: '520px', background: '#fff' }}
-            title={displayFilename}
-          />
+        <div className={`${panelBase} bg-zinc-800/50`}>
+          <div className="p-5" style={{ background: 'linear-gradient(135deg, #27272a 0%, #18181b 100%)' }}>
+            <iframe
+              srcDoc={preview.content}
+              sandbox="allow-scripts allow-same-origin"
+              className="w-full border-none rounded-md"
+              style={{ 
+                height: '520px', 
+                background: '#fff',
+                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
+              }}
+              title={displayFilename}
+            />
+          </div>
         </div>
       );
     }
@@ -450,13 +517,18 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
     // ── PDF ───────────────────────────────────────────────────────────────
     if (preview.status === 'pdf') {
       return (
-        <div className={`${panelBase}`}>
-          <iframe
-            src={`${preview.blobUrl}#toolbar=1`}
-            className="w-full border-none"
-            style={{ height: '560px' }}
-            title={displayFilename}
-          />
+        <div className={`${panelBase} bg-zinc-800/50`}>
+          <div className="p-5" style={{ background: 'linear-gradient(135deg, #27272a 0%, #18181b 100%)' }}>
+            <iframe
+              src={`${preview.blobUrl}#toolbar=1`}
+              className="w-full border-none rounded-md"
+              style={{ 
+                height: '560px',
+                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
+              }}
+              title={displayFilename}
+            />
+          </div>
         </div>
       );
     }

@@ -3500,6 +3500,170 @@ python migration_validator.py
 
 ---
 
+## Tool Results Persistence (NEW - Critical for Generative UI)
+
+The frontend now persists tool results to the database so generative UI cards (documents, presentations, charts, etc.) survive page reloads and work across devices. **You must implement these endpoints:**
+
+### Database Schema
+
+Add the `tool_results` table to your Supabase/PostgreSQL database:
+
+```sql
+CREATE TABLE tool_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  message_id UUID NOT NULL,
+  tool_call_id TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  input JSONB NOT NULL DEFAULT '{}',
+  output JSONB DEFAULT '{}',
+  state TEXT DEFAULT 'pending' CHECK (state IN ('pending', 'completed', 'error')),
+  error_text TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indexes for fast lookups
+CREATE INDEX idx_tool_results_conversation ON tool_results(conversation_id);
+CREATE INDEX idx_tool_results_message ON tool_results(message_id);
+CREATE INDEX idx_tool_results_tool_call ON tool_results(tool_call_id);
+
+-- Row Level Security
+ALTER TABLE tool_results ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own tool results"
+  ON tool_results FOR SELECT
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert own tool results"
+  ON tool_results FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+```
+
+### Required Endpoints
+
+#### POST `/chat/conversations/{conversation_id}/tool-results`
+
+Save tool results after streaming completes.
+
+**Request:**
+```json
+{
+  "tool_results": [
+    {
+      "message_id": "uuid",
+      "tool_call_id": "toolu_xxx",
+      "tool_name": "create_presentation",
+      "input": { "topic": "..." },
+      "output": { "file_url": "...", "slides": [...] },
+      "state": "completed"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "saved_count": 1
+}
+```
+
+**Backend Implementation (FastAPI):**
+```python
+@router.post("/chat/conversations/{conversation_id}/tool-results")
+async def save_tool_results(
+    conversation_id: str,
+    payload: ToolResultsPayload,
+    user: User = Depends(get_current_user)
+):
+    saved = 0
+    for tr in payload.tool_results:
+        # Upsert to handle duplicates
+        await supabase.table("tool_results").upsert({
+            "user_id": str(user.id),
+            "conversation_id": conversation_id,
+            "message_id": tr.message_id,
+            "tool_call_id": tr.tool_call_id,
+            "tool_name": tr.tool_name,
+            "input": tr.input,
+            "output": tr.output,
+            "state": tr.state,
+            "error_text": tr.error_text,
+        }, on_conflict="tool_call_id").execute()
+        saved += 1
+    return {"success": True, "saved_count": saved}
+```
+
+#### GET `/chat/conversations/{conversation_id}/tool-results`
+
+Fetch all tool results for a conversation.
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "message_id": "uuid",
+    "tool_call_id": "toolu_xxx",
+    "tool_name": "create_presentation",
+    "input": { "topic": "..." },
+    "output": { "file_url": "...", "slides": [...], "metadata": {...} },
+    "state": "completed",
+    "created_at": "2026-04-07T..."
+  }
+]
+```
+
+**Backend Implementation (FastAPI):**
+```python
+@router.get("/chat/conversations/{conversation_id}/tool-results")
+async def get_tool_results(
+    conversation_id: str,
+    user: User = Depends(get_current_user)
+):
+    result = await supabase.table("tool_results") \
+        .select("*") \
+        .eq("conversation_id", conversation_id) \
+        .eq("user_id", str(user.id)) \
+        .order("created_at") \
+        .execute()
+    return result.data or []
+```
+
+#### PATCH `/chat/conversations/{conversation_id}/tool-results/{tool_call_id}`
+
+Update a specific tool result.
+
+**Request:**
+```json
+{
+  "output": { "file_url": "...", "updated_data": "..." },
+  "state": "completed"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+### Frontend Changes (Already Implemented)
+
+The frontend (`ChatPage.tsx`) now:
+
+1. **On stream finish (`onFinish`)**: Extracts all completed tool results from message parts and calls `POST /chat/conversations/{id}/tool-results`
+
+2. **On load messages (`loadPreviousMessages`)**: Fetches tool results via `GET /chat/conversations/{id}/tool-results` and merges them into message parts before rendering
+
+This ensures that even if localStorage is cleared or the user switches devices, the generative UI cards are reconstructed from the database.
+
+---
+
 ## Summary
 
 ### What You Need to Do

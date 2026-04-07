@@ -417,6 +417,66 @@ class APIClient {
     return this.request<{ success: boolean }>(`/chat/conversations/${conversationId}`, 'DELETE');
   }
 
+  // ─── Tool Results Persistence ──────────────────────────────────────────────
+  // These methods persist tool results (generative UI card data) to the database
+  // so they survive page reloads and work across devices.
+
+  /**
+   * Save tool results for a conversation.
+   * Call this after streaming completes to persist tool output data.
+   */
+  async saveToolResults(
+    conversationId: string,
+    toolResults: Array<{
+      message_id: string;
+      tool_call_id: string;
+      tool_name: string;
+      input: any;
+      output: any;
+      state: 'pending' | 'completed' | 'error';
+      error_text?: string;
+    }>
+  ): Promise<{ success: boolean; saved_count: number }> {
+    return this.request<{ success: boolean; saved_count: number }>(
+      `/chat/conversations/${conversationId}/tool-results`,
+      'POST',
+      { tool_results: toolResults }
+    );
+  }
+
+  /**
+   * Get tool results for a conversation.
+   * Returns all persisted tool outputs for reconstructing generative UI cards.
+   */
+  async getToolResults(conversationId: string): Promise<Array<{
+    id: string;
+    message_id: string;
+    tool_call_id: string;
+    tool_name: string;
+    input: any;
+    output: any;
+    state: string;
+    error_text?: string;
+    created_at: string;
+  }>> {
+    return this.request<any[]>(`/chat/conversations/${conversationId}/tool-results`);
+  }
+
+  /**
+   * Update a single tool result (e.g., when a tool finishes executing).
+   */
+  async updateToolResult(
+    conversationId: string,
+    toolCallId: string,
+    update: { output?: any; state?: string; error_text?: string }
+  ): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(
+      `/chat/conversations/${conversationId}/tool-results/${toolCallId}`,
+      'PATCH',
+      update
+    );
+  }
+
   // FIXED: Correct return type matching backend response
   async sendMessage(content: string, conversationId?: string) {
     return this.request<{
