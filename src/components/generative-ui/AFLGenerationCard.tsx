@@ -56,6 +56,13 @@ const IconChevron = ({ size = 14, color = 'currentColor', direction = 'down' }) 
   </svg>
 );
 
+const IconWarning = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M12 9v4M12 17h.01" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AFL_META = {
@@ -152,7 +159,7 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
   const [isError, setIsError] = useState(false);
   const [outputData, setOutputData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
-  const [codePreviewOpen, setCodePreviewOpen] = useState(true);
+  const [codePreviewOpen, setCodePreviewOpen] = useState(false);
   const [safetyTimeout, setSafetyTimeout] = useState(false);
 
   const startTimeRef = useRef<number>(Date.now());
@@ -174,7 +181,7 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
       setCurrentPhase(AFL_META.phases.length - 1);
       setOutputData(effectiveOutput);
       setSafetyTimeout(false);
-      setTimeout(() => setCodePreviewOpen(true), 300);
+      // Code preview starts closed - user can expand to preview before downloading
       return;
     }
     
@@ -191,7 +198,7 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
             if (saved.outputData) setOutputData(saved.outputData);
             if (saved.elapsedTime) setElapsedTime(saved.elapsedTime);
             setSafetyTimeout(false);
-            setTimeout(() => setCodePreviewOpen(true), 300);
+            // Code preview starts closed - user can expand to preview before downloading
           } else if (saved.isError) {
             restoredFromStorage.current = true;
             setIsError(true);
@@ -269,7 +276,7 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
         setIsComplete(true);
         setSafetyTimeout(false);
         setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
-        setTimeout(() => setCodePreviewOpen(true), 500);
+        // Code preview starts closed - user can expand to preview before downloading
       }
     }
   }, [state, output, externalOutput]);
@@ -467,6 +474,27 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
               {formatTime(elapsedTime)}
             </span>
           </div>
+          
+          {/* Warning message */}
+          <div style={{
+            marginTop: '14px',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(234, 179, 8, 0.1)',
+            border: '1px solid rgba(234, 179, 8, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}>
+            <IconWarning size={16} color="#eab308" />
+            <span style={{
+              fontSize: '12px',
+              color: '#eab308',
+              lineHeight: 1.4,
+            }}>
+              Please do not navigate away from this page or refresh while generating. Your code may be lost.
+            </span>
+          </div>
         </div>
       )}
 
@@ -639,13 +667,13 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <IconCode size={14} color="rgba(255,255,255,0.5)" />
-              Code Preview
+              Preview Code Before Downloading
               <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px' }}>
                 ({codeLines} lines)
               </span>
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: AFL_META.color }}>
-              {codePreviewOpen ? 'Hide' : 'Show'} Preview
+              {codePreviewOpen ? 'Hide' : 'Show'} Code
               <IconChevron size={14} color={AFL_META.color} direction={codePreviewOpen ? 'up' : 'down'} />
             </span>
           </button>
