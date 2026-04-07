@@ -807,13 +807,7 @@ export function ChatPage() {
       }, 30000);
 
       if (convId) {
-        const allMsgs = [...streamMessages, message];
-        console.log('[v0] onFinish: saving parts for', allMsgs.length, 'messages, tool parts in last msg=', message.parts?.filter((p: any) => isToolPart(p.type)).length);
-        allMsgs.forEach((m: any) => {
-          const toolP = m.parts?.filter((p: any) => isToolPart(p.type)) || [];
-          if (toolP.length > 0) console.log('[v0]  msg', m.id, 'has', toolP.length, 'tool parts:', toolP.map((p: any) => `${p.type}/${p.toolName}/${p.state}`).join(', '));
-        });
-        savePartsToCache(convId, allMsgs);
+        savePartsToCache(convId, [...streamMessages, message]);
       }
 
       loadConversations();
@@ -854,7 +848,6 @@ export function ChatPage() {
     if (newConvId) {
       try {
         const stored = localStorage.getItem(`file_dl_${newConvId}`);
-        console.log('[v0] conversation switch: file_dl keys=', stored ? Object.keys(JSON.parse(stored)).length : 0);
         if (stored) setFileDownloadEvents(JSON.parse(stored));
         else setFileDownloadEvents({});
       } catch { setFileDownloadEvents({}); }
@@ -1019,17 +1012,28 @@ export function ChatPage() {
         const rawParts = localParts ?? serverParts ?? fallbackParts;
         const parts = rawParts.map((p: any) => {
           if (!p || p.type !== 'tool-invocation') return p;
+
+          // AI SDK v3 stores tool data nested inside `toolInvocation`.
+          // Flatten it so our renderToolPart / renderInvokeSkill can read
+          // part.input, part.output, part.toolName, and part.state directly.
+          const ti = p.toolInvocation || {};
           const stateMap: Record<string, string> = {
             'call':           'input-available',
             'partial-call':   'input-streaming',
             'result':         'output-available',
           };
-          const normalizedState = stateMap[p.state] ?? p.state;
-          // Also normalise the toolInvocation sub-object if present
-          const toolInvocation = p.toolInvocation
-            ? { ...p.toolInvocation, state: stateMap[p.toolInvocation.state] ?? p.toolInvocation.state }
-            : undefined;
-          return { ...p, state: normalizedState, ...(toolInvocation ? { toolInvocation } : {}) };
+          const rawState = p.state || ti.state || 'input-available';
+          const normalizedState = stateMap[rawState] ?? rawState;
+
+          return {
+            ...p,
+            // Flattened fields our renderer expects
+            toolName:  p.toolName  || ti.toolName  || 'unknown',
+            toolCallId: p.toolCallId || ti.toolCallId,
+            input:     p.input     ?? ti.args      ?? {},
+            output:    p.output    ?? ti.result    ?? undefined,
+            state:     normalizedState,
+          };
         });
         return {
           id: m.id,
@@ -1190,8 +1194,9 @@ export function ChatPage() {
           if (part.toolCallId && seenToolCallIds.get(part.toolCallId) !== pIdx) {
             return null;
           }
-          // Find matching file_download event for externalOutput injection
-          const toolInput = part.input || {};
+          // Find matching file_download event for externalOutput injection.
+          // Handle both flattened (part.input) and nested (part.toolInvocation.args) formats.
+          const toolInput = part.input || (part as any).toolInvocation?.args || {};
           const toolFilename = toolInput.filename || toolInput.name || '';
           const extOut = toolFilename && fileDownloadEvents[toolFilename]
             ? fileDownloadEvents[toolFilename]
@@ -1456,7 +1461,7 @@ export function ChatPage() {
     );
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────��─────────────────────
 
   const cssVars = {
     '--chat-bg':  isDark ? '#0C0C0E' : '#FAFAFA',
