@@ -4,14 +4,15 @@
  * FilePreviewService
  * 
  * Client-side document parsing for previewing files in the browser.
- * Supports: PDF, DOCX/DOC, PPTX/PPT, CSV, XLSX/XLS, TXT, MD, JSON, HTML
+ * Supports: PDF, DOCX/DOC, CSV, XLSX/XLS, TXT, MD, JSON, HTML
  * 
  * Libraries used:
  *   - DOCX: docx-preview
- *   - PPTX: pptx-parser (browser-compatible)
  *   - XLSX: SheetJS (xlsx)
  *   - PDF: pdfjs-dist
  *   - CSV: PapaParse
+ * 
+ * Note: PPTX preview is handled by UI components using PPTXjs CDN.
  * 
  * No server changes required — all parsing happens in-browser.
  */
@@ -261,58 +262,20 @@ export async function parseJson(blob: Blob): Promise<ParsedDocument> {
   }
 }
 
-// ─── PPTX Parser (pptx-parser - browser compatible) ─────────────────────────
+// ─── PPTX Parser (not supported in browser - returns placeholder) ───────────
+// PPTX parsing requires server-side processing or CDN scripts loaded at runtime.
+// Use ChatFilePreviewModal or DocumentDownloadCard for PPTX preview which use PPTXjs CDN.
 
-export async function parsePptx(blob: Blob): Promise<ParsedDocument> {
-  const pptxParser = await import('pptx-parser');
-  const arrayBuffer = await blobToArrayBuffer(blob);
-  
-  const pptxData = await pptxParser.default(arrayBuffer);
-  const slides: string[] = [];
-  let allText = '';
-  
-  // Generate HTML for each slide
-  if (pptxData?.slides && Array.isArray(pptxData.slides)) {
-    for (const slide of pptxData.slides) {
-      let slideHtml = '<div class="pptx-slide" style="background:#fff;padding:40px;min-height:400px;position:relative;">';
-      
-      if (slide.background?.color) {
-        slideHtml = slideHtml.replace('background:#fff', `background:${slide.background.color}`);
-      }
-      
-      if (slide.elements && Array.isArray(slide.elements)) {
-        for (const el of slide.elements) {
-          if (el.type === 'text' || el.text) {
-            const text = el.text || el.content || '';
-            allText += text + ' ';
-            const fontSize = el.fontSize || 16;
-            const fontColor = el.fontColor || '#000';
-            const isBold = el.bold ? 'font-weight:bold;' : '';
-            slideHtml += `<div style="font-size:${fontSize}px;color:${fontColor};${isBold}margin:8px 0;">${text}</div>`;
-          } else if (el.type === 'image' && el.data) {
-            slideHtml += `<img src="${el.data}" style="max-width:100%;margin:8px 0;" />`;
-          }
-        }
-      }
-      
-      slideHtml += '</div>';
-      slides.push(slideHtml);
-    }
-  }
-  
-  const slidesHtml = slides.length > 0 
-    ? slides.join('\n') 
-    : '<div class="pptx-slide" style="padding:40px;text-align:center;color:#666;"><p>No slides found</p></div>';
-  
-  const wordCount = allText.split(/\s+/).filter(w => w.length > 0).length;
-  
+export async function parsePptx(_blob: Blob): Promise<ParsedDocument> {
+  // PPTX parsing is handled by the UI components using PPTXjs CDN
+  // This function returns a placeholder - use the preview components instead
   return {
     type: 'html',
-    content: slidesHtml,
+    content: '<div style="padding:40px;text-align:center;color:#666;"><p>PPTX preview is available in the document viewer</p></div>',
     metadata: {
-      pages: slides.length || 1,
-      wordCount,
-      charCount: allText.length,
+      pages: 0,
+      wordCount: 0,
+      charCount: 0,
     },
   };
 }

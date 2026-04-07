@@ -7,7 +7,7 @@
  *
  * Preview engines (all client-side, zero server round-trips):
  *   DOCX  → docx-preview          (renderAsync into a ref'd <div>)
- *   PPTX  → pptx-parser           (browser-compatible PPTX parsing)
+ *   PPTX  → PPTXjs CDN            (slide-by-slide HTML rendering)
  *   XLSX  → SheetJS (xlsx)        (sheet_to_html into a <div>)
  *   HTML  → sandboxed <iframe srcDoc>
  *   PDF   → pdfjs-dist            (canvas rendering)
@@ -253,50 +253,23 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
 
       // ─────────────────────── PPTX ────────────────────────────────────────
       if (ext === 'pptx' || ext === 'ppt') {
-        // Use pptx-parser for browser-compatible PPTX parsing
-        const pptxParser = await import('pptx-parser');
+        await loadScript('https://cdn.jsdelivr.net/gh/nicam/pptxjs@main/dist/pptxjs.min.js');
         const ab = await blob.arrayBuffer();
         
         try {
-          const pptxData = await pptxParser.default(ab);
-          const slides: string[] = [];
-          
-          // Generate HTML for each slide
-          if (pptxData?.slides && Array.isArray(pptxData.slides)) {
-            for (const slide of pptxData.slides) {
-              let slideHtml = '<div class="pptx-slide" style="background:#fff;padding:40px;min-height:400px;position:relative;">';
-              
-              // Handle slide background
-              if (slide.background?.color) {
-                slideHtml = slideHtml.replace('background:#fff', `background:${slide.background.color}`);
-              }
-              
-              // Render shapes/text elements
-              if (slide.elements && Array.isArray(slide.elements)) {
-                for (const el of slide.elements) {
-                  if (el.type === 'text' || el.text) {
-                    const text = el.text || el.content || '';
-                    const fontSize = el.fontSize || 16;
-                    const fontColor = el.fontColor || '#000';
-                    const isBold = el.bold ? 'font-weight:bold;' : '';
-                    slideHtml += `<div style="font-size:${fontSize}px;color:${fontColor};${isBold}margin:8px 0;">${text}</div>`;
-                  } else if (el.type === 'image' && el.data) {
-                    slideHtml += `<img src="${el.data}" style="max-width:100%;margin:8px 0;" />`;
-                  }
-                }
-              }
-              
-              slideHtml += '</div>';
-              slides.push(slideHtml);
-            }
+          const pptx = (window as any).pptx;
+          if (pptx?.slides2Html) {
+            const result = await pptx.slides2Html({ pptx: ab, slidesScale: 'fit' });
+            const slides: string[] = Array.isArray(result)
+              ? result.map((s: any) => (typeof s === 'string' ? s : s.html || String(s)))
+              : [typeof result === 'string' ? result : '<p>Could not parse slides</p>'];
+            pptxSlidesRef.current = slides;
+            setPreview({ status: 'pptx', slides, active: 0 });
+          } else {
+            // Fallback: just show a message that parsing failed
+            pptxSlidesRef.current = ['<div class="pptx-slide" style="padding:40px;text-align:center;color:#666;"><p>PPTX preview not available</p></div>'];
+            setPreview({ status: 'pptx', slides: pptxSlidesRef.current, active: 0 });
           }
-          
-          if (slides.length === 0) {
-            slides.push('<div class="pptx-slide" style="padding:40px;text-align:center;color:#666;"><p>No slides found or unable to parse presentation</p></div>');
-          }
-          
-          pptxSlidesRef.current = slides;
-          setPreview({ status: 'pptx', slides, active: 0 });
         } catch (parseError) {
           console.error('PPTX parse error:', parseError);
           pptxSlidesRef.current = ['<div style="padding:40px;color:#ef4444;">Failed to parse PPTX file</div>'];
