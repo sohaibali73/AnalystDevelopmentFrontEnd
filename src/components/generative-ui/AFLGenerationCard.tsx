@@ -340,10 +340,9 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
 
   // ── Derive display values ──────────────────────────────────────────────────
   const aflCode = extractAFLCode(outputData);
-  const filename = outputData ? extractFilename(outputData, input) : null;
-  const metadata = outputData ? extractMetadata(outputData) : null;
   const codeLines = aflCode ? aflCode.split('\n').length : 0;
   const codeSize = aflCode ? `${(aflCode.length / 1024).toFixed(1)} KB` : null;
+  const metadata = extractMetadata(outputData);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
