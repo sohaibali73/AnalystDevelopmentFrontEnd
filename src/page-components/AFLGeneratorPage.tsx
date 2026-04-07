@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, MessageSquare, ArrowUpFromLine, Trash2, ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Pencil, X, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Download, Code2, PanelRightClose, PanelRightOpen, Settings2, Zap, Layers, Sparkles, Check } from 'lucide-react';
+import { Plus, MessageSquare, Paperclip, Trash2, ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Pencil, X, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Download, Code2, PanelRightClose, PanelRightOpen, Settings2, Zap, Layers, Sparkles, Check } from 'lucide-react';
 import { FadeIn, AnimatedCard, AnimatedListItem, StaggerContainer, StaggerItem, Glow, AnimatedProgress, Pulse } from '@/components/AnimatedComponents';
+import { renderToolPart } from '@/components/chat/tool-registry';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -69,9 +70,9 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
     if (!disabled) attachments.openFileDialog();
   }, [attachments, disabled]);
   return (
-    <PromptInputButton onClick={handleClick} disabled={disabled} tooltip="Attach files">
-      <ArrowUpFromLine className="size-4" />
-    </PromptInputButton>
+<PromptInputButton onClick={handleClick} disabled={disabled} tooltip="Attach files (PDF, AFL, CSV, images, etc.)">
+    <Paperclip className="size-4" />
+  </PromptInputButton>
   );
 }
 
@@ -569,32 +570,9 @@ export function AFLGeneratorPage() {
                 }
 
               default:
-                if (part.type?.startsWith('tool-')) {
-                  const toolName = part.type.replace('tool-', '');
-                  switch (part.state) {
-                    case 'input-streaming': case 'input-available':
-                      return <ToolLoading key={pIdx} toolName={toolName} input={part.input} />;
-                    case 'output-available':
-                      return (
-                        <AITool key={pIdx}>
-                          <ToolHeader type={part.type} state={part.state} />
-                          <ToolContent>
-                            <ToolInput input={part.input} />
-                            <ToolOutput output={part.output} errorText={part.errorText} />
-                          </ToolContent>
-                        </AITool>
-                      );
-                    case 'output-error':
-                      return (
-                        <AITool key={pIdx}>
-                          <ToolHeader type={part.type} state={part.state} />
-                          <ToolContent>
-                            <ToolOutput output={part.output} errorText={part.errorText} />
-                          </ToolContent>
-                        </AITool>
-                      );
-                    default: return null;
-                  }
+                // Use centralized tool registry for all other tools including invoke_skill
+                if (part.type?.startsWith('tool-') || part.type === 'dynamic-tool' || part.type === 'tool-invocation') {
+                  return renderToolPart(part, pIdx, message.id, conversationIdRef.current);
                 }
                 return null;
             }
@@ -1491,7 +1469,12 @@ export function AFLGeneratorPage() {
                   }
 
                   const contextPrefix = `[AFL Generator Context: strategy_type=${strategyType}, initial_equity=${backtestSettings.initial_equity}, max_positions=${backtestSettings.max_positions}, commission=${backtestSettings.commission}]\n\n`;
-                  sendMessage({ text: contextPrefix + messageText }, { body: { conversationId: convId } });
+                  sendMessage({ text: contextPrefix + messageText }, { 
+                    body: { 
+                      conversationId: convId,
+                      backtest_settings: backtestSettings,
+                    } 
+                  });
                 }}
               >
                 <AttachmentsDisplay />
