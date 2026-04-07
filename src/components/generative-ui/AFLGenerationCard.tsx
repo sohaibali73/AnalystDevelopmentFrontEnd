@@ -342,7 +342,7 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
   const aflCode = extractAFLCode(outputData);
   const codeLines = aflCode ? aflCode.split('\n').length : 0;
   const codeSize = aflCode ? `${(aflCode.length / 1024).toFixed(1)} KB` : null;
-  console.log("[v0] aflCode extracted:", !!aflCode, "outputData:", outputData);
+  const metadata = extractMetadata(outputData);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
