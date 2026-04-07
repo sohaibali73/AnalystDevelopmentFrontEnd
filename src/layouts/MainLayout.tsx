@@ -154,16 +154,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 }} 
               />
             </div>
-            <span style={{
-              fontFamily: "'Rajdhani', sans-serif",
-              fontWeight: 700,
-              fontSize: '18px',
-              color: '#ffffff',
-              letterSpacing: '2px',
-               textShadow: '0 0 20px var(--accent-glow)',
-            }}>
-              POTOMAC ANALYST
-            </span>
+
           </div>
           
           <button
@@ -269,30 +260,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 }} 
               />
             </div>
-            {(!collapsed || isMobile) && (
-              <div>
-                <div style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  color: '#ffffff',
-                  letterSpacing: '2px',
-                  lineHeight: 1.2,
-                  textShadow: '0 0 20px rgba(212, 169, 68, 0.3)',
-                }}>
-                  POTOMAC
-                </div>
-                <div style={{
-                  fontFamily: "'Quicksand', sans-serif",
-                  fontSize: '12px',
-                  color: '#9ca3af',
-                  letterSpacing: '1px',
-                  marginTop: '2px',
-                }}>
-                  Analyst Platform
-                </div>
-              </div>
-            )}
+
           </div>
           
           {!isMobile && (!collapsed || isMobile) && (
