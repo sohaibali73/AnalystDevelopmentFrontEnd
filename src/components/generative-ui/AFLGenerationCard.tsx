@@ -91,6 +91,7 @@ interface AFLGenerationCardProps {
   state: 'input-streaming' | 'input-available' | 'output-available' | 'output-error';
   errorText?: string;
   conversationId?: string;
+  onCodeGenerated?: (code: string, metadata?: { description?: string; strategyType?: string }) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -149,6 +150,7 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
   state,
   errorText,
   conversationId,
+  onCodeGenerated,
 }) => {
   const title = extractTitle(input, toolName);
   
@@ -302,6 +304,20 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
     return () => clearTimeout(timeout);
   }, [isComplete, isError]);
 
+  // ── Notify parent when code is generated ───────────────────────────────────
+  useEffect(() => {
+    if (isComplete && outputData && onCodeGenerated) {
+      const code = extractAFLCode(outputData);
+      if (code) {
+        const metadata = extractMetadata(outputData);
+        onCodeGenerated(code, {
+          description: metadata.strategy,
+          strategyType: metadata.type,
+        });
+      }
+    }
+  }, [isComplete, outputData, onCodeGenerated]);
+  
   // ── Copy to clipboard ──────────────────────────────────────────────────────
   const handleCopy = useCallback(() => {
     const code = extractAFLCode(outputData);

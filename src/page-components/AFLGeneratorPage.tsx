@@ -23,23 +23,17 @@ import FeedbackModal from '@/components/FeedbackModal';
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from '@/components/ai-elements/reasoning';
 import { Shimmer } from '@/components/ai-elements/shimmer';
-import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
+// Tool is handled by tool-registry
 import { ConversationEmptyState } from '@/components/ai-elements/conversation';
 import { Message as AIMessage, MessageContent, MessageActions, MessageAction, MessageResponse } from '@/components/ai-elements/message';
 import { PromptInput, PromptInputTextarea, PromptInputFooter, PromptInputHeader, PromptInputTools, PromptInputButton, PromptInputSubmit, usePromptInputAttachments } from '@/components/ai-elements/prompt-input';
 import { Attachments, Attachment, AttachmentPreview, AttachmentRemove } from '@/components/ai-elements/attachments';
 import { ChainOfThought, ChainOfThoughtHeader, ChainOfThoughtContent, ChainOfThoughtStep } from '@/components/ai-elements/chain-of-thought';
-import {
-  AFLGenerateCard,
-  AFLValidateCard,
-  AFLDebugCard,
-  AFLExplainCard,
-  AFLSanityCheckCard,
-  KnowledgeBaseResults,
-  WebSearchResults,
-  ToolLoading,
-} from '@/components/generative-ui';
+// AFL cards are now rendered via tool-registry for persistence
+// Only import what's needed for non-tool purposes
+import AFLGenerationCard from '@/components/generative-ui/AFLGenerationCard';
 import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineReactPreview';
+import { renderToolPart, isToolPart } from '@/components/chat/tool-registry';
 
 const logo = '/potomac-icon.png';
 
@@ -81,6 +75,18 @@ function extractAFLCode(text: string): string | null {
   if (aflMatch) return aflMatch[1].trim();
   const codeMatch = text.match(/```\w*\s*\n([\s\S]*?)```/);
   if (codeMatch) return codeMatch[1].trim();
+  return null;
+}
+
+// Extract AFL code from tool output
+function extractAFLCodeFromToolOutput(output: any): string | null {
+  if (!output) return null;
+  if (typeof output === 'string') return output;
+  if (output.afl_code) return output.afl_code;
+  if (output.code) return output.code;
+  if (output.fixed_code) return output.fixed_code;
+  if (output.data?.afl_code) return output.data.afl_code;
+  if (output.data?.code) return output.data.code;
   return null;
 }
 
@@ -209,18 +215,40 @@ export function AFLGeneratorPage() {
       let extractedDescription: string | undefined;
       let extractedStrategyType: string | undefined;
 
+      // Check all tool parts for AFL code output
       for (const part of parts) {
-        if (part.type === 'tool-generate_afl_code' && part.state === 'output-available') {
-          const aflCode = (part as any).output?.code || (part as any).output?.afl_code;
-          if (aflCode) {
-            extractedCode = aflCode;
-            extractedDescription = (part as any).output?.description;
-            extractedStrategyType = (part as any).output?.strategy_type;
-            break;
+        const partType = part.type || '';
+        const toolName = part.toolName || (partType.startsWith('tool-') ? partType.replace('tool-', '') : '');
+        
+        // Check for AFL-related tool outputs
+        const isAFLTool = 
+          partType === 'tool-generate_afl_code' ||
+          partType === 'tool-invoke_skill' ||
+          partType === 'dynamic-tool' ||
+          toolName === 'generate_afl_code' ||
+          toolName === 'invoke_skill' ||
+          toolName === 'afl_generate' ||
+          toolName === 'create_afl' ||
+          toolName === 'write_afl';
+        
+        if (isAFLTool && part.state === 'output-available' && part.output) {
+          // Check if this is an invoke_skill for AFL
+          const skillSlug = part.input?.skill_slug?.toLowerCase().replace(/-/g, '_') || '';
+          const isAFLSkill = ['amibroker_afl_developer', 'afl_developer', 'generate_afl', 'afl_generate', 'afl_code', 'create_afl', 'write_afl', 'afl_strategy', 'amibroker', 'afl'].includes(skillSlug);
+          
+          if (isAFLTool && (toolName !== 'invoke_skill' || isAFLSkill)) {
+            const aflCode = extractAFLCodeFromToolOutput(part.output);
+            if (aflCode) {
+              extractedCode = aflCode;
+              extractedDescription = part.output?.description || part.output?.data?.description;
+              extractedStrategyType = part.output?.strategy_type || part.output?.data?.strategy_type;
+              break;
+            }
           }
         }
       }
 
+      // Fallback: extract from text content
       if (!extractedCode) {
         extractedCode = extractAFLCode(fullText);
       }
@@ -291,23 +319,43 @@ export function AFLGeneratorPage() {
     finally { setLoadingConversations(false); }
   };
 
-  const loadPreviousMessages = async (conversationId: string) => {
-    try {
-      const data = await apiClient.getMessages(conversationId);
-      setMessages(data.map((m: any) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content || '',
-        parts: m.metadata?.parts || [{ type: 'text', text: m.content || '' }],
-        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
-      })));
-      for (let i = data.length - 1; i >= 0; i--) {
-        if (data[i].role === 'assistant') {
-          const code = extractAFLCode(data[i].content || '');
-          if (code) { setGeneratedCode(code); break; }
+const loadPreviousMessages = async (conversationId: string) => {
+  try {
+  const data = await apiClient.getMessages(conversationId);
+  setMessages(data.map((m: any) => ({
+  id: m.id,
+  role: m.role,
+  content: m.content || '',
+  parts: m.metadata?.parts || [{ type: 'text', text: m.content || '' }],
+  createdAt: m.created_at ? new Date(m.created_at) : new Date(),
+  })));
+  
+  // Extract AFL code from previous messages - check both text and tool outputs
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].role === 'assistant') {
+      let code: string | null = null;
+      
+      // First check tool parts for AFL code
+      const parts = data[i].metadata?.parts || [];
+      for (const part of parts) {
+        if (part.state === 'output-available' && part.output) {
+          code = extractAFLCodeFromToolOutput(part.output);
+          if (code) break;
         }
       }
-    } catch { setMessages([]); }
+      
+      // Fallback to text extraction
+      if (!code) {
+        code = extractAFLCode(data[i].content || '');
+      }
+      
+      if (code) { 
+        setGeneratedCode(code); 
+        break; 
+      }
+    }
+  }
+  } catch { setMessages([]); }
   };
 
   const handleNewConversation = async () => {
@@ -518,83 +566,16 @@ export function AFLGeneratorPage() {
                   </Reasoning>
                 );
 
-              case 'tool-generate_afl_code':
-                switch (part.state) {
-                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="generate_afl_code" input={part.input} />;
-                  case 'output-available': return <AFLGenerateCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
-                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL generation error: {part.errorText}</div>;
-                  default: return null;
-                }
-              case 'tool-validate_afl':
-                switch (part.state) {
-                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="validate_afl" input={part.input} />;
-                  case 'output-available': return <AFLValidateCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
-                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL validation error: {part.errorText}</div>;
-                  default: return null;
-                }
-              case 'tool-debug_afl_code':
-                switch (part.state) {
-                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="debug_afl_code" input={part.input} />;
-                  case 'output-available': return <AFLDebugCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
-                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL debug error: {part.errorText}</div>;
-                  default: return null;
-                }
-              case 'tool-explain_afl_code':
-                switch (part.state) {
-                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="explain_afl_code" input={part.input} />;
-                  case 'output-available': return <AFLExplainCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
-                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL explain error: {part.errorText}</div>;
-                  default: return null;
-                }
-              case 'tool-sanity_check_afl':
-                switch (part.state) {
-                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="sanity_check_afl" input={part.input} />;
-                  case 'output-available': return <AFLSanityCheckCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
-                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL sanity check error: {part.errorText}</div>;
-                  default: return null;
-                }
-              case 'tool-search_knowledge_base':
-                switch (part.state) {
-                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="search_knowledge_base" input={part.input} />;
-                  case 'output-available': return <KnowledgeBaseResults key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
-                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>KB search error: {part.errorText}</div>;
-                  default: return null;
-                }
-              case 'tool-web_search':
-                switch (part.state) {
-                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="web_search" input={part.input} />;
-                  case 'output-available': return <WebSearchResults key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
-                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>Web search error: {part.errorText}</div>;
-                  default: return null;
-                }
-
               default:
-                if (part.type?.startsWith('tool-')) {
-                  const toolName = part.type.replace('tool-', '');
-                  switch (part.state) {
-                    case 'input-streaming': case 'input-available':
-                      return <ToolLoading key={pIdx} toolName={toolName} input={part.input} />;
-                    case 'output-available':
-                      return (
-                        <AITool key={pIdx}>
-                          <ToolHeader type={part.type} state={part.state} />
-                          <ToolContent>
-                            <ToolInput input={part.input} />
-                            <ToolOutput output={part.output} errorText={part.errorText} />
-                          </ToolContent>
-                        </AITool>
-                      );
-                    case 'output-error':
-                      return (
-                        <AITool key={pIdx}>
-                          <ToolHeader type={part.type} state={part.state} />
-                          <ToolContent>
-                            <ToolOutput output={part.output} errorText={part.errorText} />
-                          </ToolContent>
-                        </AITool>
-                      );
-                    default: return null;
-                  }
+                // Use centralized tool registry for all tool rendering with persistence
+                if (part.type?.startsWith('tool-') || part.type === 'dynamic-tool' || part.type === 'tool-invocation') {
+                  return renderToolPart(
+                    part,
+                    pIdx,
+                    message.id,
+                    selectedConversation?.id || conversationIdRef.current,
+                    undefined // externalOutput
+                  );
                 }
                 return null;
             }
@@ -620,7 +601,7 @@ export function AFLGeneratorPage() {
         )}
       </AIMessage>
     );
-  }, [lastIdxRef, isStreamingRef, userName, logo, isDark, colors, handleCopyMessage, setShowFeedbackModal, status, stripReactCodeBlocks]);
+  }, [lastIdxRef, isStreamingRef, userName, logo, isDark, colors, handleCopyMessage, setShowFeedbackModal, status, stripReactCodeBlocks, selectedConversation]);
 
   // RENDER
   return (
