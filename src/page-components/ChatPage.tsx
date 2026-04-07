@@ -808,12 +808,53 @@ export function ChatPage() {
 
       if (convId) {
         const allMsgs = [...streamMessages, message];
-        console.log('[v0] onFinish: saving parts for', allMsgs.length, 'messages, tool parts in last msg=', message.parts?.filter((p: any) => isToolPart(p.type)).length);
-        allMsgs.forEach((m: any) => {
-          const toolP = m.parts?.filter((p: any) => isToolPart(p.type)) || [];
-          if (toolP.length > 0) console.log('[v0]  msg', m.id, 'has', toolP.length, 'tool parts:', toolP.map((p: any) => `${p.type}/${p.toolName}/${p.state}`).join(', '));
-        });
         savePartsToCache(convId, allMsgs);
+
+        // ── Persist tool results to database ────────────────────────────────
+        // Extract completed tool results and save them for cross-device persistence
+        const toolResultsToSave: Array<{
+          message_id: string;
+          tool_call_id: string;
+          tool_name: string;
+          input: any;
+          output: any;
+          state: 'pending' | 'completed' | 'error';
+          error_text?: string;
+        }> = [];
+
+        for (const m of allMsgs) {
+          if (m.role !== 'assistant' || !m.parts) continue;
+          for (const part of m.parts as any[]) {
+            if (!isToolPart(part.type)) continue;
+            
+            // Only persist completed/error tool results (not pending ones)
+            if (part.state !== 'output-available' && part.state !== 'output-error') continue;
+            
+            const toolName = part.type === 'tool-invocation' 
+              ? part.toolName 
+              : part.type === 'dynamic-tool'
+                ? (part.toolName || 'unknown')
+                : part.type?.replace('tool-', '') || 'unknown';
+
+            const toolCallId = part.toolCallId || part.toolInvocation?.toolCallId || `${m.id}_${toolName}_${Date.now()}`;
+            
+            toolResultsToSave.push({
+              message_id: m.id,
+              tool_call_id: toolCallId,
+              tool_name: toolName,
+              input: part.input || part.toolInvocation?.args || part.args || {},
+              output: part.output || part.result || part.toolInvocation?.result || {},
+              state: part.state === 'output-error' ? 'error' : 'completed',
+              error_text: part.errorText,
+            });
+          }
+        }
+
+        if (toolResultsToSave.length > 0) {
+          apiClient.saveToolResults(convId, toolResultsToSave).catch(err => {
+            console.warn('Failed to persist tool results:', err);
+          });
+        }
       }
 
       loadConversations();
@@ -1004,8 +1045,21 @@ export function ChatPage() {
 
     // Background refresh with error handling
     try {
-      const data = await apiClient.getMessages(conversationId);
+      // Fetch messages and tool results in parallel
+      const [data, dbToolResults] = await Promise.all([
+        apiClient.getMessages(conversationId),
+        apiClient.getToolResults(conversationId).catch(() => [] as any[]),
+      ]);
       if (conversationIdRef.current !== conversationId) return;
+
+      // Build a lookup map: message_id -> tool_call_id -> tool result
+      const toolResultsMap = new Map<string, Map<string, any>>();
+      for (const tr of dbToolResults) {
+        if (!toolResultsMap.has(tr.message_id)) {
+          toolResultsMap.set(tr.message_id, new Map());
+        }
+        toolResultsMap.get(tr.message_id)!.set(tr.tool_call_id, tr);
+      }
 
       const cachedParts = loadPartsCache(conversationId);
       const newMessages = data.map((m: any) => {
@@ -1017,15 +1071,43 @@ export function ChatPage() {
         // ('call' → 'input-available', 'result' → 'output-available') so
         // tool-registry renders DocumentGenerationCard correctly.
         const rawParts = localParts ?? serverParts ?? fallbackParts;
+        
+        // Get database tool results for this message
+        const msgToolResults = toolResultsMap.get(m.id);
+        
         const parts = rawParts.map((p: any) => {
-          if (!p || p.type !== 'tool-invocation') return p;
+          if (!p || !isToolPart(p.type)) return p;
+          
           const stateMap: Record<string, string> = {
             'call':           'input-available',
             'partial-call':   'input-streaming',
             'result':         'output-available',
           };
+          
+          // Try to find matching database tool result
+          const toolCallId = p.toolCallId || p.toolInvocation?.toolCallId;
+          const dbResult = toolCallId && msgToolResults?.get(toolCallId);
+          
+          // If we have a database result, merge it into the part
+          if (dbResult && dbResult.state === 'completed') {
+            const mergedOutput = dbResult.output || p.output || p.result || p.toolInvocation?.result;
+            return {
+              ...p,
+              state: 'output-available',
+              output: mergedOutput,
+              result: mergedOutput,
+              toolInvocation: p.toolInvocation ? {
+                ...p.toolInvocation,
+                state: 'output-available',
+                result: mergedOutput,
+              } : undefined,
+            };
+          }
+          
+          // No database result - use existing normalization logic
+          if (p.type !== 'tool-invocation') return p;
+          
           const normalizedState = stateMap[p.state] ?? p.state;
-          // Also normalise the toolInvocation sub-object if present
           const toolInvocation = p.toolInvocation
             ? { ...p.toolInvocation, state: stateMap[p.toolInvocation.state] ?? p.toolInvocation.state }
             : undefined;
@@ -1456,7 +1538,7 @@ export function ChatPage() {
     );
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────��─────────────────────
 
   const cssVars = {
     '--chat-bg':  isDark ? '#0C0C0E' : '#FAFAFA',
