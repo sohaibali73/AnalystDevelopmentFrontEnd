@@ -799,14 +799,22 @@ export function ChatPage() {
       }
     },
     onFinish: ({ message }) => {
-      setSkillStatus(null); // Clear skill status when response completes
+      setSkillStatus(null);
       const convId = conversationIdRef.current;
       justFinishedStreamRef.current = convId;
       setTimeout(() => {
         if (justFinishedStreamRef.current === convId) justFinishedStreamRef.current = null;
       }, 30000);
 
-      if (convId) savePartsToCache(convId, [...streamMessages, message]);
+      if (convId) {
+        const allMsgs = [...streamMessages, message];
+        console.log('[v0] onFinish: saving parts for', allMsgs.length, 'messages, tool parts in last msg=', message.parts?.filter((p: any) => isToolPart(p.type)).length);
+        allMsgs.forEach((m: any) => {
+          const toolP = m.parts?.filter((p: any) => isToolPart(p.type)) || [];
+          if (toolP.length > 0) console.log('[v0]  msg', m.id, 'has', toolP.length, 'tool parts:', toolP.map((p: any) => `${p.type}/${p.toolName}/${p.state}`).join(', '));
+        });
+        savePartsToCache(convId, allMsgs);
+      }
 
       loadConversations();
       if (voiceMode && message.role === 'assistant') {
@@ -846,6 +854,7 @@ export function ChatPage() {
     if (newConvId) {
       try {
         const stored = localStorage.getItem(`file_dl_${newConvId}`);
+        console.log('[v0] conversation switch: file_dl keys=', stored ? Object.keys(JSON.parse(stored)).length : 0);
         if (stored) setFileDownloadEvents(JSON.parse(stored));
         else setFileDownloadEvents({});
       } catch { setFileDownloadEvents({}); }
@@ -999,18 +1008,13 @@ export function ChatPage() {
       if (conversationIdRef.current !== conversationId) return;
 
       const cachedParts = loadPartsCache(conversationId);
+      console.log('[v0] loadPreviousMessages: cachedParts keys=', Object.keys(cachedParts).length, 'api messages=', data.length);
       const newMessages = data.map((m: any) => {
-        // Prefer the locally-cached parts (which include tool-invocation state)
-        // over server metadata. This ensures DocumentGenerationCard and other rich
-        // tool UI survive a full page reload.
         const localParts: any[] | undefined = cachedParts[m.id];
         const serverParts: any[] | undefined = m.metadata?.parts;
         const fallbackParts = [{ type: 'text', text: m.content || '' }];
-
-        // If we have locally cached parts, always use them — they contain the
-        // full output-available state which the server may not preserve.
         const parts = localParts ?? serverParts ?? fallbackParts;
-
+        console.log('[v0] msg', m.id, 'role=', m.role, 'parts source=', localParts ? 'localStorage' : serverParts ? 'server' : 'fallback', 'parts count=', parts.length, 'tool parts=', parts.filter((p: any) => isToolPart(p.type)).length);
         return {
           id: m.id,
           role: m.role,
@@ -1145,7 +1149,7 @@ export function ChatPage() {
       ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '';
 
-    // ── Content renderer (same logic, just extracted) ──────────────────────
+    // ── Content renderer (same logic, just extracted) ────────────────────��─
     const renderParts = () => {
       // Deduplicate tool parts by toolCallId — keep the last (most complete) state
       // to prevent duplicate cards when both input-available + output-available
