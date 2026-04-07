@@ -307,6 +307,25 @@ function renderInvokeSkill(
   const slug = rawSlug.toLowerCase().replace(/-/g, '_');
   const displaySlug = rawSlug || 'invoke_skill';
 
+  // ── File-producing skills → DocumentGenerationCard (ALL states) ─────────
+  // This MUST come before the early-return switch below so the rich generation
+  // animation is shown for DOCX / PPTX / XLSX / datapack skills.
+  if (INVOKE_FILE_SLUGS.has(slug)) {
+    return (
+      <DocumentGenerationCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'invoke_skill'}
+        input={part.input}
+        output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
   // ── Analysis/Research skills → specific cards (check FIRST) ─────────────
   let Component: React.ComponentType<any> | null = null;
 
@@ -319,7 +338,7 @@ function renderInvokeSkill(
   else if (INVOKE_QUANT_SLUGS.has(slug))     Component = SkillResultCard;
   else                                       Component = SkillResultCard;
 
-  // Always use SkillResultCard for ALL skills - FAST & CLEAN
+  // Always use SkillResultCard for ALL non-file skills — fast and clean
   switch (part.state) {
     case 'input-streaming':
     case 'input-available':
@@ -338,38 +357,6 @@ function renderInvokeSkill(
     default:
       return null;
   }
-
-  // ── File-producing skills → DocumentGenerationCard (fallback) ────────────
-  if (INVOKE_FILE_SLUGS.has(slug) || slug === '') {
-    return (
-      <DocumentGenerationCard
-        key={pIdx}
-        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
-        toolName={slug || 'invoke_skill'}
-        input={part.input}
-        output={part.state === 'output-available' ? part.output : undefined}
-        externalOutput={externalOutput}
-        state={part.state as any}
-        errorText={part.errorText}
-        conversationId={conversationId || undefined}
-      />
-    );
-  }
-
-  // ── Unknown skill → DocumentGenerationCard (default fallback) ────────────
-  return (
-    <DocumentGenerationCard
-      key={pIdx}
-      toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
-      toolName={slug || 'invoke_skill'}
-      input={part.input}
-      output={part.state === 'output-available' ? part.output : undefined}
-      externalOutput={externalOutput}
-      state={part.state as any}
-      errorText={part.errorText}
-      conversationId={conversationId || undefined}
-    />
-  );
 }
 
 // ─── Main Render Function ─────────────────────────────────────────────────────

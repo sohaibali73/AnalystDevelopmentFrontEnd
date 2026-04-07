@@ -305,11 +305,67 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   const startTimeRef = useRef<number>(Date.now());
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const restoredFromStorage = useRef(false);
+
+  const STORAGE_KEY = `docgen_state_${toolCallId}`;
 
   const isDark =
     typeof window !== 'undefined' &&
     (document.documentElement.getAttribute('data-theme') === 'dark' ||
       window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+
+  // ── Restore state from localStorage on mount ──────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        // Only restore if saved within the last 24 hours
+        if (Date.now() - (saved.timestamp || 0) < 86400000) {
+          if (saved.isComplete) {
+            restoredFromStorage.current = true;
+            setIsComplete(true);
+            setProgress(100);
+            setCurrentPhase(meta.phases.length - 1);
+            if (saved.downloadUrl)  setDownloadUrl(saved.downloadUrl);
+            if (saved.fileId)       setFileId(saved.fileId);
+            if (saved.outputData)   setOutputData(saved.outputData);
+            if (saved.elapsedTime)  setElapsedTime(saved.elapsedTime);
+            setSafetyTimeout(false);
+            // Auto-open preview after a short delay
+            setTimeout(() => setPreviewOpen(true), 500);
+          } else if (saved.isError) {
+            restoredFromStorage.current = true;
+            setIsError(true);
+            if (saved.elapsedTime) setElapsedTime(saved.elapsedTime);
+          }
+        }
+      }
+    } catch {
+      // localStorage not available or parse error — ignore
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
+
+  // ── Persist state to localStorage on changes ──────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isComplete && !isError) return; // only persist terminal states
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        isComplete,
+        isError,
+        downloadUrl,
+        fileId,
+        outputData,
+        elapsedTime,
+        timestamp: Date.now(),
+      }));
+    } catch {
+      // Ignore storage quota errors
+    }
+  }, [STORAGE_KEY, isComplete, isError, downloadUrl, fileId, outputData, elapsedTime]);
 
   // ── Progress simulation ────────────────────────────────────────────────────
   const startProgressSimulation = useCallback(() => {
@@ -340,6 +396,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   }, [meta.phases.length]);
 
   useEffect(() => {
+    if (restoredFromStorage.current) return; // skip if we restored a terminal state
     if (state === 'input-streaming' || state === 'input-available') {
       startProgressSimulation();
     }
@@ -372,6 +429,8 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
       setIsComplete(true);
       setSafetyTimeout(false);
       setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      // Auto-open preview
+      setTimeout(() => setPreviewOpen(true), 600);
     }
   }, [externalOutput]);
 
@@ -396,6 +455,8 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           setCurrentPhase(meta.phases.length - 1);
           setIsComplete(true);
           setSafetyTimeout(false);
+          // Auto-open preview after completion animation settles
+          setTimeout(() => setPreviewOpen(true), 600);
         }
       }, 16);
 
@@ -644,99 +705,193 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         {!isError && (
           <div style={{ marginBottom: '12px' }}>
 
-            {/* Animated progress indicator */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              padding: '16px 0',
-              position: 'relative',
-            }}>
-              {/* Animated dots */}
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      backgroundColor: meta.color,
-                      animation: `docGenBounce 1.4s ease-in-out ${i * 0.16}s infinite`,
-                    }}
-                  />
-                ))}
-              </div>
-              
-              {/* Spinning ring */}
+            {/* SVG circular ring + phase checklist */}
+            {!isComplete && (
               <div style={{
-                position: 'absolute',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                border: `2px solid ${trackCol}`,
-                borderTopColor: meta.color,
-                animation: 'docGenSpin 1s linear infinite',
-              }} />
-            </div>
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '20px',
+                padding: '16px 4px 12px',
+              }}>
 
-            {/* Phase text */}
-            <div style={{
-              fontSize: '12px',
-              color: meta.color,
-              fontWeight: 600,
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              marginBottom: '8px',
-            }}>
-              <span style={{
-                display: 'inline-block',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: meta.color,
-                animation: 'docGenPulse 1.5s ease-in-out infinite',
-              }} />
-              {isComplete ? 'Generation complete' : meta.phases[currentPhase] || 'Processing your request'}
-            </div>
+                {/* Circular progress ring */}
+                <div style={{ flexShrink: 0, position: 'relative', width: '80px', height: '80px' }}>
+                  <svg width="80" height="80" viewBox="0 0 80 80" style={{ transform: 'rotate(-90deg)' }}>
+                    {/* Track */}
+                    <circle
+                      cx="40" cy="40" r="34"
+                      fill="none"
+                      stroke={trackCol}
+                      strokeWidth="6"
+                    />
+                    {/* Progress arc */}
+                    <circle
+                      cx="40" cy="40" r="34"
+                      fill="none"
+                      stroke={meta.color}
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 34}`}
+                      strokeDashoffset={`${2 * Math.PI * 34 * (1 - progress / 100)}`}
+                      style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1)' }}
+                    />
+                  </svg>
+                  {/* Percentage label */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '1px',
+                  }}>
+                    <span style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontWeight: 700,
+                      fontSize: '15px',
+                      color: textColor,
+                      lineHeight: 1,
+                    }}>
+                      {Math.round(progress)}%
+                    </span>
+                    <span style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: '8px',
+                      color: mutedCol,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}>
+                      {formatTime(elapsedTime)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Phase checklist */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '7px', paddingTop: '4px' }}>
+                  {meta.phases.map((phase, idx) => {
+                    const isDone    = idx < currentPhase;
+                    const isActive  = idx === currentPhase;
+                    const isPending = idx > currentPhase;
+                    return (
+                      <div key={idx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        opacity: isPending ? 0.38 : 1,
+                        transition: 'opacity 0.3s ease',
+                      }}>
+                        {/* State indicator */}
+                        {isDone ? (
+                          <div style={{
+                            width: '16px', height: '16px', borderRadius: '50%',
+                            backgroundColor: meta.color,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                            <IconCheck size={9} color="#fff" />
+                          </div>
+                        ) : isActive ? (
+                          <div style={{
+                            width: '16px', height: '16px', borderRadius: '50%',
+                            border: `2px solid ${meta.color}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                            <div style={{
+                              width: '7px', height: '7px', borderRadius: '50%',
+                              backgroundColor: meta.color,
+                              animation: 'docGenPulse 1.4s ease-in-out infinite',
+                            }} />
+                          </div>
+                        ) : (
+                          <div style={{
+                            width: '16px', height: '16px', borderRadius: '50%',
+                            border: `1.5px solid ${mutedCol}`,
+                            flexShrink: 0,
+                            opacity: 0.4,
+                          }} />
+                        )}
+                        {/* Phase label */}
+                        <span style={{
+                          fontSize: '11.5px',
+                          fontWeight: isActive ? 700 : isDone ? 600 : 400,
+                          color: isActive ? meta.color : isDone ? textColor : mutedCol,
+                          lineHeight: 1.3,
+                          transition: 'color 0.3s ease, font-weight 0.2s ease',
+                          fontFamily: "'Instrument Sans', sans-serif",
+                        }}>
+                          {phase}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Do not refresh warning */}
             {!isComplete && (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
+                justifyContent: 'space-between',
+                gap: '8px',
                 padding: '8px 12px',
                 borderRadius: '8px',
                 backgroundColor: 'var(--accent-dim)',
                 border: '1px solid var(--border-hover)',
-                marginTop: '8px',
+                marginTop: '2px',
               }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <span style={{
-                  fontSize: '11px',
-                  color: 'var(--accent)',
-                  fontWeight: 600,
-                  fontFamily: "'DM Mono', monospace",
-                  letterSpacing: '0.02em',
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span style={{
+                    fontSize: '11px',
+                    color: 'var(--accent)',
+                    fontWeight: 600,
+                    fontFamily: "'DM Mono', monospace",
+                    letterSpacing: '0.02em',
+                  }}>
+                    Do not refresh or leave this page
+                  </span>
+                </div>
+                {/* Shimmer progress bar */}
+                <div style={{
+                  position: 'relative',
+                  width: '90px',
+                  height: '4px',
+                  borderRadius: '2px',
+                  backgroundColor: trackCol,
+                  flexShrink: 0,
+                  overflow: 'hidden',
                 }}>
-                  Do not refresh or leave this page
-                </span>
+                  <div style={{
+                    position: 'absolute',
+                    left: 0, top: 0, bottom: 0,
+                    width: `${progress}%`,
+                    borderRadius: '2px',
+                    backgroundColor: meta.color,
+                    transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
+                  }} />
+                  {/* Shimmer sweep */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0, bottom: 0,
+                    width: '40px',
+                    background: `linear-gradient(90deg, transparent, ${meta.color}80, transparent)`,
+                    animation: 'docGenShimmer 1.6s linear infinite',
+                  }} />
+                </div>
               </div>
             )}
 
             {/* Phase step dots */}
             {!isComplete && (
-              <div style={{ display: 'flex', gap: '4px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', gap: '4px', marginTop: '10px' }}>
                 {meta.phases.map((_, idx) => (
                   <div key={idx} style={{
                     flex: 1,
@@ -777,7 +932,110 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         {/* ── Complete: file info + actions ─────────────────────────────────── */}
         {isComplete && outputData && (
           <div>
-            {/* Metadata row */}
+
+            {/* Prominent download banner */}
+            {(downloadUrl || fileId) && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                padding: '14px 16px',
+                borderRadius: '11px',
+                background: isDark
+                  ? `linear-gradient(135deg, ${meta.color}1A 0%, ${meta.color}0D 100%)`
+                  : `linear-gradient(135deg, ${meta.color}0F 0%, ${meta.color}06 100%)`,
+                border: `1.5px solid ${meta.color}30`,
+                marginBottom: '12px',
+              }}>
+                {/* File icon + name + size */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '9px',
+                    background: isDark ? meta.bgDark : meta.bgLight,
+                    border: `1px solid ${meta.color}28`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: `0 2px 8px ${meta.color}20`,
+                  }}>
+                    <FileIcon size={20} color={meta.color} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      color: textColor,
+                      fontFamily: "'Syne', sans-serif",
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {outputData.filename || `${title}.${fileType}`}
+                    </div>
+                    <div style={{
+                      fontSize: '11px',
+                      color: mutedCol,
+                      marginTop: '2px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontFamily: "'DM Mono', monospace",
+                    }}>
+                      <span style={{
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        backgroundColor: `${meta.color}14`,
+                        color: meta.color,
+                        fontSize: '9.5px',
+                        fontWeight: 700,
+                        letterSpacing: '0.5px',
+                        textTransform: 'uppercase',
+                      }}>
+                        {fileType.toUpperCase()}
+                      </span>
+                      {formatSize() && <span>{formatSize()}</span>}
+                      <span style={{ opacity: 0.35 }}>·</span>
+                      <span>{formatTime(elapsedTime)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Download CTA */}
+                <button
+                  onClick={handleDownload}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                    borderRadius: '9px',
+                    border: 'none',
+                    background: meta.gradient,
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    fontFamily: "'Syne', sans-serif",
+                    letterSpacing: '0.5px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    boxShadow: `0 4px 14px ${meta.color}35`,
+                    transition: 'all 0.18s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = `0 6px 18px ${meta.color}50`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = `0 4px 14px ${meta.color}35`;
+                  }}
+                >
+                  <IconDownload size={13} color="#fff" />
+                  Download {fileType.toUpperCase()}
+                </button>
+              </div>
+            )}
             <div style={{
               display: 'flex',
               gap: '16px',
@@ -1291,7 +1549,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           </div>
         )}
 
-        {/* ── Estimated time hint ───────────────────────────────────────────── */}
+        {/* ── Estimated time hint ──────────────────────────��────────────────── */}
         {!isComplete && !isError && progress > 5 && (
           <div style={{
             fontSize: '10.5px',
@@ -1317,12 +1575,12 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           100% { transform: rotate(360deg); }
         }
         @keyframes docGenShimmer {
-          0% { left: -100%; }
-          100% { left: 200%; }
+          0% { left: -60px; }
+          100% { left: calc(100% + 60px); }
         }
-        @keyframes docGenBounce {
-          0%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-12px); }
+        @keyframes docGenSlideIn {
+          0% { opacity: 0; transform: translateY(8px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </div>
