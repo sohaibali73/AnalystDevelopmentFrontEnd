@@ -305,18 +305,38 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
   }, [isComplete, isError]);
 
   // ── Notify parent when code is generated ───────────────────────────────────
+  const hasNotifiedRef = useRef(false);
+  
   useEffect(() => {
-    if (isComplete && outputData && onCodeGenerated) {
+    if (isComplete && outputData && !hasNotifiedRef.current) {
       const code = extractAFLCode(outputData);
       if (code) {
+        hasNotifiedRef.current = true;
         const metadata = extractMetadata(outputData);
-        onCodeGenerated(code, {
-          description: metadata.strategy,
-          strategyType: metadata.type,
-        });
+        const filename = extractFilename(outputData, input);
+        
+        // Notify via callback if provided
+        if (onCodeGenerated) {
+          onCodeGenerated(code, {
+            description: metadata.strategy,
+            strategyType: metadata.type,
+          });
+        }
+        
+        // Also dispatch custom event for AFL Generator page to listen for
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('afl-code-generated', {
+            detail: {
+              code,
+              filename,
+              description: metadata.strategy,
+              strategyType: metadata.type,
+            }
+          }));
+        }
       }
     }
-  }, [isComplete, outputData, onCodeGenerated]);
+  }, [isComplete, outputData, onCodeGenerated, input]);
   
   // ── Copy to clipboard ──────────────────────────────────────────────────────
   const handleCopy = useCallback(() => {
@@ -345,7 +365,29 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success(`Downloaded ${filename}`);
-  }, [outputData, input]);
+    
+    // Also notify parent to update code editor with full code
+    if (onCodeGenerated) {
+      const metadata = extractMetadata(outputData);
+      onCodeGenerated(code, {
+        description: metadata.strategy,
+        strategyType: metadata.type,
+      });
+    }
+    
+    // Dispatch custom event for AFL Generator page to listen for
+    if (typeof window !== 'undefined') {
+      const metadata = extractMetadata(outputData);
+      window.dispatchEvent(new CustomEvent('afl-code-generated', {
+        detail: {
+          code,
+          filename,
+          description: metadata.strategy,
+          strategyType: metadata.type,
+        }
+      }));
+    }
+  }, [outputData, input, onCodeGenerated]);
 
   // ── Format time ────────────────────────────────────────────────────────────
   const formatTime = (seconds: number) => {

@@ -200,6 +200,44 @@ export function AFLGeneratorPage() {
 
   const isStreaming = status === 'streaming' || status === 'submitted';
 
+  // Listen for AFL code generated events from AFLGenerationCard
+  useEffect(() => {
+    const handleAFLCodeGenerated = (event: CustomEvent<{
+      code: string;
+      filename?: string;
+      description?: string;
+      strategyType?: string;
+    }>) => {
+      const { code, description, strategyType } = event.detail;
+      if (!code) return;
+      
+      if (compositeMode) {
+        setStrategies(prev => {
+          const alreadyExists = prev.some(s => s.code === code);
+          if (alreadyExists) return prev;
+          const newStrategy = {
+            id: `strategy-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            name: `Strategy ${prev.length + 1}`,
+            code,
+            description,
+            strategyType,
+            createdAt: new Date(),
+          };
+          setTimeout(() => setActiveTab(newStrategy.id), 0);
+          return [...prev, newStrategy];
+        });
+      } else {
+        setGeneratedCode(code);
+      }
+      if (!codePanelOpen && !isMobile) setCodePanelOpen(true);
+    };
+
+    window.addEventListener('afl-code-generated', handleAFLCodeGenerated as EventListener);
+    return () => {
+      window.removeEventListener('afl-code-generated', handleAFLCodeGenerated as EventListener);
+    };
+  }, [compositeMode, codePanelOpen, isMobile]);
+
   // Auto-extract AFL code from the latest assistant message
   const lastExtractedCodeRef = useRef<string | null>(null);
 
