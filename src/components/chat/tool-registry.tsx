@@ -342,32 +342,78 @@ function renderInvokeSkill(
     );
   }
 
+  // ── Check if output looks like AFL code result ──────────────────────────
+  const looksLikeAFLOutput = output && (
+    output.afl_code ||
+    output.fixed_code ||
+    output.strategy_type ||
+    (output.valid !== undefined && output.errors !== undefined) ||
+    (output.explanation && output.code)
+  );
+
+  // ── Check if output looks like DCF model result ────────────────────────────
+  const looksLikeDCFOutput = output && (
+    output.intrinsic_value ||
+    output.wacc ||
+    output.enterprise_value ||
+    output.equity_value ||
+    (output.ticker && (output.current_price || output.upside_downside))
+  );
+
+  // ── Check if output looks like presentation result ─────────────────────────
+  const looksLikePresentationOutput = output && (
+    output.presentation_id ||
+    output.slide_count ||
+    (output.slides && Array.isArray(output.slides)) ||
+    (output.title && output.theme && output.download_url)
+  );
+
   // ── Analysis/Research skills → specific cards (check FIRST) ─────────────
-  let Component: React.ComponentType<any> | null = null;
+  // Also detect card type from output shape as fallback when slug is missing
+  let Component: React.ComponentType<any> = SkillResultCard;
 
-  if (INVOKE_RESEARCH_SLUGS.has(slug))       Component = FinancialResearchCard;
-  else if (INVOKE_BUBBLE_SLUGS.has(slug))    Component = BubbleDetectorCard;
-  else if (INVOKE_DOC_INTERPRETER_SLUGS.has(slug)) Component = DocInterpreterCard;
-  else if (INVOKE_AFL_SLUGS.has(slug))       Component = AFLGenerateCard;
-  else if (INVOKE_DCF_SLUGS.has(slug))       Component = DCFModelCard;
-  else if (INVOKE_BACKTEST_SLUGS.has(slug))  Component = SkillResultCard;
-  else if (INVOKE_QUANT_SLUGS.has(slug))     Component = SkillResultCard;
-  else                                       Component = SkillResultCard;
+  if (INVOKE_RESEARCH_SLUGS.has(slug))                Component = FinancialResearchCard;
+  else if (INVOKE_BUBBLE_SLUGS.has(slug))             Component = BubbleDetectorCard;
+  else if (INVOKE_DOC_INTERPRETER_SLUGS.has(slug))    Component = DocInterpreterCard;
+  else if (INVOKE_AFL_SLUGS.has(slug) || looksLikeAFLOutput)    Component = AFLGenerateCard;
+  else if (INVOKE_DCF_SLUGS.has(slug) || looksLikeDCFOutput)    Component = DCFModelCard;
+  else if (INVOKE_BACKTEST_SLUGS.has(slug))           Component = SkillResultCard;
+  else if (INVOKE_QUANT_SLUGS.has(slug))              Component = SkillResultCard;
+  // Presentation output should go to DocumentGenerationCard for consistent download experience
+  else if (looksLikePresentationOutput)               Component = DocumentGenerationCard;
 
-  // Always use SkillResultCard for ALL non-file skills — fast and clean
+  // ── Render based on state ───────────────────────────────────────────────────
   switch (part.state) {
     case 'input-streaming':
     case 'input-available':
       return <ToolLoading key={pIdx} toolName={displaySlug} input={part.input} />;
-    case 'output-available':
+    case 'output-available': {
+      // For DocumentGenerationCard, pass the full props structure
+      if (Component === DocumentGenerationCard) {
+        return (
+          <DocumentGenerationCard
+            key={pIdx}
+            toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+            toolName={slug || 'invoke_skill'}
+            input={part.input}
+            output={part.output}
+            externalOutput={externalOutput}
+            state={part.state as any}
+            errorText={part.errorText}
+            conversationId={conversationId || undefined}
+          />
+        );
+      }
+      // For other cards, spread the output as props
       return (
-        <SkillResultCard
+        <Component
           key={pIdx}
           skill={slug}
           skill_name={displaySlug}
           {...(typeof part.output === 'object' && part.output ? part.output : {})}
         />
       );
+    }
     case 'output-error':
       return <ToolError key={pIdx} toolName={displaySlug} errorText={part.errorText} />;
     default:
@@ -495,6 +541,30 @@ function renderDynamicTool(
 ): React.ReactNode {
   if (part.state === 'output-available' && typeof part.output === 'object' && part.output) {
     const out = part.output as any;
+
+    // ── AFL code output detection ────────────────────────────────────────────
+    if (
+      out.afl_code ||
+      out.fixed_code ||
+      out.strategy_type ||
+      (out.valid !== undefined && out.errors !== undefined) ||
+      (out.explanation && out.code) ||
+      /afl|amibroker/.test(toolName)
+    ) {
+      return <AFLGenerateCard key={pIdx} {...out} />;
+    }
+
+    // ── DCF model output detection ───────────────────────────────────────────
+    if (
+      out.intrinsic_value ||
+      out.wacc ||
+      out.enterprise_value ||
+      out.equity_value ||
+      (out.ticker && (out.current_price || out.upside_downside)) ||
+      /dcf|valuation/.test(toolName)
+    ) {
+      return <DCFModelCard key={pIdx} {...out} />;
+    }
 
     // Has a download URL → show download card
     if (

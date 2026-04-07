@@ -992,17 +992,21 @@ export function ChatPage() {
             const mergedOutput = dbResult.output || p.output || p.result || p.toolInvocation?.result;
             // CRITICAL: Also merge the input from dbResult to preserve skill_slug for document generation
             const mergedInput = { ...(p.input || {}), ...(dbResult.input || {}) };
+            // Also preserve toolName from dbResult for proper card routing
+            const mergedToolName = p.toolName || dbResult.tool_name || p.toolInvocation?.toolName;
             return {
               ...p,
               state: 'output-available',
               input: mergedInput,
               output: mergedOutput,
               result: mergedOutput,
+              toolName: mergedToolName,
               toolInvocation: p.toolInvocation ? {
                 ...p.toolInvocation,
                 state: 'output-available',
                 result: mergedOutput,
                 args: mergedInput,
+                toolName: mergedToolName,
               } : undefined,
             };
           }
