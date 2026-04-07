@@ -314,9 +314,28 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     (document.documentElement.getAttribute('data-theme') === 'dark' ||
       window.matchMedia?.('(prefers-color-scheme: dark)').matches);
 
-  // ── Restore state from localStorage on mount ──────────────────────────────
+  // ── Restore state from localStorage OR from output prop on mount ───────────
+  // Priority: output prop (from database) > localStorage > nothing
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    
+    // If we have output/externalOutput prop and state is output-available, use that as authoritative source
+    // This handles the case where data is restored from the database after page refresh
+    const effectiveOutput = output || externalOutput;
+    if (state === 'output-available' && effectiveOutput) {
+      restoredFromStorage.current = true;
+      setIsComplete(true);
+      setProgress(100);
+      setCurrentPhase(meta.phases.length - 1);
+      setOutputData(effectiveOutput);
+      setDownloadUrl(effectiveOutput.download_url || effectiveOutput.downloadUrl || effectiveOutput.file_url || null);
+      setFileId(effectiveOutput.file_id || effectiveOutput.fileId || effectiveOutput.document_id || effectiveOutput.presentation_id || null);
+      setSafetyTimeout(false);
+      setTimeout(() => setPreviewOpen(true), 500);
+      return;
+    }
+    
+    // Fallback: try localStorage
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {

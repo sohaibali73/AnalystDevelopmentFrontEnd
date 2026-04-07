@@ -442,9 +442,22 @@ function splitTextWithCards(text: string): TextSegment[] {
   let lastIndex = 0;
   let i = 0;
 
+  // Patterns we want to strip and optionally render as a card:
+  //   {"card":"...",...}          — original format
+  //   {"type":"data-card_afl",...} — AFL skill output format
+  const JSON_OPENERS = ['{"card":"', '{"type":"data-card_'];
+
   while (i < text.length) {
-    // Look for {"card":"
-    const start = text.indexOf('{"card":"', i);
+    // Find the earliest occurrence of any opener from current position
+    let start = -1;
+    let matchedOpener = '';
+    for (const opener of JSON_OPENERS) {
+      const pos = text.indexOf(opener, i);
+      if (pos !== -1 && (start === -1 || pos < start)) {
+        start = pos;
+        matchedOpener = opener;
+      }
+    }
     if (start === -1) break;
 
     // Walk forward counting braces to find the matching closing }
@@ -464,9 +477,16 @@ function splitTextWithCards(text: string): TextSegment[] {
     const json = text.slice(start, found + 1);
     try {
       const parsed = JSON.parse(json);
-      if (parsed.card && parsed.data !== undefined) {
+      // Support both {"card":"...", "data":...} and {"type":"data-card_...", "data":...}
+      const cardType: string | undefined =
+        parsed.card ||
+        (typeof parsed.type === 'string' && parsed.type.startsWith('data-card_')
+          ? parsed.type.replace('data-card_', '')
+          : undefined);
+
+      if (cardType !== undefined) {
         if (start > lastIndex) segments.push({ type: 'text', text: text.slice(lastIndex, start) });
-        segments.push({ type: 'card', cardType: parsed.card, data: parsed.data });
+        segments.push({ type: 'card', cardType, data: parsed.data ?? parsed });
         lastIndex = found + 1;
       }
     } catch { /* not valid JSON, skip */ }
@@ -492,6 +512,10 @@ function renderInlineCard(cardType: string, data: any, key: number): React.React
       return <MarketOverview key={key} {...data} />;
     case 'backtest':
       return <BacktestResults key={key} {...data} />;
+    // AFL card JSON is handled entirely by the tool-part renderer (AFLGenerationCard).
+    // Suppress it here so the raw JSON never leaks into the text stream.
+    case 'afl':
+      return null;
     default:
       // Unknown card type — suppress the JSON, show nothing
       return null;
@@ -990,15 +1014,23 @@ export function ChatPage() {
           // If we have a database result, merge it into the part
           if (dbResult && dbResult.state === 'completed') {
             const mergedOutput = dbResult.output || p.output || p.result || p.toolInvocation?.result;
+            // CRITICAL: Also merge the input from dbResult to preserve skill_slug for document generation
+            const mergedInput = { ...(p.input || {}), ...(dbResult.input || {}) };
+            // Also preserve toolName from dbResult for proper card routing
+            const mergedToolName = p.toolName || dbResult.tool_name || p.toolInvocation?.toolName;
             return {
               ...p,
               state: 'output-available',
+              input: mergedInput,
               output: mergedOutput,
               result: mergedOutput,
+              toolName: mergedToolName,
               toolInvocation: p.toolInvocation ? {
                 ...p.toolInvocation,
                 state: 'output-available',
                 result: mergedOutput,
+                args: mergedInput,
+                toolName: mergedToolName,
               } : undefined,
             };
           }
