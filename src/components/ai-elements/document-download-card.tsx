@@ -7,7 +7,7 @@
  *
  * Preview engines (all client-side, zero server round-trips):
  *   DOCX  → docx-preview          (renderAsync into a ref'd <div>)
- *   PPTX  → @kandiforge/pptx-renderer (slide-by-slide HTML rendering)
+ *   PPTX  → pptx-parser           (browser-compatible PPTX parsing)
  *   XLSX  → SheetJS (xlsx)        (sheet_to_html into a <div>)
  *   HTML  → sandboxed <iframe srcDoc>
  *   PDF   → pdfjs-dist            (canvas rendering)
@@ -253,30 +253,54 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
 
       // ─────────────────────── PPTX ────────────────────────────────────────
       if (ext === 'pptx' || ext === 'ppt') {
-        const { renderPptx } = await import('@kandiforge/pptx-renderer');
+        // Use pptx-parser for browser-compatible PPTX parsing
+        const pptxParser = await import('pptx-parser');
         const ab = await blob.arrayBuffer();
         
-        // Create a temporary container for rendering
-        const container = document.createElement('div');
-        container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
-        document.body.appendChild(container);
-        
         try {
-          await renderPptx(ab, container, {
-            slideWidth: 960,
-            slideHeight: 540,
-          });
+          const pptxData = await pptxParser.default(ab);
+          const slides: string[] = [];
           
-          // Extract rendered slides as HTML strings
-          const slideElements = container.querySelectorAll('.pptx-slide, [class*="slide"]');
-          const slides: string[] = slideElements.length > 0
-            ? Array.from(slideElements).map(el => el.outerHTML)
-            : [container.innerHTML || '<p>No slides found</p>'];
+          // Generate HTML for each slide
+          if (pptxData?.slides && Array.isArray(pptxData.slides)) {
+            for (const slide of pptxData.slides) {
+              let slideHtml = '<div class="pptx-slide" style="background:#fff;padding:40px;min-height:400px;position:relative;">';
+              
+              // Handle slide background
+              if (slide.background?.color) {
+                slideHtml = slideHtml.replace('background:#fff', `background:${slide.background.color}`);
+              }
+              
+              // Render shapes/text elements
+              if (slide.elements && Array.isArray(slide.elements)) {
+                for (const el of slide.elements) {
+                  if (el.type === 'text' || el.text) {
+                    const text = el.text || el.content || '';
+                    const fontSize = el.fontSize || 16;
+                    const fontColor = el.fontColor || '#000';
+                    const isBold = el.bold ? 'font-weight:bold;' : '';
+                    slideHtml += `<div style="font-size:${fontSize}px;color:${fontColor};${isBold}margin:8px 0;">${text}</div>`;
+                  } else if (el.type === 'image' && el.data) {
+                    slideHtml += `<img src="${el.data}" style="max-width:100%;margin:8px 0;" />`;
+                  }
+                }
+              }
+              
+              slideHtml += '</div>';
+              slides.push(slideHtml);
+            }
+          }
+          
+          if (slides.length === 0) {
+            slides.push('<div class="pptx-slide" style="padding:40px;text-align:center;color:#666;"><p>No slides found or unable to parse presentation</p></div>');
+          }
           
           pptxSlidesRef.current = slides;
           setPreview({ status: 'pptx', slides, active: 0 });
-        } finally {
-          document.body.removeChild(container);
+        } catch (parseError) {
+          console.error('PPTX parse error:', parseError);
+          pptxSlidesRef.current = ['<div style="padding:40px;color:#ef4444;">Failed to parse PPTX file</div>'];
+          setPreview({ status: 'pptx', slides: pptxSlidesRef.current, active: 0 });
         }
         return;
       }

@@ -8,7 +8,7 @@
  * 
  * Libraries used:
  *   - DOCX: docx-preview
- *   - PPTX: @kandiforge/pptx-renderer
+ *   - PPTX: pptx-parser (browser-compatible)
  *   - XLSX: SheetJS (xlsx)
  *   - PDF: pdfjs-dist
  *   - CSV: PapaParse
@@ -261,46 +261,60 @@ export async function parseJson(blob: Blob): Promise<ParsedDocument> {
   }
 }
 
-// ─── PPTX Parser (@kandiforge/pptx-renderer) ────────────────────────────────
+// ─── PPTX Parser (pptx-parser - browser compatible) ─────────────────────────
 
 export async function parsePptx(blob: Blob): Promise<ParsedDocument> {
-  const { renderPptx } = await import('@kandiforge/pptx-renderer');
+  const pptxParser = await import('pptx-parser');
   const arrayBuffer = await blobToArrayBuffer(blob);
   
-  // Create a temporary container
-  const container = document.createElement('div');
-  container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
-  document.body.appendChild(container);
+  const pptxData = await pptxParser.default(arrayBuffer);
+  const slides: string[] = [];
+  let allText = '';
   
-  try {
-    await renderPptx(arrayBuffer, container, {
-      slideWidth: 960,
-      slideHeight: 540,
-    });
-    
-    // Extract rendered slides as HTML
-    const slideElements = container.querySelectorAll('.pptx-slide, [class*="slide"]');
-    const slidesHtml = slideElements.length > 0
-      ? Array.from(slideElements).map(el => el.outerHTML).join('\n')
-      : container.innerHTML;
-    
-    // Extract text for metadata
-    const text = container.textContent || '';
-    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-    const slideCount = slideElements.length || 1;
-    
-    return {
-      type: 'html',
-      content: slidesHtml,
-      metadata: {
-        pages: slideCount,
-        wordCount,
-        charCount: text.length,
-      },
-    };
-  } finally {
-    document.body.removeChild(container);
+  // Generate HTML for each slide
+  if (pptxData?.slides && Array.isArray(pptxData.slides)) {
+    for (const slide of pptxData.slides) {
+      let slideHtml = '<div class="pptx-slide" style="background:#fff;padding:40px;min-height:400px;position:relative;">';
+      
+      if (slide.background?.color) {
+        slideHtml = slideHtml.replace('background:#fff', `background:${slide.background.color}`);
+      }
+      
+      if (slide.elements && Array.isArray(slide.elements)) {
+        for (const el of slide.elements) {
+          if (el.type === 'text' || el.text) {
+            const text = el.text || el.content || '';
+            allText += text + ' ';
+            const fontSize = el.fontSize || 16;
+            const fontColor = el.fontColor || '#000';
+            const isBold = el.bold ? 'font-weight:bold;' : '';
+            slideHtml += `<div style="font-size:${fontSize}px;color:${fontColor};${isBold}margin:8px 0;">${text}</div>`;
+          } else if (el.type === 'image' && el.data) {
+            slideHtml += `<img src="${el.data}" style="max-width:100%;margin:8px 0;" />`;
+          }
+        }
+      }
+      
+      slideHtml += '</div>';
+      slides.push(slideHtml);
+    }
   }
+  
+  const slidesHtml = slides.length > 0 
+    ? slides.join('\n') 
+    : '<div class="pptx-slide" style="padding:40px;text-align:center;color:#666;"><p>No slides found</p></div>';
+  
+  const wordCount = allText.split(/\s+/).filter(w => w.length > 0).length;
+  
+  return {
+    type: 'html',
+    content: slidesHtml,
+    metadata: {
+      pages: slides.length || 1,
+      wordCount,
+      charCount: allText.length,
+    },
+  };
 }
 
 // ─── HTML Parser ────────────────────────────────────────────────────────────

@@ -191,41 +191,50 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
             setXlsxAllHtml(pages);
           }
 
-          // PPTX - using @kandiforge/pptx-renderer
+          // PPTX - using pptx-parser for browser-compatible parsing
           if (PPTX_EXTENSIONS.includes(ext)) {
             if (controller.signal.aborted) return;
             const ab = await blob.arrayBuffer();
             try {
-              const { renderPptx } = await import('@kandiforge/pptx-renderer');
+              const pptxParser = await import('pptx-parser');
+              const pptxData = await pptxParser.default(ab);
+              const slides: string[] = [];
               
-              // Create a temporary container for rendering
-              const container = document.createElement('div');
-              container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
-              document.body.appendChild(container);
-              
-              try {
-                await renderPptx(ab, container, {
-                  slideWidth: 960,
-                  slideHeight: 540,
-                });
-                
-                if (controller.signal.aborted) {
-                  document.body.removeChild(container);
-                  return;
-                }
-                
-                // Extract rendered slides as HTML strings
-                const slideElements = container.querySelectorAll('.pptx-slide, [class*="slide"]');
-                const slides: string[] = slideElements.length > 0
-                  ? Array.from(slideElements).map(el => el.outerHTML)
-                  : [container.innerHTML || '<p>No slides found</p>'];
-                
-                setPptxSlides(slides);
-              } finally {
-                if (document.body.contains(container)) {
-                  document.body.removeChild(container);
+              // Generate HTML for each slide
+              if (pptxData?.slides && Array.isArray(pptxData.slides)) {
+                for (const slide of pptxData.slides) {
+                  let slideHtml = '<div class="pptx-slide" style="background:#fff;padding:40px;min-height:400px;position:relative;">';
+                  
+                  if (slide.background?.color) {
+                    slideHtml = slideHtml.replace('background:#fff', `background:${slide.background.color}`);
+                  }
+                  
+                  if (slide.elements && Array.isArray(slide.elements)) {
+                    for (const el of slide.elements) {
+                      if (el.type === 'text' || el.text) {
+                        const text = el.text || el.content || '';
+                        const fontSize = el.fontSize || 16;
+                        const fontColor = el.fontColor || '#000';
+                        const isBold = el.bold ? 'font-weight:bold;' : '';
+                        slideHtml += `<div style="font-size:${fontSize}px;color:${fontColor};${isBold}margin:8px 0;">${text}</div>`;
+                      } else if (el.type === 'image' && el.data) {
+                        slideHtml += `<img src="${el.data}" style="max-width:100%;margin:8px 0;" />`;
+                      }
+                    }
+                  }
+                  
+                  slideHtml += '</div>';
+                  slides.push(slideHtml);
                 }
               }
+              
+              if (controller.signal.aborted) return;
+              
+              if (slides.length === 0) {
+                slides.push('<div class="pptx-slide" style="padding:40px;text-align:center;color:#666;"><p>No slides found or unable to parse presentation</p></div>');
+              }
+              
+              setPptxSlides(slides);
             } catch (pptxErr) {
               if (!controller.signal.aborted) {
                 setPptxSlides(['<p style="color:#ef4444">Failed to render PPTX: ' + (pptxErr instanceof Error ? pptxErr.message : 'Unknown error') + '</p>']);
@@ -394,7 +403,7 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
       );
     }
 
-    // ── Images ─────────────────────────────────────────────────────────────
+    // ── Images ───────────────────────────────────────────────────��─────────
     if (IMAGE_EXTENSIONS.includes(ext) && blobUrl) {
       return (
         <div className="flex-1 min-h-[480px]" style={{ backgroundColor: isDark ? '#0d0d0d' : '#1a1a1a' }}>
@@ -548,7 +557,7 @@ export function ChatFilePreviewModal({ file, onClose, isDark }: ChatFilePreviewM
       );
     }
 
-    // ── Fallback ───────────────────────────────────────────────────────────
+    // ── Fallback ─────────���─────────────────────────────────────────────────
     return (
       <div className="flex flex-col items-center justify-center flex-1 gap-3 p-10">
         <Info size={32} color={colors.textMuted} />
