@@ -27,7 +27,7 @@ import {
   CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye, Volume2,
   FileText as FileTextIcon, FileCode as FileCodeIcon,
   FileSpreadsheet as FileSpreadsheetIcon, File as FileIconLucide,
-  CheckIcon, XIcon, ImageIcon, Music2Icon, VideoIcon,
+  XIcon, ImageIcon, Music2Icon, VideoIcon,
 } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChat } from '@ai-sdk/react';
@@ -260,25 +260,21 @@ function getFileTypeIcon(filename: string | undefined) {
   return FileIconLucide;
 }
 
-function AttachmentsDisplay({
+  function AttachmentsDisplay({
   isDark,
-  uploadStates,
   onRemoveFile,
-  onRemoveUpload,
   forcedSkillSlug,
   forcedSkillName,
   onClearSkill,
-}: {
+  }: {
   isDark: boolean;
-  uploadStates: Record<string, { filename: string; size: number; mediaType: string; status: 'uploading' | 'complete' | 'error'; showCheckmark: boolean }>;
   onRemoveFile: (id: string) => void;
-  onRemoveUpload: (filename: string) => void;
   forcedSkillSlug: string | null;
   forcedSkillName: string | null;
   onClearSkill: () => void;
-}) {
+  }) {
   const attachments = usePromptInputAttachments();
-  const hasFiles = attachments.files.length > 0 || Object.keys(uploadStates).length > 0;
+  const hasFiles = attachments.files.length > 0;
 
   const hasSkillBadge = forcedSkillSlug !== null;
 
@@ -410,96 +406,6 @@ function AttachmentsDisplay({
             </div>
           );
         })}
-
-        {/* Upload states - uploading/complete/error */}
-        {Object.entries(uploadStates).map(([filename, state]) => {
-          const Icon = getFileTypeIcon(filename);
-          const isError = state.status === 'error';
-          const isUploading = state.status === 'uploading';
-
-          return (
-            <div
-              key={filename}
-              className="group"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 10px 6px 8px',
-                borderRadius: '8px',
-                border: `1px solid ${isError 
-                  ? 'rgba(239,68,68,0.3)' 
-                  : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                background: isError
-                  ? (isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)')
-                  : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: isError 
-                  ? '#EF4444' 
-                  : isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
-                maxWidth: '200px',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {state.showCheckmark ? (
-                <CheckIcon size={14} color="#22C55E" style={{ flexShrink: 0 }} />
-              ) : isUploading ? (
-                <div 
-                  style={{ 
-                    width: 14, 
-                    height: 14, 
-                    borderRadius: '50%',
-                    border: '2px solid transparent',
-                    borderTopColor: isDark ? '#6366F1' : '#4F46E5',
-                    borderRightColor: isDark ? '#6366F1' : '#4F46E5',
-                    animation: 'chat-spin 0.6s linear infinite',
-                    flexShrink: 0,
-                  }} 
-                />
-              ) : isError ? (
-                <XIcon size={14} style={{ flexShrink: 0 }} />
-              ) : (
-                <Icon size={14} style={{ opacity: 0.7, flexShrink: 0 }} />
-              )}
-              <span style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>{filename}</span>
-              {!isUploading && (
-                <button
-                  onClick={() => onRemoveUpload(filename)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '4px',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: isError ? '#EF4444' : isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-                    flexShrink: 0,
-                    marginLeft: '2px',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={e => { 
-                    e.currentTarget.style.color = '#EF4444';
-                    e.currentTarget.style.background = isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)';
-                  }}
-                  onMouseLeave={e => { 
-                    e.currentTarget.style.color = isError ? '#EF4444' : isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <XIcon size={12} />
-                </button>
-              )}
-            </div>
-          );
-        })}
       </div>
     </PromptInputHeader>
   );
@@ -628,13 +534,6 @@ export function ChatPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileDownloadEvents, setFileDownloadEvents] = useState<Record<string, any>>({});
   const fileDownloadEventsRef = useRef<Record<string, any>>({});
-  const [uploadStates, setUploadStates] = useState<Record<string, {
-    filename: string;
-    size: number;
-    mediaType: string;
-    status: 'uploading' | 'complete' | 'error';
-    showCheckmark: boolean;
-  }>>({});
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { status: connStatus, check: recheckConnection } = useConnectionStatus({ interval: 60000 });
@@ -2024,26 +1923,12 @@ export function ChatPage() {
 
                   let messageText = text;
 
-                  if (files.length > 0) {
-                    const token = getAuthToken();
-                    const uploaded: string[] = [];
-
-                    // Initialize upload states for all files
-                    for (const file of files) {
-                      const fileName = file.filename || 'upload';
-                      setUploadStates(prev => ({
-                        ...prev,
-                        [fileName]: {
-                          filename: fileName,
-                          size: 0,
-                          mediaType: file.mediaType || 'application/octet-stream',
-                          status: 'uploading',
-                          showCheckmark: false,
-                        },
-                      }));
-                    }
-
-                    for (const file of files) {
+        if (files.length > 0) {
+        const token = getAuthToken();
+        const uploaded: string[] = [];
+        
+        // Upload files silently in background (no spinner shown)
+        for (const file of files) {
                       const fileName = file.filename || 'upload';
                       try {
                         let actualFile: File;
@@ -2056,10 +1941,7 @@ export function ChatPage() {
                           const blob = await resp.blob();
                           actualFile = new File([blob], fileName, { type: file.mediaType || blob.type || 'application/octet-stream' });
                         } else { 
-                          setUploadStates(prev => ({
-                            ...prev,
-                            [fileName]: { ...prev[fileName], status: 'error' },
-                          }));
+                          toast.error(`Cannot upload ${fileName}: no file data`);
                           continue;
                         }
 
@@ -2081,38 +1963,18 @@ export function ChatPage() {
                           uploaded.push(fileName);
                           fileBlobCacheRef.current.set(fileName, { url: file.url || undefined, fileId: respData.file_id || respData.id, filename: fileName, mediaType: file.mediaType, size: actualFile.size });
 
-                          // Show checkmark briefly then clear
-                          setUploadStates(prev => ({
-                            ...prev,
-                            [fileName]: { ...prev[fileName], status: 'complete', size: actualFile.size, showCheckmark: true },
-                          }));
-                          setTimeout(() => {
-                            setUploadStates(prev => {
-                              const next = { ...prev };
-                              delete next[fileName];
-                              return next;
-                            });
-                          }, 600);
-
                           if (respData.is_template && respData.template_id) {
                             toast.success(`${fileName} registered as template`, { duration: 4000 });
                           }
                         } catch (err) {
                           const msg = err instanceof Error ? err.message : 'Unknown error';
-                          setUploadStates(prev => ({
-                            ...prev,
-                            [fileName]: { ...prev[fileName], status: 'error' },
-                          }));
                           toast.error(`Upload failed: ${msg}`, { duration: 5000 });
                           if (msg.includes('fetch') || msg.includes('network') || msg.includes('aborted')) {
                             setBackendAvailable(false);
                           }
                         }
-                      } catch { 
-                        setUploadStates(prev => ({
-                          ...prev,
-                          [fileName]: { ...prev[fileName], status: 'error' },
-                        }));
+                      } catch (err) { 
+                        toast.error(`Failed to process file: ${fileName}`, { duration: 5000 });
                       }
                     }
                     if (uploaded.length > 0) {
@@ -2131,15 +1993,7 @@ export function ChatPage() {
               >
                 <AttachmentsDisplay 
                   isDark={isDark} 
-                  uploadStates={uploadStates} 
                   onRemoveFile={(id) => {}} 
-                  onRemoveUpload={(filename) => {
-                    setUploadStates(prev => {
-                      const next = { ...prev };
-                      delete next[filename];
-                      return next;
-                    });
-                  }}
                   forcedSkillSlug={forcedSkillSlug}
                   forcedSkillName={forcedSkillName}
                   onClearSkill={() => { setForcedSkillSlug(null); setForcedSkillName(null); }}
