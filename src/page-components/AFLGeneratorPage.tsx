@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Plus, MessageSquare, ArrowUpFromLine, Trash2, ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Pencil, X, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Download, Code2, PanelRightClose, PanelRightOpen, Settings2, Zap, Layers, Sparkles, Check } from 'lucide-react';
+import { FadeIn, AnimatedCard, AnimatedListItem, StaggerContainer, StaggerItem, Glow, AnimatedProgress, Pulse } from '@/components/AnimatedComponents';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -649,28 +651,55 @@ export function AFLGeneratorPage() {
             : 'linear-gradient(135deg, var(--accent-dim) 0%, transparent 100%)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background: `linear-gradient(135deg, ${colors.primaryBlue} 0%, ${colors.primaryBlueHover} 100%)`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 8px var(--accent-glow)'
-            }}>
-              <Code2 size={18} color="#1A1A1A" strokeWidth={2.5} />
-            </div>
+            <Glow color={colors.primaryBlue}>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4, ease: [0.22, 0.68, 0, 1.15] }}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: `linear-gradient(135deg, ${colors.primaryBlue} 0%, ${colors.primaryBlueHover} 100%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px var(--accent-glow)'
+                }}
+              >
+                <Code2 size={18} color="#1A1A1A" strokeWidth={2.5} />
+              </motion.div>
+            </Glow>
             <div>
-              <h2 style={{ 
-                fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
-                fontSize: '13px', 
-                fontWeight: 700, 
-                color: colors.text, 
-                margin: 0, 
-                letterSpacing: '1px', 
-                textTransform: 'uppercase' 
-              }}>AFL Generator</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ 
+                  fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
+                  fontSize: '13px', 
+                  fontWeight: 700, 
+                  color: colors.text, 
+                  margin: 0, 
+                  letterSpacing: '1px', 
+                  textTransform: 'uppercase' 
+                }}>AFL Generator</h2>
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  style={{
+                    fontSize: '8px',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                    color: '#A78BFA',
+                    letterSpacing: '0.5px',
+                    fontFamily: "'DM Mono', monospace",
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                  }}
+                >
+                  SKILL
+                </motion.span>
+              </div>
               <p style={{
                 fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
                 fontSize: '10px',
@@ -702,7 +731,12 @@ export function AFLGeneratorPage() {
 
         {/* New Chat + Search */}
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <button 
+          <motion.button 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            whileHover={streamMessages.length > 0 ? { scale: 1.02, y: -2 } : {}}
+            whileTap={streamMessages.length > 0 ? { scale: 0.98 } : {}}
             onClick={handleNewConversation}
             disabled={streamMessages.length === 0}
             title={streamMessages.length === 0 ? 'Current conversation is empty' : 'Start a new strategy'}
@@ -723,26 +757,13 @@ export function AFLGeneratorPage() {
               color: streamMessages.length === 0 ? 'rgba(26, 26, 26, 0.5)' : colors.darkGray, 
               fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
               fontSize: '13px', 
-              transition: 'all 0.2s ease', 
               boxShadow: streamMessages.length === 0 ? 'none' : '0 2px 8px var(--accent-glow)',
               letterSpacing: '0.3px',
               opacity: streamMessages.length === 0 ? 0.7 : 1
             }} 
-            onMouseOver={(e) => { 
-              if (streamMessages.length > 0) {
-                e.currentTarget.style.transform = 'translateY(-1px)'; 
-                e.currentTarget.style.boxShadow = '0 4px 12px var(--accent-glow)'; 
-              }
-            }} 
-            onMouseOut={(e) => { 
-              if (streamMessages.length > 0) {
-                e.currentTarget.style.transform = 'translateY(0)'; 
-                e.currentTarget.style.boxShadow = '0 2px 8px var(--accent-glow)'; 
-              }
-            }}
           >
             <Plus size={18} strokeWidth={2.5} /> New Strategy
-          </button>
+          </motion.button>
           <div style={{ position: 'relative' }}>
             <Search size={14} color={colors.textMuted} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
@@ -863,9 +884,20 @@ export function AFLGeneratorPage() {
                 </div>
               );
             }
-            return filtered.map(conv => (
-              <div 
-                key={conv.id} 
+            return (
+              <AnimatePresence mode="popLayout">
+                {filtered.map((conv, index) => (
+              <motion.div
+                key={conv.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20, height: 0 }}
+                transition={{ 
+                  duration: 0.3, 
+                  delay: index * 0.03,
+                  ease: [0.22, 0.68, 0, 1.15] 
+                }}
+                whileHover={{ x: 4 }}
                 onClick={() => { if (renamingId !== conv.id) setSelectedConversation(conv); }} 
                 style={{ 
                   padding: '12px', 
@@ -880,7 +912,7 @@ export function AFLGeneratorPage() {
                   alignItems: 'center', 
                   gap: '10px', 
                   fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif", 
-                  transition: 'all 0.2s ease',
+                  transition: 'background-color 0.2s ease, border-color 0.2s ease',
                   position: 'relative'
                 }} 
                 onMouseOver={(e) => {
@@ -1014,8 +1046,10 @@ export function AFLGeneratorPage() {
                     </div>
                   </>
                 )}
-              </div>
-            ));
+              </motion.div>
+            ))}
+              </AnimatePresence>
+            );
           })()}
         </div>
       </div>
@@ -1205,20 +1239,32 @@ export function AFLGeneratorPage() {
           } as React.CSSProperties}>
             <div className="max-w-[900px] mx-auto px-6 py-8" style={{ color: colors.text }}>
               {allMessages.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: [0.22, 0.68, 0, 1.15] }}
+                >
                 <ConversationEmptyState
                   icon={
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '20px',
-                    background: `linear-gradient(135deg, ${colors.primaryBlue}20 0%, ${colors.primaryBlue}10 100%)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '8px'
-                  }}>
-                    <Code2 size={40} color={colors.primaryBlue} strokeWidth={2} />
-                  </div>
+                  <Glow color={colors.primaryBlue}>
+                    <motion.div 
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 0.68, 0, 1.15] }}
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '20px',
+                        background: `linear-gradient(135deg, ${colors.primaryBlue}20 0%, ${colors.primaryBlue}10 100%)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '8px'
+                      }}
+                    >
+                      <Code2 size={40} color={colors.primaryBlue} strokeWidth={2} />
+                    </motion.div>
+                  </Glow>
                   }
                   title="AFL Code Generator"
                   description="Generate, debug, and optimize AmiBroker Formula Language strategies with AI assistance"
@@ -1246,21 +1292,38 @@ export function AFLGeneratorPage() {
                       </p>
                     </div>
                     <Suggestions className="justify-center mt-4">
-                      <Suggestion suggestion="Generate a moving average crossover strategy with stop loss" onClick={(s: string) => setInput(s)} />
-                      <Suggestion suggestion="Create an RSI-based mean reversion system" onClick={(s: string) => setInput(s)} />
-                      <Suggestion suggestion="Build a Bollinger Band breakout with position sizing" onClick={(s: string) => setInput(s)} />
-                      <Suggestion suggestion="Debug my AFL code for syntax errors" onClick={(s: string) => setInput(s)} />
+                      {[
+                        "Generate a moving average crossover strategy with stop loss",
+                        "Create an RSI-based mean reversion system",
+                        "Build a Bollinger Band breakout with position sizing",
+                        "Debug my AFL code for syntax errors"
+                      ].map((suggestion, index) => (
+                        <motion.div
+                          key={suggestion}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
+                        >
+                          <Suggestion suggestion={suggestion} onClick={(s: string) => setInput(s)} />
+                        </motion.div>
+                      ))}
                     </Suggestions>
                     <p className="text-xs mt-2" style={{ color: colors.textSubtle }}>
                       Click a suggestion or describe your strategy below
                     </p>
                   </div>
                 </ConversationEmptyState>
+                </motion.div>
               ) : (
                 <>
-                  <div className="flex flex-col gap-6">
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col gap-6"
+                  >
                     {allMessages.map((msg, idx) => renderMessage(msg, idx))}
-                  </div>
+                  </motion.div>
 
                   {status === 'submitted' && allMessages.length > 0 && allMessages[allMessages.length - 1]?.role === 'user' && (
                     <AIMessage from="assistant">
@@ -1476,27 +1539,33 @@ export function AFLGeneratorPage() {
       </div>
 
       {/* CODE PANEL */}
+      <AnimatePresence>
       {codePanelOpen && (() => {
         const activeCode = getActiveCode();
         const hasCode = compositeMode ? (strategies.length > 0 || activeTab === 'composite') : !!generatedCode;
         const isCompositeTab = compositeMode && activeTab === 'composite';
 
         return (
-        <div style={{ 
-          width: isMobile ? '100%' : '480px', 
-          backgroundColor: colors.codePanelBg, 
-          borderLeft: `1px solid ${colors.border}`, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          height: '100%', 
-          flexShrink: 0, 
-          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
-          position: isMobile ? 'absolute' : 'relative', 
-          right: 0, 
-          top: 0, 
-          zIndex: isMobile ? 200 : 1,
-          boxShadow: isDark ? '-2px 0 12px rgba(0,0,0,0.3)' : '-2px 0 12px rgba(0,0,0,0.04)'
-        }}>
+        <motion.div
+          initial={{ x: 100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 100, opacity: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 0.68, 0, 1.15] }}
+          style={{ 
+            width: isMobile ? '100%' : '480px', 
+            backgroundColor: colors.codePanelBg, 
+            borderLeft: `1px solid ${colors.border}`, 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%', 
+            flexShrink: 0, 
+            position: isMobile ? 'absolute' : 'relative', 
+            right: 0, 
+            top: 0, 
+            zIndex: isMobile ? 200 : 1,
+            boxShadow: isDark ? '-2px 0 12px rgba(0,0,0,0.3)' : '-2px 0 12px rgba(0,0,0,0.04)'
+          }}
+        >
           {/* Panel Header */}
           <div style={{ 
             padding: '16px 20px', 
@@ -1509,33 +1578,60 @@ export function AFLGeneratorPage() {
               : 'linear-gradient(135deg, var(--accent-dim) 0%, transparent 100%)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: colors.primaryBlue + '20',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {compositeMode ? (
-                  <Layers size={16} color={colors.primaryBlue} strokeWidth={2.5} />
-                ) : (
-                  <Code2 size={16} color={colors.primaryBlue} strokeWidth={2.5} />
-                )}
-              </div>
+              <Pulse>
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    backgroundColor: colors.primaryBlue + '20',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {compositeMode ? (
+                    <Layers size={16} color={colors.primaryBlue} strokeWidth={2.5} />
+                  ) : (
+                    <Code2 size={16} color={colors.primaryBlue} strokeWidth={2.5} />
+                  )}
+                </motion.div>
+              </Pulse>
               <div>
-                <h3 style={{ 
-                  fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
-                  fontSize: '13px', 
-                  fontWeight: 700, 
-                  color: colors.text, 
-                  margin: 0, 
-                  letterSpacing: '0.5px', 
-                  textTransform: 'uppercase' 
-                }}>
-                  {compositeMode ? 'Composite' : 'AFL Code'}
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ 
+                    fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif", 
+                    fontSize: '13px', 
+                    fontWeight: 700, 
+                    color: colors.text, 
+                    margin: 0, 
+                    letterSpacing: '0.5px', 
+                    textTransform: 'uppercase' 
+                  }}>
+                    {compositeMode ? 'Composite' : 'AFL Code'}
+                  </h3>
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                    style={{
+                      fontSize: '8px',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                      color: '#A78BFA',
+                      letterSpacing: '0.5px',
+                      fontFamily: "'DM Mono', monospace",
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                    }}
+                  >
+                    SKILL
+                  </motion.span>
+                </div>
                 {compositeMode ? (
                   <span style={{ 
                     fontSize: '10px', 
@@ -2093,9 +2189,10 @@ export function AFLGeneratorPage() {
               </div>
             );
           })()}
-        </div>
+        </motion.div>
         );
       })()}
+      </AnimatePresence>
 
       {/* Feedback Modal */}
       {showFeedbackModal && (
