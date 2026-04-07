@@ -1008,13 +1008,29 @@ export function ChatPage() {
       if (conversationIdRef.current !== conversationId) return;
 
       const cachedParts = loadPartsCache(conversationId);
-      console.log('[v0] loadPreviousMessages: cachedParts keys=', Object.keys(cachedParts).length, 'api messages=', data.length);
       const newMessages = data.map((m: any) => {
         const localParts: any[] | undefined = cachedParts[m.id];
         const serverParts: any[] | undefined = m.metadata?.parts;
         const fallbackParts = [{ type: 'text', text: m.content || '' }];
-        const parts = localParts ?? serverParts ?? fallbackParts;
-        console.log('[v0] msg', m.id, 'role=', m.role, 'parts source=', localParts ? 'localStorage' : serverParts ? 'server' : 'fallback', 'parts count=', parts.length, 'tool parts=', parts.filter((p: any) => isToolPart(p.type)).length);
+        // Prefer locally-cached parts (have the correct state values).
+        // If we must use server parts, normalize AI SDK v3 state names
+        // ('call' → 'input-available', 'result' → 'output-available') so
+        // tool-registry renders DocumentGenerationCard correctly.
+        const rawParts = localParts ?? serverParts ?? fallbackParts;
+        const parts = rawParts.map((p: any) => {
+          if (!p || p.type !== 'tool-invocation') return p;
+          const stateMap: Record<string, string> = {
+            'call':           'input-available',
+            'partial-call':   'input-streaming',
+            'result':         'output-available',
+          };
+          const normalizedState = stateMap[p.state] ?? p.state;
+          // Also normalise the toolInvocation sub-object if present
+          const toolInvocation = p.toolInvocation
+            ? { ...p.toolInvocation, state: stateMap[p.toolInvocation.state] ?? p.toolInvocation.state }
+            : undefined;
+          return { ...p, state: normalizedState, ...(toolInvocation ? { toolInvocation } : {}) };
+        });
         return {
           id: m.id,
           role: m.role,
@@ -1027,6 +1043,11 @@ export function ChatPage() {
       if (newMessages.length > 0) {
         setMessages(newMessages as any);
         saveToCache(conversationId, newMessages);
+        // Re-persist parts under real server IDs (temp streaming IDs like
+        // "msg-1234567890" are never found on reload; this ensures the real
+        // UUID is stored so the next reload hits localStorage instead of falling
+        // back to server parts).
+        savePartsToCache(conversationId, newMessages);
       }
     } catch (error: any) {
       console.warn('Failed to load messages:', error);
@@ -1614,7 +1635,7 @@ export function ChatPage() {
         onSelectedUpdate={setSelectedConversation}
       />
 
-      {/* ── Main area ─────────────────────────────────────────────────────── */}
+      {/* ── Main area ─────────────────────────────────��───────────────────── */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         minWidth: 0, overflow: 'hidden', height: '100%',
