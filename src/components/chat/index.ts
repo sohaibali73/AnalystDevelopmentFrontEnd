@@ -10,6 +10,7 @@ export { ChatModelSelector } from './ChatModelSelector';
 export { ChatSkillSelector } from './ChatSkillSelector';
 export { HTMLArtifactPreview } from './HTMLArtifactPreview';
 export { ChatAgentSettings } from './ChatAgentSettings';
+export { InteractiveCodeSandbox } from './InteractiveCodeSandbox';
 export {
   // Utilities
   getAuthToken,

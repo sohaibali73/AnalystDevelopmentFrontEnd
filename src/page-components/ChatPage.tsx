@@ -17,14 +17,14 @@
  *   - KB panel        → src/components/chat/KnowledgeBasePanel.tsx
  *   - Utilities       → src/components/chat/chat-utils.ts
  *   - Message cache   → src/hooks/useMessageCache.ts
- *   - TTS             → src/hooks/useTTS.ts
+ *   - Code Sandbox    → src/components/chat/InteractiveCodeSandbox.tsx
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   PaperclipIcon, ChevronRight, RefreshCw,
-  CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye, Volume2,
+  CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye, Code2,
   FileText as FileTextIcon, FileCode as FileCodeIcon,
   FileSpreadsheet as FileSpreadsheetIcon, File as FileIconLucide,
   XIcon, ImageIcon, Music2Icon, VideoIcon,
@@ -43,7 +43,7 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { useProcessManager } from '@/contexts/ProcessManager';
 import { ArtifactRenderer } from '@/components/artifacts';
 import { useMessageCache } from '@/hooks/useMessageCache';
-import { useTTS } from '@/hooks/useTTS';
+
 
 // ── Chat module barrel ────────────────────────────────────────────────────────
 import {
@@ -103,12 +103,12 @@ import {
 } from '@/components/ai-elements/artifact';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { ChainOfThought, ChainOfThoughtHeader, ChainOfThoughtContent, ChainOfThoughtStep } from '@/components/ai-elements/chain-of-thought';
-import { SpeechInput } from '@/components/ai-elements/speech-input';
+
 import {
   WebPreview, WebPreviewNavigation, WebPreviewBody, WebPreviewConsole,
 } from '@/components/ai-elements/web-preview';
 import { Image as AIImage } from '@/components/ai-elements/image';
-import VoiceMode from '@/components/VoiceMode';
+import InteractiveCodeSandbox from '@/components/chat/InteractiveCodeSandbox';
 import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineReactPreview';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import { Database } from 'lucide-react';
@@ -614,8 +614,9 @@ export function ChatPage() {
   const [previewChatFile, setPreviewChatFile] = useState<ChatPreviewFile | null>(null);
   const [input, setInput] = useState('');
   const [artifactsByConv, setArtifactsByConv] = useState<Record<string, any[]>>({});
-  const [voiceMode, setVoiceMode] = useState(false);
-  const [voiceModeOpen, setVoiceModeOpen] = useState(false);
+  // Code sandbox state
+  const [codeSandboxOpen, setCodeSandboxOpen] = useState(false);
+  const [sandboxCode, setSandboxCode] = useState('');
   const [kbPanelOpen, setKbPanelOpen] = useState(false);
   const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
   const [backendAvailable, setBackendAvailable] = useState(true);
@@ -636,7 +637,7 @@ export function ChatPage() {
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { status: connStatus, check: recheckConnection } = useConnectionStatus({ interval: 60000 });
   const { addProcess, updateProcess } = useProcessManager();
-  const { isSpeaking, speakText, stopSpeaking } = useTTS();
+  
   const { saveToCache, loadFromCache, loadPartsCache, savePartsToCache } = useMessageCache();
 
   // ── Refs ───────────────────────────────────────────────────────────────────
@@ -855,10 +856,6 @@ export function ChatPage() {
       }
 
       loadConversations();
-      if (voiceMode && message.role === 'assistant') {
-        const text = message.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('') || '';
-        if (text.trim()) speakText(text, message.id);
-      }
     },
     onError: (error) => {
       setSkillStatus(null); // Clear skill status on error
@@ -2181,36 +2178,12 @@ export function ChatPage() {
                         </span>
                       )}
                     </PromptInputButton>
-                    <PromptInputButton tooltip="Voice conversation mode" onClick={() => setVoiceModeOpen(true)}>
-                      <Volume2 className="size-4" />
+                    <PromptInputButton
+                      tooltip="Open Code Sandbox"
+                      onClick={() => setCodeSandboxOpen(true)}
+                    >
+                      <Code2 className="size-4" />
                     </PromptInputButton>
-                    <SpeechInput
-                      size="icon-sm" variant="ghost"
-                      onTranscriptionChange={(text) => setInput((prev) => prev.trim() ? `${prev} ${text}` : text)}
-                      onAudioRecorded={async (audioBlob) => {
-                        try {
-                          const token = getAuthToken();
-                          const convId = selectedConversation?.id || conversationIdRef.current || 'default';
-                          const formData = new FormData();
-                          formData.append('audio', audioBlob, 'recording.webm');
-                          const resp = await fetchWithTimeout(
-                            `/api/upload?conversationId=${convId}`,
-                            {
-                              method: 'POST',
-                              headers: { Authorization: token ? `Bearer ${token}` : '' },
-                              body: formData,
-                            },
-                            30000
-                          );
-                          if (resp.ok) { const data = await resp.json(); return data.transcript || ''; }
-                        } catch { 
-                          toast.error('Voice transcription failed');
-                          setBackendAvailable(false);
-                        }
-                        return '';
-                      }}
-                      lang="en-US" disabled={isStreaming}
-                    />
                     <ChatSkillSelector
                       forcedSkillSlug={forcedSkillSlug}
                       forcedSkillName={forcedSkillName}
@@ -2255,21 +2228,7 @@ export function ChatPage() {
         isDark={isDark}
       />
 
-      {/* ── Voice Mode overlay ────────────────────────────────────────────── */}
-      <VoiceMode
-        isOpen={voiceModeOpen}
-        onClose={() => setVoiceModeOpen(false)}
-        onSendMessage={async (text) => {
-          const convId = await ensureConversation();
-          if (convId) sendMessage({ text }, { body: { conversationId: convId } });
-        }}
-        lastAssistantText={(() => {
-          const last = [...allMessages].reverse().find((m) => m.role === 'assistant');
-          return last?.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('') || '';
-        })()}
-        isStreaming={isStreaming}
-        getAuthToken={getAuthToken}
-      />
+
 
       {/* ── File Preview Modal (extracted component via portal) ───────────── */}
       {previewChatFile && typeof document !== 'undefined' && createPortal(
@@ -2280,6 +2239,14 @@ export function ChatPage() {
         />,
         document.body,
       )}
+
+      {/* ── Interactive Code Sandbox ─────────────────────────────────────────── */}
+      <InteractiveCodeSandbox
+        isOpen={codeSandboxOpen}
+        onClose={() => setCodeSandboxOpen(false)}
+        initialCode={sandboxCode}
+        isDark={isDark}
+      />
     </div>
     </>
   );
