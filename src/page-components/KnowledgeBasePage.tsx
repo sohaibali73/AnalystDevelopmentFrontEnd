@@ -716,6 +716,7 @@ export function KnowledgeBasePage() {
           colors={colors}
           isBookmarked={bookmarkedIds.has(viewerDoc.id)}
           onBookmark={() => handleBookmark(viewerDoc.id)}
+          originalFileUrl={`${process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app'}/brain/documents/${viewerDoc.id}/content`}
         />
       )}
 

@@ -266,19 +266,24 @@ function getFileTypeIcon(filename: string | undefined) {
   forcedSkillSlug,
   forcedSkillName,
   onClearSkill,
+  attachedKbDocs = [],
+  onRemoveKbDoc,
   }: {
   isDark: boolean;
   onRemoveFile: (id: string) => void;
   forcedSkillSlug: string | null;
   forcedSkillName: string | null;
   onClearSkill: () => void;
+  attachedKbDocs?: Array<{ id: string; filename: string; title?: string; category: string }>;
+  onRemoveKbDoc?: (id: string) => void;
   }) {
   const attachments = usePromptInputAttachments();
   const hasFiles = attachments.files.length > 0;
+  const hasKbDocs = attachedKbDocs.length > 0;
 
   const hasSkillBadge = forcedSkillSlug !== null;
 
-  if (!hasFiles && !hasSkillBadge) return null;
+  if (!hasFiles && !hasSkillBadge && !hasKbDocs) return null;
 
   return (
     <PromptInputHeader>
@@ -406,6 +411,75 @@ function getFileTypeIcon(filename: string | undefined) {
             </div>
           );
         })}
+
+        {/* Knowledge Base document badges */}
+        {attachedKbDocs.map((doc) => (
+          <div
+            key={doc.id}
+            className="group kb-doc-badge"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px 6px 8px',
+              borderRadius: '8px',
+              border: '1px solid rgba(254, 192, 15, 0.35)',
+              background: 'rgba(254, 192, 15, 0.08)',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: '#FEC00F',
+              maxWidth: '220px',
+              transition: 'all 0.2s ease',
+              animation: 'chat-fadeIn 0.3s ease-out',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(254, 192, 15, 0.12)';
+              e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.5)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(254, 192, 15, 0.08)';
+              e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.35)';
+            }}
+          >
+            <Database size={14} style={{ opacity: 0.8, flexShrink: 0 }} />
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>{doc.title || doc.filename}</span>
+            {onRemoveKbDoc && (
+              <button
+                onClick={() => onRemoveKbDoc(doc.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '4px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#FEC00F',
+                  opacity: 0.6,
+                  flexShrink: 0,
+                  marginLeft: '2px',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => { 
+                  e.currentTarget.style.opacity = '1'; 
+                  e.currentTarget.style.background = 'rgba(254, 192, 15, 0.2)';
+                }}
+                onMouseLeave={e => { 
+                  e.currentTarget.style.opacity = '0.6'; 
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <XIcon size={12} />
+              </button>
+            )}
+          </div>
+        ))}
       </div>
     </PromptInputHeader>
   );
@@ -1137,16 +1211,19 @@ export function ChatPage() {
     return convId;
   };
 
+  // ── KB attached documents state ──────────────────────────────────────────────
+  const [attachedKbDocs, setAttachedKbDocs] = useState<Array<{ id: string; filename: string; title?: string; category: string }>>([]);
+
   // ── KB Add-to-message handler ──────────────────────────────────────────────
   const handleKbAddToMessage = useCallback(
     async (selectedDocs: Array<{ id: string; filename: string; title?: string; category: string }>) => {
       if (selectedDocs.length === 0) return;
 
-      // Build a visible tag in the textarea for each doc
-      const tags = selectedDocs.map((d) => `[KB: ${d.filename}]`).join(' ');
-      setInput((prev) => {
-        const trimmed = prev.trim();
-        return trimmed ? `${trimmed}\n\n${tags}` : tags;
+      // Store the KB docs as visual badges instead of text
+      setAttachedKbDocs((prev) => {
+        const existing = new Set(prev.map((d) => d.id));
+        const newDocs = selectedDocs.filter((d) => !existing.has(d.id));
+        return [...prev, ...newDocs];
       });
 
       // Close panel and clear selection — parent owns this
@@ -1155,6 +1232,11 @@ export function ChatPage() {
     },
     []
   );
+
+  // Handler to remove attached KB doc
+  const handleRemoveKbDoc = useCallback((docId: string) => {
+    setAttachedKbDocs((prev) => prev.filter((d) => d.id !== docId));
+  }, []);
 
   // ── Shared token shortcuts ─────────────────────────────────────────────────
   const T = {
@@ -2015,12 +2097,20 @@ export function ChatPage() {
                     }
                   }
 
-                  // Append KB document refs
+                  // Append KB document refs as system context (not visible in message)
+                  // The KB docs are shown as badges and sent as metadata to the backend
+                  const kbDocIds = attachedKbDocs.map((d) => d.id);
+                  if (attachedKbDocs.length > 0) {
+                    // Add visible reference for user context
+                    const kbRefs = attachedKbDocs.map((d) => `[Context from KB: ${d.title || d.filename}]`).join(' ');
+                    messageText = messageText ? `${messageText}\n\n${kbRefs}` : kbRefs;
+                    setAttachedKbDocs([]); // Clear after sending
+                  }
                   if (selectedKbDocIds.size > 0) {
                     setSelectedKbDocIds(new Set());
                   }
 
-                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined } });
+                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined, kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined } });
                 }}
               >
                 <AttachmentsDisplay 
@@ -2029,6 +2119,8 @@ export function ChatPage() {
                   forcedSkillSlug={forcedSkillSlug}
                   forcedSkillName={forcedSkillName}
                   onClearSkill={() => { setForcedSkillSlug(null); setForcedSkillName(null); }}
+                  attachedKbDocs={attachedKbDocs}
+                  onRemoveKbDoc={handleRemoveKbDoc}
                 />
                 <PromptInputTextarea
                   value={input}
@@ -2042,12 +2134,12 @@ export function ChatPage() {
                     <PromptInputButton
                       tooltip="Reference documents from Knowledge Base"
                       onClick={() => setKbPanelOpen((prev) => !prev)}
-                      style={{ position: 'relative', color: selectedKbDocIds.size > 0 ? '#60A5FA' : undefined }}
+                      style={{ position: 'relative', color: attachedKbDocs.length > 0 ? '#FEC00F' : undefined }}
                     >
                       <Database className="size-4" />
-                      {selectedKbDocIds.size > 0 && (
-                        <span style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: '50%', backgroundColor: '#60A5FA', color: '#000', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {selectedKbDocIds.size}
+                      {attachedKbDocs.length > 0 && (
+                        <span style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: '50%', backgroundColor: '#FEC00F', color: '#000', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {attachedKbDocs.length}
                         </span>
                       )}
                     </PromptInputButton>

@@ -17,6 +17,8 @@ import {
   File,
   FileImage,
   ExternalLink,
+  Download,
+  Eye,
 } from 'lucide-react';
 import { Document } from '@/types/api';
 import { getFileExtension } from '@/lib/filePreview';
@@ -97,6 +99,10 @@ interface KBArticlePreviewProps {
   colors: Record<string, string>;
   isBookmarked?: boolean;
   onBookmark?: () => void;
+  /** Callback to view original (non-parsed) document - receives the document */
+  onViewOriginal?: (doc: Document) => void;
+  /** URL to download the original file */
+  originalFileUrl?: string;
 }
 
 export default function KBArticlePreview({
@@ -110,6 +116,8 @@ export default function KBArticlePreview({
   colors,
   isBookmarked,
   onBookmark,
+  onViewOriginal,
+  originalFileUrl,
 }: KBArticlePreviewProps) {
   const [copied, setCopied] = React.useState(false);
   const c = catColors[doc.category] || catColors.general;
@@ -306,6 +314,49 @@ export default function KBArticlePreview({
           </div>
 
           <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+            {/* View Original / Download button */}
+            {(onViewOriginal || originalFileUrl) && (
+              <button
+                onClick={() => {
+                  if (originalFileUrl) {
+                    // Open in new tab or download
+                    window.open(originalFileUrl, '_blank');
+                  } else if (onViewOriginal) {
+                    onViewOriginal(doc);
+                  }
+                }}
+                style={{
+                  height: '34px',
+                  padding: '0 12px',
+                  backgroundColor: isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.12)',
+                  border: '1px solid rgba(254, 192, 15, 0.3)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  color: '#FEC00F',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  fontFamily: "'Rajdhani', sans-serif",
+                  letterSpacing: '0.5px',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = isDark ? 'rgba(254, 192, 15, 0.15)' : 'rgba(254, 192, 15, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isDark ? 'rgba(254, 192, 15, 0.1)' : 'rgba(254, 192, 15, 0.12)';
+                  e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.3)';
+                }}
+                title="View or download original file"
+              >
+                {originalFileUrl ? <Download size={13} /> : <Eye size={13} />}
+                <span>VIEW ORIGINAL</span>
+              </button>
+            )}
             {onBookmark && (
               <button
                 onClick={onBookmark}

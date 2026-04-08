@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Database, FileText, Tag, Clock, Search, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Database, FileText, Tag, Clock, Search, ChevronRight, ExternalLink } from 'lucide-react';
 
 interface KBDocument {
   id: string;
@@ -36,6 +36,26 @@ function getCategoryStyle(category: string): React.CSSProperties {
   return { backgroundColor: colors.bg, color: colors.text };
 }
 
+const kbStyles = `
+  @keyframes kb-fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes kb-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .kb-results-card {
+    animation: kb-fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .kb-result-item {
+    transition: background-color 0.15s ease;
+  }
+  .kb-result-item:hover {
+    background-color: rgba(254, 192, 15, 0.04);
+  }
+`;
+
 export function KnowledgeBaseResults(props: KnowledgeBaseResultsProps) {
   // Don't render the card when KB was searched but found nothing — avoids
   // noisy "0 found" cards appearing on every unrelated message.
@@ -67,16 +87,19 @@ export function KnowledgeBaseResults(props: KnowledgeBaseResultsProps) {
   }
 
   return (
-    <div
-      style={{
-        borderRadius: '14px',
-        overflow: 'hidden',
-        border: '1px solid rgba(254, 192, 15, 0.2)',
-        maxWidth: '640px',
-        marginTop: '8px',
-        backgroundColor: '#0d1117',
-      }}
-    >
+    <>
+      <style>{kbStyles}</style>
+      <div
+        className="kb-results-card"
+        style={{
+          borderRadius: '14px',
+          overflow: 'hidden',
+          border: '1px solid rgba(254, 192, 15, 0.2)',
+          maxWidth: '640px',
+          marginTop: '8px',
+          backgroundColor: '#0d1117',
+        }}
+      >
       {/* Header */}
       <div
         style={{
@@ -154,15 +177,16 @@ export function KnowledgeBaseResults(props: KnowledgeBaseResultsProps) {
             No documents found matching your query.
           </div>
         ) : (
-          results.map((doc, i) => (
-            <div
-              key={doc.id || i}
-              style={{
-                padding: '14px 18px',
-                borderBottom: i < results.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                transition: 'background-color 0.15s',
-              }}
-            >
+results.map((doc, i) => (
+  <div
+  key={doc.id || i}
+  className="kb-result-item"
+  style={{
+  padding: '14px 18px',
+  borderBottom: i < results.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+  cursor: 'pointer',
+  }}
+  >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 <FileText size={14} color="rgba(255,255,255,0.45)" />
                 <span style={{ fontWeight: 600, fontSize: '14px', color: '#e6edf3' }}>{doc.title}</span>
@@ -228,9 +252,10 @@ export function KnowledgeBaseResults(props: KnowledgeBaseResultsProps) {
             </div>
           ))
         )}
-      </div>
     </div>
+    </div>
+    </>
   );
-}
+  }
 
 export default KnowledgeBaseResults;

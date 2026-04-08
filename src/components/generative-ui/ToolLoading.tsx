@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Terminal, Database, DollarSign, Globe, Code2, Shield, Bug, BookOpen, Wand2, Zap } from 'lucide-react';
+import { Terminal, Database, DollarSign, Globe, Code2, Shield, Bug, BookOpen, Wand2, Zap, FileSearch, FileText } from 'lucide-react';
 
 const toolMeta: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   execute_python:       { icon: <Terminal size={13} />,   label: 'Executing Python',        color: '#4ade80' },
-  search_knowledge_base:{ icon: <Database size={13} />,   label: 'Searching knowledge base', color: '#60a5fa' },
+  search_knowledge_base:{ icon: <Database size={13} />,   label: 'Searching knowledge base', color: '#FEC00F' },
   get_stock_data:       { icon: <DollarSign size={13} />, label: 'Fetching stock data',      color: '#fbbf24' },
   get_stock_chart:      { icon: <DollarSign size={13} />, label: 'Loading stock chart',      color: '#fbbf24' },
   technical_analysis:   { icon: <DollarSign size={13} />, label: 'Running technical analysis', color: '#a78bfa' },
@@ -26,11 +26,19 @@ const toolMeta: Record<string, { icon: React.ReactNode; label: string; color: st
   order_food:           { icon: <Zap size={13} />,        label: 'Finding options',          color: '#fbbf24' },
   track_flight:         { icon: <Globe size={13} />,      label: 'Tracking flight',          color: '#60a5fa' },
   search_flights:       { icon: <Globe size={13} />,      label: 'Searching flights',        color: '#fbbf24' },
+  // Document Interpreter and KB skills
+  doc_interpreter:      { icon: <FileSearch size={13} />, label: 'Reading document',         color: '#10b981' },
+  interpret_document:   { icon: <FileSearch size={13} />, label: 'Interpreting document',    color: '#10b981' },
+  extract_document:     { icon: <FileText size={13} />,   label: 'Extracting content',       color: '#10b981' },
+  read_document:        { icon: <FileText size={13} />,   label: 'Reading document',         color: '#10b981' },
+  invoke_skill:         { icon: <Wand2 size={13} />,      label: 'Running skill',            color: '#a78bfa' },
 };
 
 interface ToolLoadingProps {
   toolName: string;
   input?: Record<string, unknown>;
+  /** Optional timeout in milliseconds - shows warning after this time */
+  timeoutMs?: number;
 }
 
 const styles = `
@@ -116,9 +124,47 @@ const styles = `
     animation: scanline 2.2s ease-in-out infinite;
     width: 40%;
   }
+  .tool-loading-elapsed {
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.35);
+    margin-left: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tool-loading-timeout {
+    font-size: 9.5px;
+    color: #fbbf24;
+    margin-left: 6px;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
 `;
 
-export function ToolLoading({ toolName, input }: ToolLoadingProps) {
+export function ToolLoading({ toolName, input, timeoutMs = 30000 }: ToolLoadingProps) {
+  const [elapsed, setElapsed] = useState(0);
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Track elapsed time
+  useEffect(() => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const ms = Date.now() - startTime;
+      setElapsed(ms);
+      if (ms >= timeoutMs && !timedOut) {
+        setTimedOut(true);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [timeoutMs, timedOut]);
+
+  const formatElapsed = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
   const meta = toolMeta[toolName] ?? {
     icon: <Zap size={13} />,
     label: toolName.replace(/_/g, ' '),
@@ -152,6 +198,13 @@ export function ToolLoading({ toolName, input }: ToolLoadingProps) {
           {/* Sub text */}
           {subText && (
             <span className="tool-loading-sub">{subText}</span>
+          )}
+
+          {/* Elapsed time */}
+          {elapsed >= 1000 && (
+            <span className={timedOut ? "tool-loading-timeout" : "tool-loading-elapsed"}>
+              {timedOut ? 'Taking longer than expected...' : formatElapsed(elapsed)}
+            </span>
           )}
         </div>
 
