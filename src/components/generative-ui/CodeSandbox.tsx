@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Play, Copy, Check, RotateCcw, Terminal, Code2, ChevronDown, ChevronRight, Maximize2, Minimize2, Download } from 'lucide-react';
+import { Play, Copy, Check, RotateCcw, Terminal, Code2, ChevronDown, ChevronRight, Maximize2, Minimize2, Download, ExternalLink } from 'lucide-react';
 
 interface CodeSandboxProps {
   code: string;
@@ -12,6 +12,8 @@ interface CodeSandboxProps {
   editable?: boolean;
   autorun?: boolean;
   files?: Array<{ name: string; code: string; language?: string }>;
+  /** Callback to open in the full interactive sandbox */
+  onOpenInSandbox?: (code: string, language: string) => void;
 }
 
 const languageColors: Record<string, { bg: string; text: string }> = {
@@ -62,6 +64,7 @@ export function CodeSandbox({
   editable = true,
   autorun = false,
   files = [],
+  onOpenInSandbox,
 }: CodeSandboxProps) {
   const [code, setCode] = useState(initialCode);
   const [output, setOutput] = useState(initialOutput || '');
@@ -175,6 +178,28 @@ export function CodeSandbox({
           <button onClick={() => setIsFullscreen(!isFullscreen)} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             {isFullscreen ? <Minimize2 size={12} color="rgba(255,255,255,0.5)" /> : <Maximize2 size={12} color="rgba(255,255,255,0.5)" />}
           </button>
+          {onOpenInSandbox && (
+            <button 
+              onClick={() => onOpenInSandbox(code, language)} 
+              style={{ 
+                padding: '5px 10px', 
+                borderRadius: '6px', 
+                border: '1px solid rgba(254,192,15,0.3)', 
+                backgroundColor: 'rgba(254,192,15,0.1)', 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center',
+                gap: '4px',
+                color: '#FEC00F',
+                fontSize: '10px',
+                fontWeight: 600,
+              }}
+              title="Open in interactive sandbox"
+            >
+              <ExternalLink size={11} />
+              Sandbox
+            </button>
+          )}
         </div>
       </div>
 

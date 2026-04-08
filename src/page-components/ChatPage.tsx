@@ -17,14 +17,14 @@
  *   - KB panel        → src/components/chat/KnowledgeBasePanel.tsx
  *   - Utilities       → src/components/chat/chat-utils.ts
  *   - Message cache   → src/hooks/useMessageCache.ts
- *   - TTS             → src/hooks/useTTS.ts
+ *   - Code Sandbox    → src/components/chat/InteractiveCodeSandbox.tsx
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   PaperclipIcon, ChevronRight, RefreshCw,
-  CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye, Volume2,
+  CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye, Code2,
   FileText as FileTextIcon, FileCode as FileCodeIcon,
   FileSpreadsheet as FileSpreadsheetIcon, File as FileIconLucide,
   XIcon, ImageIcon, Music2Icon, VideoIcon,
@@ -43,7 +43,7 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { useProcessManager } from '@/contexts/ProcessManager';
 import { ArtifactRenderer } from '@/components/artifacts';
 import { useMessageCache } from '@/hooks/useMessageCache';
-import { useTTS } from '@/hooks/useTTS';
+
 
 // ── Chat module barrel ────────────────────────────────────────────────────────
 import {
@@ -103,12 +103,12 @@ import {
 } from '@/components/ai-elements/artifact';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { ChainOfThought, ChainOfThoughtHeader, ChainOfThoughtContent, ChainOfThoughtStep } from '@/components/ai-elements/chain-of-thought';
-import { SpeechInput } from '@/components/ai-elements/speech-input';
+
 import {
   WebPreview, WebPreviewNavigation, WebPreviewBody, WebPreviewConsole,
 } from '@/components/ai-elements/web-preview';
 import { Image as AIImage } from '@/components/ai-elements/image';
-import VoiceMode from '@/components/VoiceMode';
+import InteractiveCodeSandbox from '@/components/chat/InteractiveCodeSandbox';
 import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineReactPreview';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import { Database } from 'lucide-react';
@@ -266,19 +266,24 @@ function getFileTypeIcon(filename: string | undefined) {
   forcedSkillSlug,
   forcedSkillName,
   onClearSkill,
+  attachedKbDocs = [],
+  onRemoveKbDoc,
   }: {
   isDark: boolean;
   onRemoveFile: (id: string) => void;
   forcedSkillSlug: string | null;
   forcedSkillName: string | null;
   onClearSkill: () => void;
+  attachedKbDocs?: Array<{ id: string; filename: string; title?: string; category: string }>;
+  onRemoveKbDoc?: (id: string) => void;
   }) {
   const attachments = usePromptInputAttachments();
   const hasFiles = attachments.files.length > 0;
+  const hasKbDocs = attachedKbDocs.length > 0;
 
   const hasSkillBadge = forcedSkillSlug !== null;
 
-  if (!hasFiles && !hasSkillBadge) return null;
+  if (!hasFiles && !hasSkillBadge && !hasKbDocs) return null;
 
   return (
     <PromptInputHeader>
@@ -406,6 +411,75 @@ function getFileTypeIcon(filename: string | undefined) {
             </div>
           );
         })}
+
+        {/* Knowledge Base document badges */}
+        {attachedKbDocs.map((doc) => (
+          <div
+            key={doc.id}
+            className="group kb-doc-badge"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px 6px 8px',
+              borderRadius: '8px',
+              border: '1px solid rgba(254, 192, 15, 0.35)',
+              background: 'rgba(254, 192, 15, 0.08)',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: '#FEC00F',
+              maxWidth: '220px',
+              transition: 'all 0.2s ease',
+              animation: 'chat-fadeIn 0.3s ease-out',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(254, 192, 15, 0.12)';
+              e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.5)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(254, 192, 15, 0.08)';
+              e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.35)';
+            }}
+          >
+            <Database size={14} style={{ opacity: 0.8, flexShrink: 0 }} />
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>{doc.title || doc.filename}</span>
+            {onRemoveKbDoc && (
+              <button
+                onClick={() => onRemoveKbDoc(doc.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '4px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#FEC00F',
+                  opacity: 0.6,
+                  flexShrink: 0,
+                  marginLeft: '2px',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => { 
+                  e.currentTarget.style.opacity = '1'; 
+                  e.currentTarget.style.background = 'rgba(254, 192, 15, 0.2)';
+                }}
+                onMouseLeave={e => { 
+                  e.currentTarget.style.opacity = '0.6'; 
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <XIcon size={12} />
+              </button>
+            )}
+          </div>
+        ))}
       </div>
     </PromptInputHeader>
   );
@@ -540,8 +614,9 @@ export function ChatPage() {
   const [previewChatFile, setPreviewChatFile] = useState<ChatPreviewFile | null>(null);
   const [input, setInput] = useState('');
   const [artifactsByConv, setArtifactsByConv] = useState<Record<string, any[]>>({});
-  const [voiceMode, setVoiceMode] = useState(false);
-  const [voiceModeOpen, setVoiceModeOpen] = useState(false);
+  // Code sandbox state
+  const [codeSandboxOpen, setCodeSandboxOpen] = useState(false);
+  const [sandboxCode, setSandboxCode] = useState('');
   const [kbPanelOpen, setKbPanelOpen] = useState(false);
   const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
   const [backendAvailable, setBackendAvailable] = useState(true);
@@ -562,7 +637,7 @@ export function ChatPage() {
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { status: connStatus, check: recheckConnection } = useConnectionStatus({ interval: 60000 });
   const { addProcess, updateProcess } = useProcessManager();
-  const { isSpeaking, speakText, stopSpeaking } = useTTS();
+  
   const { saveToCache, loadFromCache, loadPartsCache, savePartsToCache } = useMessageCache();
 
   // ── Refs ───────────────────────────────────────────────────────────────────
@@ -781,10 +856,6 @@ export function ChatPage() {
       }
 
       loadConversations();
-      if (voiceMode && message.role === 'assistant') {
-        const text = message.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('') || '';
-        if (text.trim()) speakText(text, message.id);
-      }
     },
     onError: (error) => {
       setSkillStatus(null); // Clear skill status on error
@@ -1137,16 +1208,19 @@ export function ChatPage() {
     return convId;
   };
 
+  // ── KB attached documents state ──────────────────────────────────────────────
+  const [attachedKbDocs, setAttachedKbDocs] = useState<Array<{ id: string; filename: string; title?: string; category: string }>>([]);
+
   // ── KB Add-to-message handler ──────────────────────────────────────────────
   const handleKbAddToMessage = useCallback(
     async (selectedDocs: Array<{ id: string; filename: string; title?: string; category: string }>) => {
       if (selectedDocs.length === 0) return;
 
-      // Build a visible tag in the textarea for each doc
-      const tags = selectedDocs.map((d) => `[KB: ${d.filename}]`).join(' ');
-      setInput((prev) => {
-        const trimmed = prev.trim();
-        return trimmed ? `${trimmed}\n\n${tags}` : tags;
+      // Store the KB docs as visual badges instead of text
+      setAttachedKbDocs((prev) => {
+        const existing = new Set(prev.map((d) => d.id));
+        const newDocs = selectedDocs.filter((d) => !existing.has(d.id));
+        return [...prev, ...newDocs];
       });
 
       // Close panel and clear selection — parent owns this
@@ -1155,6 +1229,11 @@ export function ChatPage() {
     },
     []
   );
+
+  // Handler to remove attached KB doc
+  const handleRemoveKbDoc = useCallback((docId: string) => {
+    setAttachedKbDocs((prev) => prev.filter((d) => d.id !== docId));
+  }, []);
 
   // ── Shared token shortcuts ─────────────────────────────────────────────────
   const T = {
@@ -1259,10 +1338,14 @@ export function ChatPage() {
             .replace(/\[(?:uploaded\s+)?file:\s*[^\]]+\]/gi, '')
             .replace(/Please analyse the uploaded file\(s\):[^\n]*/gi, '')
             .replace(/\n{3,}/g, '\n\n').trim();
+          
+          // Extract KB docs from message metadata instead of parsing text
+          const kbDocs = message.kb_docs || [];
+          
           return (
             <React.Fragment key={pIdx}>
               {fileRefs.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: cleanText ? '8px' : 0 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: cleanText || kbDocs.length > 0 ? '8px' : 0 }}>
                   {fileRefs.map((filename, fIdx) => {
                     const ext = getFileExtension(filename);
                     const cc = getFileChipColor(ext);
@@ -1279,6 +1362,36 @@ export function ChatPage() {
                       </button>
                     );
                   })}
+                </div>
+              )}
+              {/* KB document badges */}
+              {kbDocs.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: cleanText ? '8px' : 0 }}>
+                  {kbDocs.map((doc: any, kbIdx: number) => (
+                    <div
+                      key={kbIdx}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(254, 192, 15, 0.35)',
+                        background: 'rgba(254, 192, 15, 0.1)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#FEC00F',
+                      }}
+                    >
+                      <Database size={13} style={{ opacity: 0.8, flexShrink: 0 }} />
+                      <span style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '180px',
+                      }}>{doc.title || doc.filename}</span>
+                    </div>
+                  ))}
                 </div>
               )}
               {cleanText && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: T.text, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>{cleanText}</p>}
@@ -2015,12 +2128,24 @@ export function ChatPage() {
                     }
                   }
 
-                  // Append KB document refs
+                  // Send KB document refs as metadata only (not visible in message text)
+                  // The KB docs are shown as badges before sending and sent as metadata to the backend
+                  const kbDocIds = attachedKbDocs.map((d) => d.id);
+                  const kbDocMetadata = attachedKbDocs.length > 0 ? attachedKbDocs.map((d) => ({
+                    id: d.id,
+                    filename: d.filename,
+                    title: d.title,
+                    category: d.category
+                  })) : undefined;
+                  
+                  if (attachedKbDocs.length > 0) {
+                    setAttachedKbDocs([]); // Clear after sending
+                  }
                   if (selectedKbDocIds.size > 0) {
                     setSelectedKbDocIds(new Set());
                   }
 
-                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined } });
+                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined, kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined, kb_docs: kbDocMetadata } });
                 }}
               >
                 <AttachmentsDisplay 
@@ -2029,6 +2154,8 @@ export function ChatPage() {
                   forcedSkillSlug={forcedSkillSlug}
                   forcedSkillName={forcedSkillName}
                   onClearSkill={() => { setForcedSkillSlug(null); setForcedSkillName(null); }}
+                  attachedKbDocs={attachedKbDocs}
+                  onRemoveKbDoc={handleRemoveKbDoc}
                 />
                 <PromptInputTextarea
                   value={input}
@@ -2042,45 +2169,21 @@ export function ChatPage() {
                     <PromptInputButton
                       tooltip="Reference documents from Knowledge Base"
                       onClick={() => setKbPanelOpen((prev) => !prev)}
-                      style={{ position: 'relative', color: selectedKbDocIds.size > 0 ? '#60A5FA' : undefined }}
+                      style={{ position: 'relative', color: attachedKbDocs.length > 0 ? '#FEC00F' : undefined }}
                     >
                       <Database className="size-4" />
-                      {selectedKbDocIds.size > 0 && (
-                        <span style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: '50%', backgroundColor: '#60A5FA', color: '#000', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {selectedKbDocIds.size}
+                      {attachedKbDocs.length > 0 && (
+                        <span style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: '50%', backgroundColor: '#FEC00F', color: '#000', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {attachedKbDocs.length}
                         </span>
                       )}
                     </PromptInputButton>
-                    <PromptInputButton tooltip="Voice conversation mode" onClick={() => setVoiceModeOpen(true)}>
-                      <Volume2 className="size-4" />
+                    <PromptInputButton
+                      tooltip="Open Code Sandbox"
+                      onClick={() => setCodeSandboxOpen(true)}
+                    >
+                      <Code2 className="size-4" />
                     </PromptInputButton>
-                    <SpeechInput
-                      size="icon-sm" variant="ghost"
-                      onTranscriptionChange={(text) => setInput((prev) => prev.trim() ? `${prev} ${text}` : text)}
-                      onAudioRecorded={async (audioBlob) => {
-                        try {
-                          const token = getAuthToken();
-                          const convId = selectedConversation?.id || conversationIdRef.current || 'default';
-                          const formData = new FormData();
-                          formData.append('audio', audioBlob, 'recording.webm');
-                          const resp = await fetchWithTimeout(
-                            `/api/upload?conversationId=${convId}`,
-                            {
-                              method: 'POST',
-                              headers: { Authorization: token ? `Bearer ${token}` : '' },
-                              body: formData,
-                            },
-                            30000
-                          );
-                          if (resp.ok) { const data = await resp.json(); return data.transcript || ''; }
-                        } catch { 
-                          toast.error('Voice transcription failed');
-                          setBackendAvailable(false);
-                        }
-                        return '';
-                      }}
-                      lang="en-US" disabled={isStreaming}
-                    />
                     <ChatSkillSelector
                       forcedSkillSlug={forcedSkillSlug}
                       forcedSkillName={forcedSkillName}
@@ -2125,21 +2228,7 @@ export function ChatPage() {
         isDark={isDark}
       />
 
-      {/* ── Voice Mode overlay ────────────────────────────────────────────── */}
-      <VoiceMode
-        isOpen={voiceModeOpen}
-        onClose={() => setVoiceModeOpen(false)}
-        onSendMessage={async (text) => {
-          const convId = await ensureConversation();
-          if (convId) sendMessage({ text }, { body: { conversationId: convId } });
-        }}
-        lastAssistantText={(() => {
-          const last = [...allMessages].reverse().find((m) => m.role === 'assistant');
-          return last?.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('') || '';
-        })()}
-        isStreaming={isStreaming}
-        getAuthToken={getAuthToken}
-      />
+
 
       {/* ── File Preview Modal (extracted component via portal) ───────────── */}
       {previewChatFile && typeof document !== 'undefined' && createPortal(
@@ -2150,6 +2239,14 @@ export function ChatPage() {
         />,
         document.body,
       )}
+
+      {/* ── Interactive Code Sandbox ─────────────────────────────────────────── */}
+      <InteractiveCodeSandbox
+        isOpen={codeSandboxOpen}
+        onClose={() => setCodeSandboxOpen(false)}
+        initialCode={sandboxCode}
+        isDark={isDark}
+      />
     </div>
     </>
   );

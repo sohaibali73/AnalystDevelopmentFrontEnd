@@ -48,6 +48,7 @@ import {
   BubbleDetectorCard,
   FinancialResearchCard,
   DocInterpreterCard,
+  ArtifactsBuilderCard,
 } from '@/components/generative-ui';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
@@ -133,6 +134,15 @@ const INVOKE_AFL_SLUGS = new Set([
   'afl_strategy',
   'amibroker',
   'afl',
+]);
+
+const INVOKE_ARTIFACTS_SLUGS = new Set([
+  'artifacts_builder',
+  'artifacts-builder',
+  'build_artifact',
+  'create_artifact',
+  'react_component',
+  'component_builder',
 ]);
 
 const INVOKE_DCF_SLUGS = new Set([
@@ -244,7 +254,7 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
 
   // Generic skill cards
   ai_elements:              { component: SkillResultCard,      displayName: 'AI Elements' },
-  artifacts_builder:        { component: SkillResultCard,      displayName: 'Artifacts Builder' },
+  artifacts_builder:        { component: ArtifactsBuilderCard, displayName: 'Artifacts Builder' },
 
   // ── Document Generation (direct tool calls, not via invoke_skill) ─────────
   create_word_document:     { component: DocumentGenerationCard, mode: 'document-generation' },
@@ -362,6 +372,12 @@ function renderInvokeSkill(
     (output.ticker && (output.current_price || output.upside_downside))
   );
 
+  // ── Check if output looks like React/artifact code result ───────────────────
+  const looksLikeReactArtifact = output && output.text && (
+    /```(jsx|tsx|react|javascript|js)\s*\n/.test(output.text) ||
+    (/function\s+[A-Z][a-zA-Z]*/.test(output.text) && /<[A-Z][a-zA-Z]*[\s/>]/.test(output.text))
+  );
+
   // ── Check if output looks like presentation result ─────────────────────────
   const looksLikePresentationOutput = output && (
     output.presentation_id ||
@@ -388,6 +404,24 @@ function renderInvokeSkill(
     );
   }
 
+  // ── Artifacts Builder skills → ArtifactsBuilderCard (ALL states for live preview) ────
+  // Also detect by output shape if it contains React code
+  if (INVOKE_ARTIFACTS_SLUGS.has(slug) || (part.state === 'output-available' && looksLikeReactArtifact)) {
+    // For loading states, show the tool loading spinner
+    if (part.state === 'input-streaming' || part.state === 'input-available') {
+      return <ToolLoading key={pIdx} toolName={displaySlug} input={part.input} />;
+    }
+    // For output, render the artifacts builder with live preview
+    return (
+      <ArtifactsBuilderCard
+        key={pIdx}
+        skill={slug}
+        skill_name={displaySlug}
+        {...(typeof part.output === 'object' && part.output ? part.output : {})}
+      />
+    );
+  }
+
   // ── Analysis/Research skills → specific cards (check FIRST) ─────────────
   // Also detect card type from output shape as fallback when slug is missing
   let Component: React.ComponentType<any> = SkillResultCard;
@@ -396,6 +430,7 @@ function renderInvokeSkill(
   else if (INVOKE_BUBBLE_SLUGS.has(slug))             Component = BubbleDetectorCard;
   else if (INVOKE_DOC_INTERPRETER_SLUGS.has(slug))    Component = DocInterpreterCard;
   else if (INVOKE_DCF_SLUGS.has(slug) || looksLikeDCFOutput)    Component = DCFModelCard;
+  else if (INVOKE_ARTIFACTS_SLUGS.has(slug) || looksLikeReactArtifact) Component = ArtifactsBuilderCard;
   else if (INVOKE_BACKTEST_SLUGS.has(slug))           Component = SkillResultCard;
   else if (INVOKE_QUANT_SLUGS.has(slug))              Component = SkillResultCard;
   // Presentation output should go to DocumentGenerationCard for consistent download experience
