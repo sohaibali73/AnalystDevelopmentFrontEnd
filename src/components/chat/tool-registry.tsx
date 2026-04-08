@@ -317,6 +317,9 @@ function renderInvokeSkill(
   const rawSlug = part.input?.skill_slug || '';
   const slug = rawSlug.toLowerCase().replace(/-/g, '_');
   const displaySlug = rawSlug || 'invoke_skill';
+  
+  // Debug logging to diagnose file generation issues
+  console.log('[v0] renderInvokeSkill - slug:', slug, 'state:', part.state, 'output:', part.output, 'externalOutput:', externalOutput);
 
   // ── Check if output looks like a document generation result ─────────────
   // This helps restore the correct card after page refresh even if skill_slug

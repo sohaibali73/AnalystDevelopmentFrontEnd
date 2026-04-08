@@ -314,6 +314,97 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     (document.documentElement.getAttribute('data-theme') === 'dark' ||
       window.matchMedia?.('(prefers-color-scheme: dark)').matches);
 
+  // ── Helper to extract download URL from various output formats ───────────────
+  const extractDownloadUrl = useCallback((out: any): string | null => {
+    if (!out) return null;
+    // Direct properties
+    if (out.download_url) return out.download_url;
+    if (out.downloadUrl) return out.downloadUrl;
+    if (out.file_url) return out.file_url;
+    // Nested in data property
+    if (out.data?.download_url) return out.data.download_url;
+    if (out.data?.downloadUrl) return out.data.downloadUrl;
+    if (out.data?.file_url) return out.data.file_url;
+    // Result property (common in skill outputs)
+    if (out.result?.download_url) return out.result.download_url;
+    if (out.result?.downloadUrl) return out.result.downloadUrl;
+    if (out.result?.file_url) return out.result.file_url;
+    // Files array (common in skill outputs) - get the first file's download URL
+    if (out.files && Array.isArray(out.files) && out.files.length > 0) {
+      const firstFile = out.files[0];
+      if (firstFile?.download_url) return firstFile.download_url;
+      if (firstFile?.downloadUrl) return firstFile.downloadUrl;
+      if (firstFile?.file_url) return firstFile.file_url;
+    }
+    if (out.data?.files && Array.isArray(out.data.files) && out.data.files.length > 0) {
+      const firstFile = out.data.files[0];
+      if (firstFile?.download_url) return firstFile.download_url;
+      if (firstFile?.downloadUrl) return firstFile.downloadUrl;
+    }
+    return null;
+  }, []);
+
+  // ── Helper to extract file ID from various output formats ───────────────────
+  const extractFileId = useCallback((out: any): string | null => {
+    if (!out) return null;
+    // Direct properties
+    if (out.file_id) return out.file_id;
+    if (out.fileId) return out.fileId;
+    if (out.document_id) return out.document_id;
+    if (out.presentation_id) return out.presentation_id;
+    if (out.spreadsheet_id) return out.spreadsheet_id;
+    // Nested in data property
+    if (out.data?.file_id) return out.data.file_id;
+    if (out.data?.fileId) return out.data.fileId;
+    if (out.data?.document_id) return out.data.document_id;
+    if (out.data?.presentation_id) return out.data.presentation_id;
+    if (out.data?.spreadsheet_id) return out.data.spreadsheet_id;
+    // Result property
+    if (out.result?.file_id) return out.result.file_id;
+    if (out.result?.fileId) return out.result.fileId;
+    if (out.result?.document_id) return out.result.document_id;
+    if (out.result?.presentation_id) return out.result.presentation_id;
+    if (out.result?.spreadsheet_id) return out.result.spreadsheet_id;
+    // Files array (common in skill outputs)
+    if (out.files && Array.isArray(out.files) && out.files.length > 0) {
+      const firstFile = out.files[0];
+      if (firstFile?.file_id) return firstFile.file_id;
+      if (firstFile?.fileId) return firstFile.fileId;
+    }
+    if (out.data?.files && Array.isArray(out.data.files) && out.data.files.length > 0) {
+      const firstFile = out.data.files[0];
+      if (firstFile?.file_id) return firstFile.file_id;
+      if (firstFile?.fileId) return firstFile.fileId;
+    }
+    return null;
+  }, []);
+
+  // ── Helper to flatten output data for display ───────────────────────────────
+  const flattenOutputData = useCallback((out: any): any => {
+    if (!out) return out;
+    // If output has a data or result wrapper, merge it with top-level
+    const base = { ...out };
+    if (out.data && typeof out.data === 'object') {
+      Object.assign(base, out.data);
+    }
+    if (out.result && typeof out.result === 'object') {
+      Object.assign(base, out.result);
+    }
+    // If files array exists, merge first file's properties for display
+    if (out.files && Array.isArray(out.files) && out.files.length > 0) {
+      const firstFile = out.files[0];
+      if (firstFile && typeof firstFile === 'object') {
+        // Only merge file-related properties, not overwrite everything
+        if (firstFile.filename && !base.filename) base.filename = firstFile.filename;
+        if (firstFile.file_type && !base.file_type) base.file_type = firstFile.file_type;
+        if (firstFile.size_kb && !base.file_size_kb) base.file_size_kb = firstFile.size_kb;
+        if (firstFile.download_url && !base.download_url) base.download_url = firstFile.download_url;
+        if (firstFile.file_id && !base.file_id) base.file_id = firstFile.file_id;
+      }
+    }
+    return base;
+  }, []);
+
   // ── Restore state from localStorage OR from output prop on mount ───────────
   // Priority: output prop (from database) > localStorage > nothing
   useEffect(() => {
@@ -322,14 +413,18 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     // If we have output/externalOutput prop and state is output-available, use that as authoritative source
     // This handles the case where data is restored from the database after page refresh
     const effectiveOutput = output || externalOutput;
+    console.log('[v0] DocumentGenerationCard mount - state:', state, 'output:', output, 'externalOutput:', externalOutput);
     if (state === 'output-available' && effectiveOutput) {
+      const extractedUrl = extractDownloadUrl(effectiveOutput);
+      const extractedId = extractFileId(effectiveOutput);
+      console.log('[v0] DocumentGenerationCard - extractedUrl:', extractedUrl, 'extractedId:', extractedId, 'effectiveOutput keys:', Object.keys(effectiveOutput));
       restoredFromStorage.current = true;
       setIsComplete(true);
       setProgress(100);
       setCurrentPhase(meta.phases.length - 1);
-      setOutputData(effectiveOutput);
-      setDownloadUrl(effectiveOutput.download_url || effectiveOutput.downloadUrl || effectiveOutput.file_url || null);
-      setFileId(effectiveOutput.file_id || effectiveOutput.fileId || effectiveOutput.document_id || effectiveOutput.presentation_id || null);
+      setOutputData(flattenOutputData(effectiveOutput));
+      setDownloadUrl(extractedUrl);
+      setFileId(extractedId);
       setSafetyTimeout(false);
       setTimeout(() => setPreviewOpen(true), 500);
       return;
@@ -435,10 +530,12 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   // ── Wire externalOutput (file_download events) into the card ───────────────
   useEffect(() => {
     if (!externalOutput) return;
-    const data = externalOutput;
-    setOutputData((prev: any) => ({ ...prev, ...data }));
-    setDownloadUrl(data.download_url || data.downloadUrl || data.file_url || downloadUrl);
-    setFileId(data.file_id || data.fileId || data.document_id || data.presentation_id || fileId);
+    const flattened = flattenOutputData(externalOutput);
+    setOutputData((prev: any) => ({ ...prev, ...flattened }));
+    const extractedUrl = extractDownloadUrl(externalOutput);
+    const extractedId = extractFileId(externalOutput);
+    if (extractedUrl) setDownloadUrl(extractedUrl);
+    if (extractedId) setFileId(extractedId);
     // If we were still generating, snap to complete now
     if (!isComplete && !isError) {
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
@@ -451,7 +548,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
       // Auto-open preview
       setTimeout(() => setPreviewOpen(true), 600);
     }
-  }, [externalOutput]);
+  }, [externalOutput, extractDownloadUrl, extractFileId, flattenOutputData, isComplete, isError, meta.phases.length]);
 
   // ── Fix 1: snap to 100% when state === 'output-available' (no && output guard) ──
   useEffect(() => {
@@ -480,9 +577,9 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
       }, 16);
 
       if (output) {
-        setOutputData(output);
-        setDownloadUrl(output.download_url || output.downloadUrl || output.file_url || null);
-        setFileId(output.file_id || output.fileId || output.document_id || output.presentation_id || null);
+        setOutputData(flattenOutputData(output));
+        setDownloadUrl(extractDownloadUrl(output));
+        setFileId(extractFileId(output));
       }
       setElapsedTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }
@@ -929,7 +1026,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           </div>
         )}
 
-        {/* ── Error section ─────────────────────────────────────────────────── */}
+        {/* ── Error section ───────────────────────────────────────────────��─── */}
         {isError && (
           <div style={{
             padding: '11px 13px',
