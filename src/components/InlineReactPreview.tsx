@@ -333,7 +333,11 @@ function PreviewCard({ block, isDark }: { block: DetectedCodeBlock; isDark: bool
 
 
 export function InlineReactPreview({ text, isDark }: InlineReactPreviewProps) {
-  const blocks = useMemo(() => extractReactCodeBlocks(text), [text]);
+  const blocks = useMemo(() => {
+    const detected = extractReactCodeBlocks(text);
+    console.log('[v0] InlineReactPreview - detected blocks:', detected.length, 'from text length:', text.length);
+    return detected;
+  }, [text]);
   if (blocks.length === 0) return null;
   return (
     <div style={{ width: '100%' }}>
