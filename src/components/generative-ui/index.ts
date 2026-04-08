@@ -136,5 +136,8 @@ export { FinancialResearchCard } from './FinancialResearchCard';
 // Document Interpreter (doc-interpreter skill)
 export { DocInterpreterCard } from './DocInterpreterCard';
 
+// Artifacts Builder with live React preview (artifacts-builder skill)
+export { ArtifactsBuilderCard } from './ArtifactsBuilderCard';
+
 // NEW: File Analysis Card (inline card JSON extraction)
 export { FileAnalysisCard } from './FileAnalysisCard';
