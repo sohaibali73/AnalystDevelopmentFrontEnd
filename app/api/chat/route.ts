@@ -190,7 +190,19 @@ export async function POST(req: NextRequest) {
             if (!content) continue;
 
             try {
-              const parsed = JSON.parse(content);
+              // Special handling for type 0 (text deltas) - may be raw text or JSON string
+              let parsed: any;
+              if (typeCode === '0') {
+                // Try JSON parse first, fall back to treating content as raw text
+                try {
+                  parsed = JSON.parse(content);
+                } catch {
+                  // Content is raw text, not JSON - use directly
+                  parsed = content;
+                }
+              } else {
+                parsed = JSON.parse(content);
+              }
 
               switch (typeCode) {
                 case '0': { // Text delta
@@ -299,14 +311,19 @@ export async function POST(req: NextRequest) {
                   break;
 
                 case 'a': { // Tool result (output available) — parse string results
-                  if (parsed.toolCallId) {
-                    let output = parsed.result;
+                  // Try to parse if content wasn't already parsed as JSON
+                  let toolResult = parsed;
+                  if (typeof parsed === 'string') {
+                    try { toolResult = JSON.parse(parsed); } catch { toolResult = { result: parsed }; }
+                  }
+                  if (toolResult.toolCallId) {
+                    let output = toolResult.result;
                     if (typeof output === 'string') {
                       try { output = JSON.parse(output); } catch { /* keep as string */ }
                     }
                     await writeSSE({
                       type: 'tool-output-available',
-                      toolCallId: parsed.toolCallId,
+                      toolCallId: toolResult.toolCallId,
                       output: output,
                     });
                   }
