@@ -1341,10 +1341,14 @@ export function ChatPage() {
             .replace(/\[(?:uploaded\s+)?file:\s*[^\]]+\]/gi, '')
             .replace(/Please analyse the uploaded file\(s\):[^\n]*/gi, '')
             .replace(/\n{3,}/g, '\n\n').trim();
+          
+          // Extract KB docs from message metadata instead of parsing text
+          const kbDocs = message.kb_docs || [];
+          
           return (
             <React.Fragment key={pIdx}>
               {fileRefs.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: cleanText ? '8px' : 0 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: cleanText || kbDocs.length > 0 ? '8px' : 0 }}>
                   {fileRefs.map((filename, fIdx) => {
                     const ext = getFileExtension(filename);
                     const cc = getFileChipColor(ext);
@@ -1361,6 +1365,36 @@ export function ChatPage() {
                       </button>
                     );
                   })}
+                </div>
+              )}
+              {/* KB document badges */}
+              {kbDocs.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: cleanText ? '8px' : 0 }}>
+                  {kbDocs.map((doc: any, kbIdx: number) => (
+                    <div
+                      key={kbIdx}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(254, 192, 15, 0.35)',
+                        background: 'rgba(254, 192, 15, 0.1)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#FEC00F',
+                      }}
+                    >
+                      <Database size={13} style={{ opacity: 0.8, flexShrink: 0 }} />
+                      <span style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '180px',
+                      }}>{doc.title || doc.filename}</span>
+                    </div>
+                  ))}
                 </div>
               )}
               {cleanText && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: T.text, whiteSpace: 'pre-wrap', wordBreak: 'break-word' as const }}>{cleanText}</p>}
@@ -2097,20 +2131,24 @@ export function ChatPage() {
                     }
                   }
 
-                  // Append KB document refs as system context (not visible in message)
-                  // The KB docs are shown as badges and sent as metadata to the backend
+                  // Send KB document refs as metadata only (not visible in message text)
+                  // The KB docs are shown as badges before sending and sent as metadata to the backend
                   const kbDocIds = attachedKbDocs.map((d) => d.id);
+                  const kbDocMetadata = attachedKbDocs.length > 0 ? attachedKbDocs.map((d) => ({
+                    id: d.id,
+                    filename: d.filename,
+                    title: d.title,
+                    category: d.category
+                  })) : undefined;
+                  
                   if (attachedKbDocs.length > 0) {
-                    // Add visible reference for user context
-                    const kbRefs = attachedKbDocs.map((d) => `[Context from KB: ${d.title || d.filename}]`).join(' ');
-                    messageText = messageText ? `${messageText}\n\n${kbRefs}` : kbRefs;
                     setAttachedKbDocs([]); // Clear after sending
                   }
                   if (selectedKbDocIds.size > 0) {
                     setSelectedKbDocIds(new Set());
                   }
 
-                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined, kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined } });
+                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined, kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined, kb_docs: kbDocMetadata } });
                 }}
               >
                 <AttachmentsDisplay 
