@@ -4,11 +4,11 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, ArrowUpFromLine, Trash2, ChevronLeft, ChevronRight, 
-  Loader2, RefreshCw, Search, Pencil, X, Copy, ThumbsUp, 
-  ThumbsDown, Download, Code2, Settings2, Sparkles, Check, 
-  Database, BookOpen, PanelLeft, FileText, Zap, TrendingUp,
-  BarChart3, Activity, MessageSquare, Clock, ChevronDown, History
+  Loader2, RefreshCw, Search, Pencil, X, CopyIcon, ThumbsUpIcon, 
+  ThumbsDownIcon, Download, Code2, Settings2, Sparkles, Check, 
+  Database, BookOpen, PanelLeft, FileText
 } from 'lucide-react';
+import { Glow, Pulse } from '@/components/AnimatedComponents';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChat } from '@ai-sdk/react';
@@ -24,10 +24,14 @@ import FeedbackModal from '@/components/FeedbackModal';
 
 // AI Elements
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
+import { Reasoning, ReasoningTrigger, ReasoningContent } from '@/components/ai-elements/reasoning';
 import { Shimmer } from '@/components/ai-elements/shimmer';
+import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
 import { ConversationEmptyState } from '@/components/ai-elements/conversation';
-import { Message as AIMessage, MessageContent, MessageActions, MessageAction } from '@/components/ai-elements/message';
+import { Message as AIMessage, MessageContent, MessageActions, MessageAction, MessageResponse } from '@/components/ai-elements/message';
 import { PromptInput, PromptInputTextarea, PromptInputFooter, PromptInputHeader, PromptInputTools, PromptInputButton, PromptInputSubmit, usePromptInputAttachments } from '@/components/ai-elements/prompt-input';
+import { Attachments, Attachment, AttachmentPreview, AttachmentRemove } from '@/components/ai-elements/attachments';
+import { ChainOfThought, ChainOfThoughtHeader, ChainOfThoughtContent, ChainOfThoughtStep } from '@/components/ai-elements/chain-of-thought';
 import {
   AFLGenerateCard,
   AFLValidateCard,
@@ -38,9 +42,56 @@ import {
   WebSearchResults,
   ToolLoading,
 } from '@/components/generative-ui';
+import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineReactPreview';
 import { KnowledgeBasePanel, getAuthToken, getFileExtension, getFileChipColor } from '@/components/chat';
 
 const logo = '/potomac-icon.png';
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const AFL_STYLES = `
+  @keyframes afl-fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes afl-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  .afl-root {
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(ellipse 100% 80% at 50% -20%, rgba(254, 192, 15, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(254, 192, 15, 0.04) 0%, transparent 50%);
+  }
+  
+  .afl-glass-panel {
+    background: rgba(13, 13, 16, 0.7);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  
+  .afl-glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  
+  .afl-msg-enter { animation: afl-fadeUp .3s cubic-bezier(.16, 1, .3, 1) both; }
+  .afl-msg-row:hover .msg-actions { opacity: 1 !important; }
+  
+  [data-scroll-container]::-webkit-scrollbar { width: 6px; }
+  [data-scroll-container]::-webkit-scrollbar-track { background: transparent; }
+  [data-scroll-container]::-webkit-scrollbar-thumb { 
+    background: rgba(254, 192, 15, 0.15); 
+    border-radius: 3px; 
+  }
+  [data-scroll-container]::-webkit-scrollbar-thumb:hover { 
+    background: rgba(254, 192, 15, 0.3); 
+  }
+`;
 
 // ─── KB Document type ─────────────────────────────────────────────────────────
 interface KBDocument {
@@ -51,20 +102,13 @@ interface KBDocument {
   file_size?: number;
 }
 
-// ─── Extract AFL Code ─────────────────────────────────────────────────────────
-function extractAFLCode(text: string): string | null {
-  const aflMatch = text.match(/```(?:afl|amibroker)\s*\n([\s\S]*?)```/i);
-  if (aflMatch) return aflMatch[1].trim();
-  const codeMatch = text.match(/```\w*\s*\n([\s\S]*?)```/);
-  if (codeMatch) return codeMatch[1].trim();
-  return null;
-}
-
 // ─── Attachments Display ──────────────────────────────────────────────────────
 function AttachmentsDisplay({ 
+  isDark, 
   attachedKbDocs = [], 
   onRemoveKbDoc 
 }: { 
+  isDark: boolean;
   attachedKbDocs?: KBDocument[];
   onRemoveKbDoc?: (id: string) => void;
 }) {
@@ -76,26 +120,49 @@ function AttachmentsDisplay({
 
   return (
     <PromptInputHeader>
-      <div className="flex flex-wrap gap-2 py-2">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 0' }}>
+        {/* KB Document attachments */}
         {attachedKbDocs.map((doc) => {
           const ext = getFileExtension(doc.filename);
           const docColor = getFileChipColor(ext);
           return (
             <div
               key={doc.id}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium max-w-[180px]"
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 10px 6px 8px',
+                borderRadius: '8px',
                 border: `1px solid ${docColor}40`,
-                background: `${docColor}15`,
+                background: `${docColor}10`,
+                fontSize: '13px',
+                fontWeight: 500,
                 color: docColor,
+                maxWidth: '200px',
               }}
             >
-              <Database size={12} className="opacity-80 shrink-0" />
-              <span className="truncate">{doc.title || doc.filename}</span>
+              <Database size={14} style={{ opacity: 0.8, flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {doc.title || doc.filename}
+              </span>
               {onRemoveKbDoc && (
                 <button
                   onClick={() => onRemoveKbDoc(doc.id)}
-                  className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '4px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: docColor,
+                    opacity: 0.6,
+                    marginLeft: '2px',
+                  }}
                 >
                   <X size={12} />
                 </button>
@@ -104,16 +171,44 @@ function AttachmentsDisplay({
           );
         })}
         
+        {/* File attachments */}
         {attachments.files.map((file) => (
           <div
             key={file.id}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium max-w-[180px] border border-white/10 bg-white/5 text-white/90"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px 6px 8px',
+              borderRadius: '8px',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
+              maxWidth: '200px',
+            }}
           >
-            <FileText size={12} className="opacity-70 shrink-0" />
-            <span className="truncate">{file.filename || 'file'}</span>
+            <FileText size={14} style={{ opacity: 0.7, flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {file.filename || 'file'}
+            </span>
             <button
               onClick={() => attachments.remove(file.id)}
-              className="ml-1 opacity-50 hover:opacity-100 transition-opacity"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '16px',
+                height: '16px',
+                borderRadius: '4px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+                flexShrink: 0,
+                marginLeft: '2px',
+              }}
             >
               <X size={12} />
             </button>
@@ -138,31 +233,51 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
   );
 }
 
+// ─── Extract AFL Code ─────────────────────────────────────────────────────────
+function extractAFLCode(text: string): string | null {
+  const aflMatch = text.match(/```(?:afl|amibroker)\s*\n([\s\S]*?)```/i);
+  if (aflMatch) return aflMatch[1].trim();
+  const codeMatch = text.match(/```\w*\s*\n([\s\S]*?)```/);
+  if (codeMatch) return codeMatch[1].trim();
+  return null;
+}
+
 // ─── Settings Modal ───────────────────────────────────────────────────────────
 function SettingsModal({ 
   isOpen, 
   onClose, 
   settings, 
   onSettingsChange,
+  isDark 
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
   settings: any;
   onSettingsChange: (settings: any) => void;
+  isDark: boolean;
 }) {
   if (!isOpen) return null;
 
   const settingsFields = [
-    { label: 'Initial Equity', key: 'initial_equity', type: 'number', description: 'Starting capital' },
-    { label: 'Max Positions', key: 'max_positions', type: 'number', description: 'Max simultaneous' },
-    { label: 'Position Size', key: 'position_size', type: 'text', description: '% of equity' },
-    { label: 'Commission', key: 'commission', type: 'number', description: 'Rate (0.001 = 0.1%)' },
-    { label: 'Margin %', key: 'margin_requirement', type: 'number', description: 'Requirement %' },
+    { label: 'Initial Equity', key: 'initial_equity', type: 'number', description: 'Starting capital for backtests' },
+    { label: 'Max Positions', key: 'max_positions', type: 'number', description: 'Maximum simultaneous positions' },
+    { label: 'Position Size', key: 'position_size', type: 'text', description: 'Size per trade (e.g., 100 for 100%)' },
+    { label: 'Commission', key: 'commission', type: 'number', description: 'Commission rate (e.g., 0.001 = 0.1%)' },
+    { label: 'Margin %', key: 'margin_requirement', type: 'number', description: 'Margin requirement percentage' },
   ];
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(8px)',
+      }}
       onClick={onClose}
     >
       <motion.div
@@ -171,45 +286,100 @@ function SettingsModal({
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.2 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md mx-5 rounded-2xl overflow-hidden"
+        className="afl-glass-panel"
         style={{
-          background: 'linear-gradient(135deg, rgba(20, 20, 24, 0.95) 0%, rgba(12, 12, 16, 0.98) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 24px 48px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(254, 192, 15, 0.1)',
+          width: '100%',
+          maxWidth: '480px',
+          margin: '0 20px',
+          borderRadius: '20px',
+          overflow: 'hidden',
         }}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #FEC00F 0%, #F59E0B 100%)' }}
-            >
-              <Settings2 size={20} className="text-black" strokeWidth={2.5} />
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #FEC00F 0%, #F59E0B 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Settings2 size={18} color="#1A1A1A" strokeWidth={2.5} />
             </div>
             <div>
-                  <h2 className="text-base font-bold text-white tracking-wide uppercase">
-                    Backtest Settings
-                  </h2>
-              <p className="text-xs text-white/50">Configure parameters</p>
+              <h2 style={{
+                fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                fontSize: '16px',
+                fontWeight: 700,
+                color: '#FFFFFF',
+                margin: 0,
+                letterSpacing: '0.5px',
+              }}>
+                Backtest Settings
+              </h2>
+              <p style={{
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.5)',
+                margin: 0,
+                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+              }}>
+                Configure strategy parameters
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.2s',
+            }}
           >
-            <X size={18} className="text-white/60" />
+            <X size={18} color="rgba(255, 255, 255, 0.6)" />
           </button>
         </div>
 
         {/* Settings Grid */}
-        <div className="p-6 space-y-4">
+        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {settingsFields.map(({ label, key, type, description }) => (
-            <div key={key} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-white/90">{label}</label>
-                <span className="text-[10px] text-white/40">{description}</span>
-              </div>
+            <div key={key}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '8px',
+              }}>
+                <span style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                }}>
+                  {label}
+                </span>
+                <span style={{
+                  fontSize: '11px',
+                  color: 'rgba(255, 255, 255, 0.4)',
+                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                }}>
+                  {description}
+                </span>
+              </label>
               <input
                 type={type}
                 value={settings[key]}
@@ -217,26 +387,70 @@ function SettingsModal({
                   ...settings,
                   [key]: type === 'number' ? Number(e.target.value) : e.target.value,
                 })}
-                className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-sm outline-none transition-all focus:border-[#FEC00F] focus:bg-[#FEC00F]/5"
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '10px',
+                  color: '#FFFFFF',
+                  fontSize: '14px',
+                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#FEC00F';
+                  e.currentTarget.style.backgroundColor = 'rgba(254, 192, 15, 0.05)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                }}
               />
             </div>
           ))}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-white/[0.06] flex justify-end gap-3">
+        <div style={{
+          padding: '16px 24px 20px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+        }}>
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border border-white/10 text-white/70 text-sm font-semibold hover:bg-white/5 transition-colors"
+            style={{
+              padding: '10px 20px',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'transparent',
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+              transition: 'all 0.2s',
+            }}
           >
             Cancel
           </button>
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl text-black text-sm font-bold transition-all hover:shadow-lg"
-            style={{ 
+            style={{
+              padding: '10px 24px',
+              borderRadius: '10px',
+              border: 'none',
               background: 'linear-gradient(135deg, #FEC00F 0%, #F59E0B 100%)',
-              boxShadow: '0 4px 12px rgba(254, 192, 15, 0.3)'
+              color: '#1A1A1A',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+              boxShadow: '0 4px 12px rgba(254, 192, 15, 0.3)',
             }}
           >
             Save Settings
@@ -244,83 +458,6 @@ function SettingsModal({
         </div>
       </motion.div>
     </div>
-  );
-}
-
-// ─── Conversation Item ────────────────────────────────────────────────────────
-function ConversationItem({ 
-  conv, 
-  isSelected, 
-  onSelect, 
-  onRename, 
-  onDelete,
-  isRenaming,
-  renameValue,
-  setRenameValue,
-  onRenameSubmit,
-  onRenameCancel
-}: {
-  conv: ConversationType;
-  isSelected: boolean;
-  onSelect: () => void;
-  onRename: () => void;
-  onDelete: () => void;
-  isRenaming: boolean;
-  renameValue: string;
-  setRenameValue: (v: string) => void;
-  onRenameSubmit: () => void;
-  onRenameCancel: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      className={`
-        group relative px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200
-        ${isSelected 
-          ? 'bg-gradient-to-r from-[#FEC00F]/15 to-[#FEC00F]/5 border border-[#FEC00F]/20' 
-          : 'hover:bg-white/[0.04] border border-transparent'}
-      `}
-      onClick={onSelect}
-    >
-      {isRenaming ? (
-        <input
-          autoFocus
-          value={renameValue}
-          onChange={(e) => setRenameValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onRenameSubmit();
-            if (e.key === 'Escape') onRenameCancel();
-          }}
-          onBlur={onRenameCancel}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full bg-black/30 border border-[#FEC00F]/40 rounded-lg px-2 py-1 text-sm text-white outline-none"
-        />
-      ) : (
-        <>
-          <div className="flex items-center gap-2.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-[#FEC00F]' : 'bg-white/20'}`} />
-            <span className={`text-sm truncate ${isSelected ? 'text-white font-medium' : 'text-white/70'}`}>
-              {conv.title || 'Untitled Strategy'}
-            </span>
-          </div>
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => { e.stopPropagation(); onRename(); }}
-              className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-            >
-              <Pencil size={12} className="text-white/60" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="w-6 h-6 rounded-md bg-white/5 hover:bg-red-500/20 flex items-center justify-center transition-colors"
-            >
-              <Trash2 size={12} className="text-white/60 hover:text-red-400" />
-            </button>
-          </div>
-        </>
-      )}
-    </motion.div>
   );
 }
 
@@ -335,7 +472,7 @@ export function AFLGeneratorPage() {
   const [conversations, setConversations] = useState<ConversationType[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationType | null>(null);
   const [loadingConversations, setLoadingConversations] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Collapsed by default
   const [pageError, setPageError] = useState('');
   const [input, setInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -346,7 +483,6 @@ export function AFLGeneratorPage() {
   const [generatedCode, setGeneratedCode] = useState('');
   const [editorCode, setEditorCode] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [showStrategyHistory, setShowStrategyHistory] = useState(false);
   const [backtestSettings, setBacktestSettings] = useState({
     initial_equity: 100000,
     position_size: '100',
@@ -366,10 +502,8 @@ export function AFLGeneratorPage() {
   // Feedback
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   
-  // Code loading
-  const [isLoadingCode, setIsLoadingCode] = useState(false);
-  const lastExtractedCodeRef = useRef<string | null>(null);
-  const lastFetchedFileIdRef = useRef<string | null>(null);
+  // Auto-download tracking
+  const lastDownloadedCodeRef = useRef<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef<string | null>(null);
@@ -380,9 +514,6 @@ export function AFLGeneratorPage() {
   const getToken = () => {
     try { return localStorage.getItem('auth_token') || ''; } catch { return ''; }
   };
-
-  // API base URL
-  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
 
   // AI SDK useChat
   const { messages: streamMessages, sendMessage, status, stop, error: chatError, setMessages, regenerate } = useChat({
@@ -414,521 +545,995 @@ export function AFLGeneratorPage() {
 
   const isStreaming = status === 'streaming' || status === 'submitted';
 
-  // Load conversations
-  const loadConversations = useCallback(async () => {
-    if (skipNextLoadRef.current) {
-      skipNextLoadRef.current = false;
-      return;
-    }
+  // Auto-extract AFL code and auto-download
+  const lastExtractedCodeRef = useRef<string | null>(null);
+  const lastFetchedFileIdRef = useRef<string | null>(null);
+  const [isLoadingCode, setIsLoadingCode] = useState(false);
+
+  // API base URL for fetching files
+  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
+
+  // Fetch AFL file content from download URL
+  const fetchAFLContent = useCallback(async (downloadUrl: string, filename: string, fileId: string) => {
+    // Don't fetch the same file twice
+    if (lastFetchedFileIdRef.current === fileId) return;
+    lastFetchedFileIdRef.current = fileId;
+    
+    setIsLoadingCode(true);
     try {
-      const list = await apiClient.getConversations('afl');
-      setConversations(list);
-    } catch (e) {
-      console.error('Failed to load conversations', e);
+      const token = getToken();
+      // Make URL absolute if it's relative
+      const absoluteUrl = downloadUrl.startsWith('/') 
+        ? `${API_BASE_URL}${downloadUrl}` 
+        : downloadUrl;
+      
+      console.log('[v0] Fetching AFL file from:', absoluteUrl);
+      
+      const response = await fetch(absoluteUrl, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status}`);
+      }
+      
+      const code = await response.text();
+      console.log('[v0] Fetched AFL code length:', code.length);
+      
+      if (code && code.trim()) {
+        setGeneratedCode(code);
+        setEditorCode(code);
+        lastExtractedCodeRef.current = code;
+        
+        // Auto-download the file
+        if (lastDownloadedCodeRef.current !== code) {
+          lastDownloadedCodeRef.current = code;
+          const blob = new Blob([code], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename || 'strategy.afl';
+          a.click();
+          URL.revokeObjectURL(url);
+          toast.success('AFL file auto-downloaded', { description: filename || 'strategy.afl' });
+        }
+      }
+    } catch (err) {
+      console.error('[v0] Error fetching AFL file:', err);
+      toast.error('Failed to load AFL code');
     } finally {
-      setLoadingConversations(false);
+      setIsLoadingCode(false);
     }
-  }, []);
+  }, [API_BASE_URL]);
 
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    if (streamMessages.length === 0) return;
+    
+    for (let i = streamMessages.length - 1; i >= 0; i--) {
+      const msg = streamMessages[i];
+      if (msg.role !== 'assistant') continue;
+      const parts = msg.parts || [];
+      const fullText = parts.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('');
 
-  // Load conversation messages
-  const loadConversationMessages = useCallback(async (conv: ConversationType) => {
-    try {
-      const messages = await apiClient.getMessages(conv.id);
-      const formatted = messages.map((m: any) => ({
-        id: m.id,
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-        parts: m.parts || [{ type: 'text', text: m.content }],
-        createdAt: new Date(m.created_at),
-      }));
-      setMessages(formatted);
-    } catch (e) {
-      console.error('Failed to load messages', e);
+      let extractedCode: string | null = null;
+      let strategyName: string | undefined;
+
+      // Check for invoke_skill tool with AFL file output
+      for (const part of parts) {
+        // Handle invoke_skill tool output with file_type: "afl"
+        if ((part.type === 'tool-invoke_skill' || part.type === 'dynamic-tool') && part.state === 'output-available') {
+          const output = (part as any).output || {};
+          const fileType = output.file_type || '';
+          const downloadUrl = output.download_url || '';
+          const filename = output.filename || '';
+          const fileId = output.file_id || '';
+          
+          console.log('[v0] Found tool output:', { fileType, filename, fileId, hasDownloadUrl: !!downloadUrl });
+          
+          if (fileType === 'afl' && downloadUrl && fileId) {
+            // Fetch the AFL content from the download URL
+            fetchAFLContent(downloadUrl, filename, fileId);
+            return; // Exit early, the fetch will update the state
+          }
+        }
+        
+        // Also check for generate_afl_code tool
+        if (part.type === 'tool-generate_afl_code' && part.state === 'output-available') {
+          const aflCode = (part as any).output?.code || (part as any).output?.afl_code;
+          if (aflCode) {
+            extractedCode = aflCode;
+            strategyName = (part as any).output?.strategy_name || (part as any).output?.name;
+            break;
+          }
+        }
+      }
+
+      // Fallback: try to extract code from text (code blocks)
+      if (!extractedCode) {
+        extractedCode = extractAFLCode(fullText);
+      }
+
+      if (extractedCode) {
+        if (lastExtractedCodeRef.current === extractedCode) break;
+        lastExtractedCodeRef.current = extractedCode;
+        
+        setGeneratedCode(extractedCode);
+        setEditorCode(extractedCode);
+        
+        // Auto-download if this is new code
+        if (lastDownloadedCodeRef.current !== extractedCode && !isStreaming) {
+          lastDownloadedCodeRef.current = extractedCode;
+          const fileName = strategyName 
+            ? `${strategyName.replace(/\s+/g, '_').toLowerCase()}.afl`
+            : 'strategy.afl';
+          const blob = new Blob([extractedCode], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+          toast.success('AFL file auto-downloaded', { description: fileName });
+        }
+      }
+      break;
     }
-  }, [setMessages]);
+  }, [streamMessages, isStreaming, fetchAFLContent]);
 
-  // Select conversation
-  const handleSelectConversation = useCallback((conv: ConversationType) => {
-    setSelectedConversation(conv);
-    conversationIdRef.current = conv.id;
-    loadConversationMessages(conv);
-  }, [loadConversationMessages]);
+  // Sync conversationIdRef
+  useEffect(() => {
+    conversationIdRef.current = selectedConversation?.id || null;
+  }, [selectedConversation]);
 
-  // New conversation
-  const handleNewConversation = useCallback(() => {
-    setSelectedConversation(null);
-    conversationIdRef.current = null;
-    setMessages([]);
-    setEditorCode('');
-    setGeneratedCode('');
-  }, [setMessages]);
+  // Load conversations
+  useEffect(() => { loadConversations(); }, []);
+  useEffect(() => {
+    if (selectedConversation) {
+      if (skipNextLoadRef.current) { skipNextLoadRef.current = false; return; }
+      loadPreviousMessages(selectedConversation.id);
+    }
+  }, [selectedConversation]);
 
-  // Delete conversation
-  const handleDeleteConversation = useCallback(async (id: string) => {
+  // Auto-scroll
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      const scrollContainer = messagesEndRef.current.closest('[data-scroll-container]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      } else {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }
+  }, [streamMessages]);
+
+  useEffect(() => { if (chatError) setPageError(chatError.message); }, [chatError]);
+
+  const loadConversations = async () => {
+    try {
+      const allData = await apiClient.getConversations();
+      const data = allData.filter((c: any) => c.conversation_type === 'afl');
+      setConversations(data);
+      if (data.length > 0 && !selectedConversation) setSelectedConversation(data[0]);
+    } catch { setPageError('Failed to load conversations'); }
+    finally { setLoadingConversations(false); }
+  };
+
+  const loadPreviousMessages = async (conversationId: string) => {
+    try {
+      const data = await apiClient.getMessages(conversationId);
+      setMessages(data.map((m: any) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content || '',
+        parts: m.metadata?.parts || [{ type: 'text', text: m.content || '' }],
+        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
+      })));
+      for (let i = data.length - 1; i >= 0; i--) {
+        if (data[i].role === 'assistant') {
+          const code = extractAFLCode(data[i].content || '');
+          if (code) { 
+            setGeneratedCode(code); 
+            setEditorCode(code);
+            break; 
+          }
+        }
+      }
+    } catch { setMessages([]); }
+  };
+
+  const handleNewConversation = async () => {
+    try {
+      skipNextLoadRef.current = true;
+      const newConv = await apiClient.createConversation('New Strategy', 'afl');
+      setConversations(prev => [newConv, ...prev]);
+      setSelectedConversation(newConv);
+      conversationIdRef.current = newConv.id;
+      setMessages([]);
+      setGeneratedCode('');
+      setEditorCode('');
+      setPageError('');
+    } catch (err) { setPageError(err instanceof Error ? err.message : 'Failed'); }
+  };
+
+  const handleDeleteConversation = async (id: string) => {
+    if (!confirm('Delete this conversation?')) return;
     try {
       await apiClient.deleteConversation(id);
       setConversations(prev => prev.filter(c => c.id !== id));
-      if (selectedConversation?.id === id) {
-        handleNewConversation();
+      if (selectedConversation?.id === id) { 
+        setSelectedConversation(null); 
+        setMessages([]); 
+        setGeneratedCode(''); 
+        setEditorCode('');
       }
-      toast.success('Conversation deleted');
-    } catch {
-      toast.error('Failed to delete conversation');
-    }
-  }, [selectedConversation, handleNewConversation]);
+    } catch { setPageError('Failed to delete'); }
+  };
 
-  // Rename conversation
-  const handleRenameConversation = useCallback(async (id: string, newTitle: string) => {
+  const handleRenameConversation = async (id: string, newTitle: string) => {
     try {
-      await apiClient.updateConversation(id, { title: newTitle });
+      await apiClient.renameConversation(id, newTitle);
       setConversations(prev => prev.map(c => c.id === id ? { ...c, title: newTitle } : c));
-      toast.success('Conversation renamed');
-    } catch {
-      toast.error('Failed to rename conversation');
-    }
-    setRenamingId(null);
-  }, []);
-
-  // Remove KB doc
-  const handleRemoveKBDoc = useCallback((id: string) => {
-    setAttachedKBDocs(prev => prev.filter(d => d.id !== id));
-  }, []);
-
-  // Copy code
-  const handleCopyCode = useCallback(() => {
-    if (editorCode) {
-      navigator.clipboard.writeText(editorCode);
-      setCopied(true);
-      toast.success('Code copied to clipboard');
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [editorCode]);
-
-  // Download code
-  const handleDownloadCode = useCallback(() => {
-    if (editorCode) {
-      const blob = new Blob([editorCode], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `strategy_${Date.now()}.afl`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('AFL file downloaded');
-    }
-  }, [editorCode]);
-
-  // Auto-extract AFL code from messages
-  useEffect(() => {
-    const lastAssistant = [...streamMessages].reverse().find(m => m.role === 'assistant');
-    if (lastAssistant) {
-      const textPart = lastAssistant.parts?.find((p: any) => p.type === 'text');
-      const text = textPart?.text || (typeof lastAssistant.content === 'string' ? lastAssistant.content : '');
-      const code = extractAFLCode(text);
-      if (code && code !== lastExtractedCodeRef.current) {
-        lastExtractedCodeRef.current = code;
-        setEditorCode(code);
-        setGeneratedCode(code);
+      if (selectedConversation?.id === id) {
+        setSelectedConversation(prev => prev ? { ...prev, title: newTitle } : prev);
       }
-    }
-  }, [streamMessages]);
+    } catch { toast.error('Failed to rename'); }
+    setRenamingId(null);
+  };
 
-  // Scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [streamMessages]);
+  const handleCopyCode = () => {
+    if (!editorCode) return;
+    navigator.clipboard.writeText(editorCode);
+    setCopied(true);
+    toast.success('Code copied to clipboard');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  // Filter conversations
-  const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) return conversations;
-    const q = searchQuery.toLowerCase();
-    return conversations.filter(c => c.title?.toLowerCase().includes(q));
-  }, [conversations, searchQuery]);
+  const handleDownloadCode = () => {
+    if (!editorCode) return;
+    const blob = new Blob([editorCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'strategy.afl';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('AFL file downloaded');
+  };
 
-  // All messages
+  const handleCopyMessage = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(() => toast.success('Copied!')).catch(() => toast.error('Copy failed'));
+  }, []);
+
+  // KB Panel handlers
+  const handleAddKBDocs = (docs: KBDocument[]) => {
+    setAttachedKBDocs(prev => {
+      const existingIds = new Set(prev.map(d => d.id));
+      const newDocs = docs.filter(d => !existingIds.has(d.id));
+      return [...prev, ...newDocs];
+    });
+    setSelectedKBDocIds(new Set());
+    setShowKBPanel(false);
+  };
+
+  const handleRemoveKBDoc = (id: string) => {
+    setAttachedKBDocs(prev => prev.filter(d => d.id !== id));
+  };
+
   const allMessages = useMemo(() => streamMessages, [streamMessages]);
+  const lastIdx = allMessages.length - 1;
+  const userName = user?.name || 'You';
 
-  // Render message
-  const renderMessage = useCallback((msg: any, idx: number) => {
-    const isUser = msg.role === 'user';
-    const textPart = msg.parts?.find((p: any) => p.type === 'text');
-    const toolParts = msg.parts?.filter((p: any) => p.type === 'tool-invocation') || [];
-    const content = textPart?.text || (typeof msg.content === 'string' ? msg.content : '');
+  const lastIdxRef = useRef(lastIdx);
+  lastIdxRef.current = lastIdx;
+  const isStreamingRef = useRef(isStreaming);
+  isStreamingRef.current = isStreaming;
+
+  // Render a single message
+  const renderMessage = useCallback((message: any, idx: number) => {
+    const parts = message.parts || [];
+    const isLast = idx === lastIdxRef.current;
+    const msgIsStreaming = isStreamingRef.current && isLast && message.role === 'assistant';
+    const fullText = parts.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('');
+    const toolParts = parts.filter((p: any) => p.type?.startsWith('tool-') || p.type === 'dynamic-tool');
+    const hasMultipleTools = toolParts.length >= 2;
 
     return (
-      <motion.div
-        key={msg.id || idx}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-6"
-      >
-        <AIMessage from={isUser ? 'user' : 'assistant'}>
-          {/* Header */}
-          <div className="flex items-center gap-2 text-xs mb-3">
-            <div 
-              className="w-6 h-6 rounded-lg flex items-center justify-center"
-              style={{
-                background: isUser ? 'rgba(0, 222, 209, 0.15)' : 'rgba(254, 192, 15, 0.15)',
-              }}
-            >
-              {isUser ? (
-                <span className="text-[10px] font-bold text-[#00DED1]">
-                  {user?.username?.charAt(0).toUpperCase() || 'U'}
+      <AIMessage key={message.id} from={message.role}>
+        <div className={`flex items-center gap-2 text-xs mb-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
+          {message.role === 'user' ? (
+            <>
+              <span className="font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>{userName}</span>
+              {message.createdAt && (
+                <span style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
-              ) : (
-                <img src={logo} alt="Yang" className="w-4 h-4" />
               )}
-            </div>
-            <span className="font-semibold text-white">
-              {isUser ? (user?.username || 'You') : 'Yang'}
-            </span>
-            <span className="text-white/30 text-[10px]">
-              {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
+            </>
+          ) : (
+            <>
+              <div style={{ 
+                width: '22px', 
+                height: '22px', 
+                borderRadius: '6px', 
+                overflow: 'hidden',
+                backgroundColor: 'rgba(254, 192, 15, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <img src={logo} alt="Yang AI" style={{ width: '16px', height: '16px' }} />
+              </div>
+              <span className="font-semibold" style={{ color: '#FFFFFF' }}>Yang</span>
+              {message.createdAt && (
+                <span style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              {msgIsStreaming && <Shimmer duration={1.5}>Streaming...</Shimmer>}
+            </>
+          )}
+        </div>
 
-          {/* Tool invocations */}
-          {toolParts.map((tool: any, tIdx: number) => {
-            const toolName = tool.toolInvocation?.toolName || tool.toolName || '';
-            const toolState = tool.toolInvocation?.state || tool.state || 'input-available';
-            const toolInput = tool.toolInvocation?.args || tool.args || {};
-            const toolOutput = tool.toolInvocation?.result || tool.result;
+        <MessageContent>
+          {hasMultipleTools && message.role === 'assistant' && !msgIsStreaming && (
+            <ChainOfThought defaultOpen={false}>
+              <ChainOfThoughtHeader>Used {toolParts.length} tools</ChainOfThoughtHeader>
+              <ChainOfThoughtContent>
+                {toolParts.map((tp: any, tIdx: number) => {
+                  const tName = tp.type === 'dynamic-tool' ? (tp.toolName || 'unknown') : (tp.type?.replace('tool-', '') || 'unknown');
+                  return <ChainOfThoughtStep key={tIdx}>{tName}</ChainOfThoughtStep>;
+                })}
+              </ChainOfThoughtContent>
+            </ChainOfThought>
+          )}
 
-            if (toolName.includes('afl_generate') || toolName.includes('generate_afl')) {
-              return <AFLGenerateCard key={tIdx} toolCallId={tool.toolCallId} toolName={toolName} input={toolInput} output={toolOutput} state={toolState} />;
+          {parts.map((part: any, pIdx: number) => {
+            switch (part.type) {
+              case 'text':
+                const hasReactBlocks = /```(?:jsx|tsx|react)/i.test(part.text || '');
+                if (hasReactBlocks) {
+                  const strippedText = stripReactCodeBlocks(part.text || '');
+                  return (
+                    <React.Fragment key={pIdx}>
+                      {strippedText.trim() && <MessageResponse>{strippedText}</MessageResponse>}
+                      {!msgIsStreaming && <InlineReactPreview text={part.text} isDark={isDark} />}
+                    </React.Fragment>
+                  );
+                }
+                return (
+                  <p key={pIdx} className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ color: '#E8E8E8', fontWeight: 400 }}>
+                    {part.text}
+                  </p>
+                );
+
+              case 'reasoning':
+                return (
+                  <Reasoning key={pIdx} isStreaming={msgIsStreaming} defaultOpen={msgIsStreaming}>
+                    <ReasoningTrigger />
+                    <ReasoningContent>{part.text || ''}</ReasoningContent>
+                  </Reasoning>
+                );
+
+              case 'tool-generate_afl_code':
+                switch (part.state) {
+                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="generate_afl_code" input={part.input} />;
+                  case 'output-available': return <AFLGenerateCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
+                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL generation error: {part.errorText}</div>;
+                  default: return null;
+                }
+              case 'tool-validate_afl':
+                switch (part.state) {
+                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="validate_afl" input={part.input} />;
+                  case 'output-available': return <AFLValidateCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
+                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL validation error: {part.errorText}</div>;
+                  default: return null;
+                }
+              case 'tool-debug_afl_code':
+                switch (part.state) {
+                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="debug_afl_code" input={part.input} />;
+                  case 'output-available': return <AFLDebugCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
+                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL debug error: {part.errorText}</div>;
+                  default: return null;
+                }
+              case 'tool-explain_afl_code':
+                switch (part.state) {
+                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="explain_afl_code" input={part.input} />;
+                  case 'output-available': return <AFLExplainCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
+                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL explain error: {part.errorText}</div>;
+                  default: return null;
+                }
+              case 'tool-sanity_check_afl':
+                switch (part.state) {
+                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="sanity_check_afl" input={part.input} />;
+                  case 'output-available': return <AFLSanityCheckCard key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
+                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>AFL sanity check error: {part.errorText}</div>;
+                  default: return null;
+                }
+              case 'tool-search_knowledge_base':
+                switch (part.state) {
+                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="search_knowledge_base" input={part.input} />;
+                  case 'output-available': return <KnowledgeBaseResults key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
+                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>KB search error: {part.errorText}</div>;
+                  default: return null;
+                }
+              case 'tool-web_search':
+                switch (part.state) {
+                  case 'input-streaming': case 'input-available': return <ToolLoading key={pIdx} toolName="web_search" input={part.input} />;
+                  case 'output-available': return <WebSearchResults key={pIdx} {...(typeof part.output === 'object' ? part.output : {})} />;
+                  case 'output-error': return <div key={pIdx} style={{ padding: '12px', backgroundColor: 'rgba(220, 38, 38, 0.1)', borderRadius: '12px', marginTop: '8px', color: '#DC2626', fontSize: '13px' }}>Web search error: {part.errorText}</div>;
+                  default: return null;
+                }
+
+              default:
+                if (part.type?.startsWith('tool-')) {
+                  const toolName = part.type.replace('tool-', '');
+                  switch (part.state) {
+                    case 'input-streaming': case 'input-available':
+                      return <ToolLoading key={pIdx} toolName={toolName} input={part.input} />;
+                    case 'output-available':
+                      return (
+                        <AITool key={pIdx}>
+                          <ToolHeader type={part.type} state={part.state} />
+                          <ToolContent>
+                            <ToolInput input={part.input} />
+                            <ToolOutput output={part.output} errorText={part.errorText} />
+                          </ToolContent>
+                        </AITool>
+                      );
+                    case 'output-error':
+                      return (
+                        <AITool key={pIdx}>
+                          <ToolHeader type={part.type} state={part.state} />
+                          <ToolContent>
+                            <ToolOutput output={part.output} errorText={part.errorText} />
+                          </ToolContent>
+                        </AITool>
+                      );
+                    default: return null;
+                  }
+                }
+                return null;
             }
-            if (toolName.includes('afl_validate') || toolName.includes('validate_afl')) {
-              return <AFLValidateCard key={tIdx} toolCallId={tool.toolCallId} toolName={toolName} input={toolInput} output={toolOutput} state={toolState} />;
-            }
-            if (toolName.includes('afl_debug') || toolName.includes('debug_afl')) {
-              return <AFLDebugCard key={tIdx} toolCallId={tool.toolCallId} toolName={toolName} input={toolInput} output={toolOutput} state={toolState} />;
-            }
-            if (toolName.includes('afl_explain') || toolName.includes('explain_afl')) {
-              return <AFLExplainCard key={tIdx} toolCallId={tool.toolCallId} toolName={toolName} input={toolInput} output={toolOutput} state={toolState} />;
-            }
-            if (toolName.includes('knowledge_base') || toolName.includes('kb_search')) {
-              return <KnowledgeBaseResults key={tIdx} toolCallId={tool.toolCallId} toolName={toolName} input={toolInput} output={toolOutput} state={toolState} />;
-            }
-            if (toolName.includes('web_search')) {
-              return <WebSearchResults key={tIdx} toolCallId={tool.toolCallId} toolName={toolName} input={toolInput} output={toolOutput} state={toolState} />;
-            }
-            if (toolState === 'input-streaming' || toolState === 'input-available') {
-              return <ToolLoading key={tIdx} toolName={toolName} />;
-            }
-            return null;
           })}
 
-          {/* Text content */}
-          {content && (
-            <MessageContent className="prose prose-invert prose-sm max-w-none">
-              <div 
-                className="text-sm leading-relaxed text-white/90"
-                dangerouslySetInnerHTML={{ 
-                  __html: content
-                    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-black/30 rounded-lg p-4 overflow-x-auto text-xs my-3"><code>$2</code></pre>')
-                    .replace(/`([^`]+)`/g, '<code class="bg-[#FEC00F]/10 text-[#FEC00F] px-1.5 py-0.5 rounded text-xs">$1</code>')
-                    .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-                    .replace(/\n/g, '<br />')
-                }}
-              />
-            </MessageContent>
+          {status === 'submitted' && isLast && message.role === 'assistant' && parts.every((p: any) => !p.text) && (
+            <Shimmer duration={1.5}>Generating AFL code...</Shimmer>
           )}
+        </MessageContent>
 
-          {/* Actions */}
-          {!isUser && (
-            <MessageActions>
-              <MessageAction tooltip="Copy" onClick={() => navigator.clipboard.writeText(content)}>
-                <Copy className="size-3.5" />
-              </MessageAction>
-              <MessageAction tooltip="Like" onClick={() => {}}>
-                <ThumbsUp className="size-3.5" />
-              </MessageAction>
-              <MessageAction tooltip="Dislike" onClick={() => setShowFeedbackModal(true)}>
-                <ThumbsDown className="size-3.5" />
-              </MessageAction>
-            </MessageActions>
-          )}
-        </AIMessage>
-      </motion.div>
+        {message.role === 'assistant' && !msgIsStreaming && fullText && (
+          <MessageActions className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <MessageAction tooltip="Copy" onClick={() => handleCopyMessage(fullText)}>
+              <CopyIcon className="size-3.5" />
+            </MessageAction>
+            <MessageAction tooltip="Helpful" onClick={() => toast.success('Thanks for the feedback!')}>
+              <ThumbsUpIcon className="size-3.5" />
+            </MessageAction>
+            <MessageAction tooltip="Not helpful" onClick={() => setShowFeedbackModal(true)}>
+              <ThumbsDownIcon className="size-3.5" />
+            </MessageAction>
+          </MessageActions>
+        )}
+      </AIMessage>
     );
-  }, [user, setShowFeedbackModal]);
+  }, [userName, isDark, handleCopyMessage, status]);
 
+  // Filtered conversations
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    return conversations.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [conversations, searchQuery]);
+
+  // ─── RENDER ─────────────────────────────────────────────────────────────────
   return (
     <>
-      <style jsx global>{`
-        @keyframes afl-shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        .afl-glass {
-          background: linear-gradient(135deg, rgba(16, 16, 20, 0.9) 0%, rgba(8, 8, 12, 0.95) 100%);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
-        }
-        .afl-glass-subtle {
-          background: rgba(255, 255, 255, 0.02);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-        }
-        .afl-glow {
-          box-shadow: 0 0 60px -12px rgba(254, 192, 15, 0.15);
-        }
-        .afl-border {
-          border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .afl-scrollbar::-webkit-scrollbar { width: 4px; }
-        .afl-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .afl-scrollbar::-webkit-scrollbar-thumb { 
-          background: rgba(254, 192, 15, 0.2); 
-          border-radius: 2px; 
-        }
-        .afl-scrollbar::-webkit-scrollbar-thumb:hover { 
-          background: rgba(254, 192, 15, 0.4); 
-        }
-      `}</style>
-
-      <div 
-        className="h-screen flex overflow-hidden"
-        style={{
-          background: `
-            radial-gradient(ellipse 100% 100% at 0% 0%, rgba(254, 192, 15, 0.05) 0%, transparent 50%),
-            radial-gradient(ellipse 80% 80% at 100% 100%, rgba(0, 222, 209, 0.03) 0%, transparent 40%),
-            linear-gradient(180deg, #0a0a0c 0%, #08080a 100%)
-          `,
-        }}
-      >
-        {/* ─── Sidebar ─── */}
-        <AnimatePresence mode="wait">
+      <style>{AFL_STYLES}</style>
+      
+      <div className="afl-root" style={{ height: '100%', display: 'flex', overflow: 'hidden', position: 'relative' }}>
+        
+        {/* ═══════════════════════════════════════════════════════════════════════
+            COLLAPSIBLE SIDEBAR
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <AnimatePresence>
           {sidebarOpen && (
-            <motion.aside
+            <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
+              animate={{ width: 300, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              className="h-full flex flex-col afl-glass afl-border border-r border-l-0 border-t-0 border-b-0"
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="afl-glass-panel"
+              style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                flexShrink: 0,
+                borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              }}
             >
               {/* Sidebar Header */}
-              <div className="p-4 border-b border-white/[0.06]">
-                <button
-                  onClick={handleNewConversation}
-                  className="w-full py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-black transition-all hover:shadow-lg active:scale-[0.98]"
-                  style={{ 
+              <div style={{
+                padding: '20px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, rgba(254, 192, 15, 0.08) 0%, transparent 100%)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
                     background: 'linear-gradient(135deg, #FEC00F 0%, #F59E0B 100%)',
-                    boxShadow: '0 4px 12px rgba(254, 192, 15, 0.25)'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(254, 192, 15, 0.3)',
+                  }}>
+                    <Code2 size={18} color="#1A1A1A" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h2 style={{
+                      fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      margin: 0,
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                    }}>
+                      Strategies
+                    </h2>
+                    <p style={{
+                      fontSize: '11px',
+                      color: 'rgba(255, 255, 255, 0.5)',
+                      margin: 0,
+                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                    }}>
+                      {conversations.length} saved
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s',
                   }}
                 >
-                  <Plus size={16} strokeWidth={2.5} />
-                  New Strategy
+                  <ChevronLeft size={16} color="rgba(255, 255, 255, 0.6)" />
                 </button>
+              </div>
 
-                {/* Search */}
-                <div className="relative mt-3">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              {/* New Strategy + Search */}
+              <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleNewConversation}
+                  disabled={streamMessages.length === 0}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: streamMessages.length === 0
+                      ? 'rgba(254, 192, 15, 0.2)'
+                      : 'linear-gradient(135deg, #FEC00F 0%, #F59E0B 100%)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: streamMessages.length === 0 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontWeight: 700,
+                    color: streamMessages.length === 0 ? 'rgba(26, 26, 26, 0.5)' : '#1A1A1A',
+                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                    fontSize: '13px',
+                    boxShadow: streamMessages.length === 0 ? 'none' : '0 4px 12px rgba(254, 192, 15, 0.3)',
+                    opacity: streamMessages.length === 0 ? 0.6 : 1,
+                  }}
+                >
+                  <Plus size={18} strokeWidth={2.5} /> New Strategy
+                </motion.button>
+
+                <div style={{ position: 'relative' }}>
+                  <Search size={14} color="rgba(255, 255, 255, 0.4)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                   <input
                     type="text"
-                    placeholder="Search strategies..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-sm text-white placeholder:text-white/30 outline-none transition-all focus:border-[#FEC00F]/30 focus:bg-white/[0.06]"
+                    placeholder="Search strategies..."
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px 10px 36px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      color: '#FFFFFF',
+                      fontSize: '12px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                      transition: 'all 0.2s',
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(254, 192, 15, 0.5)';
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                    }}
                   />
                 </div>
               </div>
 
-              {/* Conversations List */}
-              <div className="flex-1 overflow-y-auto afl-scrollbar p-3 space-y-1">
+              {/* Conversation List */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 12px' }}>
                 {loadingConversations ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 size={20} className="animate-spin text-[#FEC00F]" />
+                  <div className="flex items-center justify-center py-10 gap-2">
+                    <Loader2 size={18} color="#FEC00F" className="animate-spin" />
+                    <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '13px' }}>Loading...</span>
                   </div>
                 ) : filteredConversations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <MessageSquare size={24} className="mx-auto text-white/20 mb-2" />
-                    <p className="text-xs text-white/40">No strategies yet</p>
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.4)', fontSize: '13px' }}>
+                    {searchQuery.trim() ? `No strategies matching "${searchQuery}"` : 'No strategies yet'}
                   </div>
                 ) : (
-                  filteredConversations.map(conv => (
-                    <ConversationItem
-                      key={conv.id}
-                      conv={conv}
-                      isSelected={selectedConversation?.id === conv.id}
-                      onSelect={() => handleSelectConversation(conv)}
-                      onRename={() => { setRenamingId(conv.id); setRenameValue(conv.title || ''); }}
-                      onDelete={() => handleDeleteConversation(conv.id)}
-                      isRenaming={renamingId === conv.id}
-                      renameValue={renameValue}
-                      setRenameValue={setRenameValue}
-                      onRenameSubmit={() => handleRenameConversation(conv.id, renameValue)}
-                      onRenameCancel={() => setRenamingId(null)}
-                    />
-                  ))
+                  <div className="space-y-1">
+                    {filteredConversations.map((conv) => (
+                      <motion.div
+                        key={conv.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        whileHover={{ x: 4 }}
+                        onClick={() => setSelectedConversation(conv)}
+                        className="group"
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          backgroundColor: selectedConversation?.id === conv.id 
+                            ? 'rgba(254, 192, 15, 0.12)' 
+                            : 'transparent',
+                          border: selectedConversation?.id === conv.id
+                            ? '1px solid rgba(254, 192, 15, 0.3)'
+                            : '1px solid transparent',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                        }}
+                      >
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          background: selectedConversation?.id === conv.id
+                            ? 'rgba(254, 192, 15, 0.2)'
+                            : 'rgba(255, 255, 255, 0.04)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}>
+                          <Code2 
+                            size={14} 
+                            color={selectedConversation?.id === conv.id ? '#FEC00F' : 'rgba(255, 255, 255, 0.5)'} 
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {renamingId === conv.id ? (
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRenameConversation(conv.id, renameValue);
+                                if (e.key === 'Escape') setRenamingId(null);
+                              }}
+                              onBlur={() => handleRenameConversation(conv.id, renameValue)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                width: '100%',
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#FFFFFF',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                outline: 'none',
+                                fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                              }}
+                            />
+                          ) : (
+                            <p style={{
+                              margin: 0,
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              color: selectedConversation?.id === conv.id ? '#FEC00F' : '#FFFFFF',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                            }}>
+                              {conv.title || 'Untitled Strategy'}
+                            </p>
+                          )}
+                          <p style={{
+                            margin: 0,
+                            fontSize: '11px',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            marginTop: '2px',
+                          }}>
+                            {conv.created_at ? new Date(conv.created_at).toLocaleDateString() : 'No date'}
+                          </p>
+                        </div>
+                        <div 
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ display: 'flex', gap: '4px' }}
+                        >
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setRenamingId(conv.id); setRenameValue(conv.title || ''); }}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Pencil size={12} color="rgba(255, 255, 255, 0.6)" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); }}
+                            style={{
+                              background: 'rgba(220, 38, 38, 0.1)',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Trash2 size={12} color="#DC2626" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 )}
               </div>
-
-              {/* Sidebar Footer */}
-              <div className="p-4 border-t border-white/[0.06]">
-                <div className="flex items-center gap-3 px-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FEC00F]/20 to-[#00DED1]/20 flex items-center justify-center">
-                    <Zap size={14} className="text-[#FEC00F]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white truncate">{user?.username || 'User'}</p>
-                    <p className="text-[10px] text-white/40">AFL Developer Mode</p>
-                  </div>
-                </div>
-              </div>
-            </motion.aside>
+            </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ─── Main Content ─── */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <header className="h-16 px-4 flex items-center justify-between border-b border-white/[0.06] bg-black/20">
-            <div className="flex items-center gap-3">
+        {/* ═══════════════════════════════════════════════════════════════════════
+            MAIN CONTENT AREA
+        ═══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
+          
+          {/* Header Bar */}
+          <div 
+            className="afl-glass-card"
+            style={{
+              padding: '12px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               {/* Sidebar Toggle */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="w-9 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-colors"
+                style={{
+                  background: sidebarOpen ? 'rgba(254, 192, 15, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  border: `1px solid ${sidebarOpen ? 'rgba(254, 192, 15, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
+                  borderRadius: '10px',
+                  padding: '10px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                }}
               >
-                {sidebarOpen ? <ChevronLeft size={18} className="text-white/60" /> : <PanelLeft size={18} className="text-white/60" />}
+                <PanelLeft size={18} color={sidebarOpen ? '#FEC00F' : 'rgba(255, 255, 255, 0.6)'} />
               </button>
 
-              {/* Logo & Title */}
-              <div className="flex items-center gap-3">
-                <div 
-                  className="w-10 h-10 rounded-xl flex items-center justify-center afl-glow"
-                  style={{ background: 'linear-gradient(135deg, #FEC00F 0%, #F59E0B 100%)' }}
-                >
-                  <Activity size={20} className="text-black" strokeWidth={2.5} />
-                </div>
+              {/* Title */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Glow color="#FEC00F">
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #FEC00F 0%, #F59E0B 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(254, 192, 15, 0.3)',
+                  }}>
+                    <Code2 size={18} color="#1A1A1A" strokeWidth={2.5} />
+                  </div>
+                </Glow>
                 <div>
-                  <h1 className="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
-                    AFL Generator
-                    <span className="px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider bg-[#00DED1]/15 text-[#00DED1] border border-[#00DED1]/20">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h1 style={{
+                      fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      margin: 0,
+                      letterSpacing: '0.5px',
+                    }}>
+                      AFL Generator
+                    </h1>
+                    <span style={{
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                      color: '#A78BFA',
+                      letterSpacing: '0.5px',
+                      fontFamily: "'DM Mono', monospace",
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                    }}>
                       SKILL
                     </span>
-                  </h1>
-                  <p className="text-[11px] text-white/40">AmiBroker Strategy Builder</p>
+                  </div>
+                  <p style={{
+                    fontSize: '11px',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    margin: 0,
+                    fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                  }}>
+                    AmiBroker Strategy Builder
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Header Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowStrategyHistory(!showStrategyHistory)}
-                className={`px-3.5 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold transition-all ${
-                  showStrategyHistory 
-                    ? 'bg-[#00DED1]/15 border border-[#00DED1]/30 text-[#00DED1]' 
-                    : 'bg-white/[0.04] border border-white/[0.06] text-white/60 hover:text-white/80 hover:bg-white/[0.06]'
-                }`}
-              >
-                <History size={14} />
-                <span className="hidden sm:inline">Strategy History</span>
-              </button>
-
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* KB Toggle */}
               <button
                 onClick={() => setShowKBPanel(!showKBPanel)}
-                className={`px-3.5 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold transition-all ${
-                  showKBPanel 
-                    ? 'bg-[#FEC00F]/15 border border-[#FEC00F]/30 text-[#FEC00F]' 
-                    : 'bg-white/[0.04] border border-white/[0.06] text-white/60 hover:text-white/80 hover:bg-white/[0.06]'
-                }`}
+                style={{
+                  background: showKBPanel ? 'rgba(254, 192, 15, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  border: `1px solid ${showKBPanel ? 'rgba(254, 192, 15, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: showKBPanel ? '#FEC00F' : 'rgba(255, 255, 255, 0.7)',
+                  fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                  transition: 'all 0.2s',
+                }}
               >
                 <Database size={14} />
-                <span className="hidden sm:inline">Knowledge Base</span>
+                Knowledge Base
               </button>
 
+              {/* Settings */}
               <button
                 onClick={() => setShowSettings(true)}
-                className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] flex items-center justify-center transition-colors"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '10px',
+                  padding: '10px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                }}
               >
-                <Settings2 size={16} className="text-white/60" />
+                <Settings2 size={18} color="rgba(255, 255, 255, 0.6)" />
               </button>
             </div>
-          </header>
+          </div>
 
           {/* Main Split View */}
-          <div className="flex-1 flex overflow-hidden">
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            
             {/* Chat Area */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto afl-scrollbar">
-                <div className="max-w-3xl mx-auto px-6 py-8">
+              <div 
+                data-scroll-container 
+                style={{ 
+                  flex: 1, 
+                  overflowY: 'auto', 
+                  overflowX: 'hidden',
+                }}
+              >
+                <div className="max-w-[800px] mx-auto px-6 py-8">
                   {allMessages.length === 0 ? (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5 }}
-                      className="flex flex-col items-center justify-center min-h-[60vh]"
                     >
-                      {/* Hero Icon */}
-                      <div 
-                        className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 afl-glow"
-                        style={{ 
-                          background: 'linear-gradient(135deg, rgba(254, 192, 15, 0.2) 0%, rgba(254, 192, 15, 0.05) 100%)',
-                          border: '1px solid rgba(254, 192, 15, 0.2)'
-                        }}
+                      <ConversationEmptyState
+                        icon={
+                          <div style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '20px',
+                            background: 'linear-gradient(135deg, rgba(254, 192, 15, 0.2) 0%, rgba(254, 192, 15, 0.1) 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '8px',
+                          }}>
+                            <Sparkles size={40} color="#FEC00F" strokeWidth={1.5} />
+                          </div>
+                        }
+                        title="AFL Code Generator"
+                        description="Generate, debug, and optimize AmiBroker Formula Language strategies with AI"
                       >
-                        <Sparkles size={36} className="text-[#FEC00F]" strokeWidth={1.5} />
-                      </div>
-
-                      <h2 className="text-2xl font-bold text-white mb-2 tracking-wide">AFL Code Generator</h2>
-                      <p className="text-sm text-white/50 mb-8 text-center max-w-md">
-                        Generate, debug, and optimize AmiBroker Formula Language strategies with AI
-                      </p>
-
-                      {/* Suggestions */}
-                      <div className="w-full max-w-lg">
-                        <Suggestions className="flex flex-col gap-2">
-                          {[
-                            { icon: TrendingUp, text: "Generate a moving average crossover strategy" },
-                            { icon: BarChart3, text: "Create an RSI-based mean reversion system" },
-                            { icon: Activity, text: "Build a Bollinger Band breakout with sizing" },
-                            { icon: Code2, text: "Debug my AFL code for syntax errors" },
-                          ].map((suggestion, index) => (
-                            <motion.div
-                              key={suggestion.text}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.2 + index * 0.1 }}
-                            >
-                              <button
-                                onClick={() => setInput(suggestion.text)}
-                                className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-[#FEC00F]/20 transition-all text-left flex items-center gap-3 group"
+                        <div className="flex flex-col items-center gap-6 mt-4" style={{ maxWidth: '500px' }}>
+                          <Suggestions className="justify-center">
+                            {[
+                              "Generate a moving average crossover strategy with stop loss",
+                              "Create an RSI-based mean reversion system",
+                              "Build a Bollinger Band breakout with position sizing",
+                              "Debug my AFL code for syntax errors"
+                            ].map((suggestion, index) => (
+                              <motion.div
+                                key={suggestion}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 + index * 0.1 }}
                               >
-                                <div className="w-8 h-8 rounded-lg bg-[#FEC00F]/10 flex items-center justify-center group-hover:bg-[#FEC00F]/15 transition-colors">
-                                  <suggestion.icon size={14} className="text-[#FEC00F]" />
-                                </div>
-                                <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                                  {suggestion.text}
-                                </span>
-                              </button>
-                            </motion.div>
-                          ))}
-                        </Suggestions>
-                      </div>
+                                <Suggestion suggestion={suggestion} onClick={(s) => setInput(s)} />
+                              </motion.div>
+                            ))}
+                          </Suggestions>
+                        </div>
+                      </ConversationEmptyState>
                     </motion.div>
                   ) : (
                     <>
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col">
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-6">
                         {allMessages.map((msg, idx) => renderMessage(msg, idx))}
                       </motion.div>
 
                       {status === 'submitted' && allMessages.length > 0 && allMessages[allMessages.length - 1]?.role === 'user' && (
                         <AIMessage from="assistant">
-                          <div className="flex items-center gap-2 text-xs mb-3">
-                            <div className="w-6 h-6 rounded-lg bg-[#FEC00F]/15 flex items-center justify-center">
-                              <img src={logo} alt="Yang" className="w-4 h-4" />
+                          <div className="flex items-center gap-2 text-xs mb-2">
+                            <div style={{ 
+                              width: '22px', height: '22px', borderRadius: '6px',
+                              backgroundColor: 'rgba(254, 192, 15, 0.15)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                              <img src={logo} alt="Yang AI" style={{ width: '16px', height: '16px' }} />
                             </div>
-                            <span className="font-semibold text-white">Yang</span>
+                            <span className="font-semibold" style={{ color: '#FFFFFF' }}>Yang</span>
                           </div>
                           <MessageContent>
                             <Shimmer duration={1.5}>Generating AFL code...</Shimmer>
@@ -943,25 +1548,55 @@ export function AFLGeneratorPage() {
 
               {/* Error Banner */}
               {(pageError || chatError) && (
-                <div className="px-6 py-3 bg-red-500/10 border-t border-red-500/20 flex items-center justify-between">
-                  <span className="text-sm text-red-400">{pageError || chatError?.message}</span>
+                <div style={{
+                  padding: '12px 20px',
+                  backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                  borderTop: '1px solid rgba(220, 38, 38, 0.3)',
+                  color: '#DC2626',
+                  fontSize: '13px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <span>{pageError || chatError?.message}</span>
                   <div className="flex gap-2">
-                    <button 
-                      onClick={() => regenerate()} 
-                      className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-red-500/10 transition-colors"
-                    >
+                    <button onClick={() => regenerate()} style={{
+                      border: '1px solid #DC2626',
+                      borderRadius: '6px',
+                      color: '#DC2626',
+                      cursor: 'pointer',
+                      padding: '6px 12px',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      backgroundColor: 'transparent',
+                      fontWeight: 600,
+                    }}>
                       <RefreshCw size={12} /> Retry
                     </button>
-                    <button onClick={() => setPageError('')} className="text-red-400 text-xl font-bold px-2">
-                      &times;
+                    <button onClick={() => setPageError('')} style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#DC2626',
+                      cursor: 'pointer',
+                      fontSize: '18px',
+                      padding: '0 8px',
+                      fontWeight: 700
+                    }}>
+                      ×
                     </button>
                   </div>
                 </div>
               )}
 
               {/* Prompt Input */}
-              <div className="border-t border-white/[0.06]" style={{ background: 'linear-gradient(to top, rgba(254, 192, 15, 0.02) 0%, transparent 100%)' }}>
-                <div className="max-w-3xl mx-auto px-6 py-5">
+              <div style={{
+                flexShrink: 0,
+                borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                background: 'linear-gradient(to top, rgba(254, 192, 15, 0.03) 0%, transparent 100%)',
+              }}>
+                <div className="max-w-[800px] mx-auto px-6 py-5">
                   <TooltipProvider>
                     <PromptInput
                       accept=".pdf,.csv,.json,.txt,.afl,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
@@ -992,6 +1627,7 @@ export function AFLGeneratorPage() {
                           } catch { setPageError('Failed to create conversation'); return; }
                         }
 
+                        // Build message with KB context
                         let messageText = text;
                         if (attachedKBDocs.length > 0) {
                           const kbContext = attachedKBDocs.map(d => `[KB Doc: ${d.title || d.filename}]`).join(', ');
@@ -999,6 +1635,7 @@ export function AFLGeneratorPage() {
                           setAttachedKBDocs([]);
                         }
 
+                        // Handle file uploads
                         if (files.length > 0) {
                           const token = getToken();
                           const uploaded: string[] = [];
@@ -1006,7 +1643,8 @@ export function AFLGeneratorPage() {
                             const fd = new FormData();
                             fd.append('file', f.rawFile);
                             try {
-                              const res = await fetch(`${API_BASE_URL}/chat/files/upload`, {
+                              const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
+                              const res = await fetch(`${baseUrl}/chat/files/upload`, {
                                 method: 'POST',
                                 headers: { Authorization: `Bearer ${token}` },
                                 body: fd,
@@ -1026,6 +1664,7 @@ export function AFLGeneratorPage() {
                       }}
                     >
                       <AttachmentsDisplay 
+                        isDark={isDark} 
                         attachedKbDocs={attachedKBDocs}
                         onRemoveKbDoc={handleRemoveKBDoc}
                       />
@@ -1059,312 +1698,297 @@ export function AFLGeneratorPage() {
             </div>
 
             {/* Code Editor Panel */}
-            {!isMobile && (
-              <div 
-                className="w-[420px] flex flex-col border-l border-white/[0.06] afl-glass"
-              >
-                {/* Editor Header */}
-                <div 
-                  className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between"
-                  style={{ background: 'linear-gradient(135deg, rgba(254, 192, 15, 0.06) 0%, transparent 100%)' }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#FEC00F]/15 flex items-center justify-center">
-                      <Code2 size={16} className="text-[#FEC00F]" strokeWidth={2.5} />
+            <div 
+              className="afl-glass-panel"
+              style={{
+                width: isMobile ? '100%' : '480px',
+                display: 'flex',
+                flexDirection: 'column',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
+                flexShrink: 0,
+              }}
+            >
+              {/* Editor Header */}
+              <div style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, rgba(254, 192, 15, 0.08) 0%, transparent 100%)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Pulse>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: 'rgba(254, 192, 15, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Code2 size={16} color="#FEC00F" strokeWidth={2.5} />
                     </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-white tracking-wide uppercase">AFL Code</h3>
-                      <span className={`text-[10px] flex items-center gap-1.5 ${isLoadingCode ? 'text-[#FEC00F]' : 'text-white/40'}`}>
-                        {isLoadingCode ? (
-                          <>
-                            <Loader2 size={10} className="animate-spin" />
-                            Loading...
-                          </>
-                        ) : editorCode ? 'Ready to edit' : 'Awaiting generation'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={handleCopyCode}
-                      disabled={!editorCode}
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                        copied 
-                          ? 'bg-[#FEC00F]/15 border border-[#FEC00F]/30' 
-                          : 'bg-white/[0.04] hover:bg-white/[0.08]'
-                      } ${!editorCode ? 'opacity-30 cursor-not-allowed' : ''}`}
-                      title="Copy code"
-                    >
-                      {copied ? <Check size={14} className="text-[#FEC00F]" /> : <Copy size={14} className="text-white/60" />}
-                    </button>
-                    <button
-                      onClick={handleDownloadCode}
-                      disabled={!editorCode}
-                      className={`w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-colors ${!editorCode ? 'opacity-30 cursor-not-allowed' : ''}`}
-                      title="Download .afl"
-                    >
-                      <Download size={14} className="text-white/60" />
-                    </button>
+                  </Pulse>
+                  <div>
+                    <h3 style={{
+                      fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      margin: 0,
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                    }}>
+                      AFL Code
+                    </h3>
+                    <span style={{
+                      fontSize: '10px',
+                      color: isLoadingCode ? '#FEC00F' : 'rgba(255, 255, 255, 0.5)',
+                      fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}>
+                      {isLoadingCode ? (
+                        <>
+                          <Loader2 size={10} className="animate-spin" />
+                          Loading code...
+                        </>
+                      ) : editorCode ? 'Editable' : 'Waiting for generation'}
+                    </span>
                   </div>
                 </div>
-
-                {/* Monaco Editor */}
-                <div className="flex-1 min-h-0 relative">
-                  {editorCode ? (
-                    <Editor
-                      height="100%"
-                      defaultLanguage="cpp"
-                      theme="vs-dark"
-                      value={editorCode}
-                      onChange={(value) => setEditorCode(value || '')}
-                      onMount={(editor) => { editorRef.current = editor; }}
-                      options={{
-                        fontSize: 12,
-                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                        minimap: { enabled: false },
-                        scrollBeyondLastLine: false,
-                        padding: { top: 16, bottom: 16 },
-                        lineNumbers: 'on',
-                        wordWrap: 'on',
-                        automaticLayout: true,
-                        scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
-                        lineHeight: 20,
-                        letterSpacing: 0.3,
-                      }}
-                    />
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center p-8">
-                      <div 
-                        className="w-16 h-16 rounded-xl flex items-center justify-center mb-4"
-                        style={{ 
-                          background: 'linear-gradient(135deg, rgba(254, 192, 15, 0.1) 0%, rgba(254, 192, 15, 0.02) 100%)',
-                          border: '1px solid rgba(254, 192, 15, 0.1)'
-                        }}
-                      >
-                        <Code2 size={24} className="text-[#FEC00F]/50" />
-                      </div>
-                      <p className="text-sm font-medium text-white/60 mb-1">No Code Yet</p>
-                      <p className="text-xs text-white/30 text-center">
-                        Your generated AFL code will appear here
-                      </p>
-                    </div>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <button
+                    onClick={handleCopyCode}
+                    disabled={!editorCode}
+                    style={{
+                      background: copied ? 'rgba(254, 192, 15, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${copied ? 'rgba(254, 192, 15, 0.3)' : 'transparent'}`,
+                      borderRadius: '8px',
+                      padding: '8px',
+                      cursor: editorCode ? 'pointer' : 'default',
+                      opacity: editorCode ? 1 : 0.3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                    title="Copy code"
+                  >
+                    {copied ? <Check size={14} color="#FEC00F" /> : <CopyIcon size={14} color="rgba(255, 255, 255, 0.6)" />}
+                  </button>
+                  <button
+                    onClick={handleDownloadCode}
+                    disabled={!editorCode}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid transparent',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      cursor: editorCode ? 'pointer' : 'default',
+                      opacity: editorCode ? 1 : 0.3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                    title="Download .afl"
+                  >
+                    <Download size={14} color="rgba(255, 255, 255, 0.6)" />
+                  </button>
                 </div>
+              </div>
 
-                {/* Editor Footer */}
-                {editorCode && (
-                  <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between bg-black/20">
-                    <div className="flex items-center gap-4 text-[10px] text-white/40">
-                      <span>{editorCode.split('\n').length} lines</span>
-                      <span>{(editorCode.length / 1024).toFixed(1)} KB</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-1 rounded bg-[#FEC00F]/15 text-[#FEC00F] text-[9px] font-bold tracking-wider">
-                        AFL
-                      </span>
-                    </div>
+              {/* Monaco Editor */}
+              <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                {editorCode ? (
+                  <Editor
+                    height="100%"
+                    defaultLanguage="cpp"
+                    theme="vs-dark"
+                    value={editorCode}
+                    onChange={(value) => setEditorCode(value || '')}
+                    onMount={(editor) => { editorRef.current = editor; }}
+                    options={{
+                      fontSize: 13,
+                      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      padding: { top: 16, bottom: 16 },
+                      lineNumbers: 'on',
+                      wordWrap: 'on',
+                      automaticLayout: true,
+                      scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
+                      lineHeight: 22,
+                      letterSpacing: 0.3,
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '16px',
+                    padding: '60px 40px',
+                  }}>
+                    {isLoadingCode ? (
+                      <>
+                        <div style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '16px',
+                          background: 'rgba(254, 192, 15, 0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <Loader2 size={28} color="#FEC00F" className="animate-spin" />
+                        </div>
+                        <div className="text-center" style={{ maxWidth: '280px' }}>
+                          <h4 style={{
+                            fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                            fontSize: '16px',
+                            fontWeight: 700,
+                            color: '#FFFFFF',
+                            marginBottom: '8px',
+                          }}>
+                            Loading Code...
+                          </h4>
+                          <p style={{
+                            fontSize: '13px',
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            textAlign: 'center',
+                            lineHeight: 1.6,
+                            margin: 0,
+                          }}>
+                            Fetching generated AFL code from the server.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '16px',
+                          background: 'rgba(254, 192, 15, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <Code2 size={32} color="rgba(255, 255, 255, 0.3)" strokeWidth={1.5} />
+                        </div>
+                        <div className="text-center" style={{ maxWidth: '280px' }}>
+                          <h4 style={{
+                            fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                            fontSize: '16px',
+                            fontWeight: 700,
+                            color: '#FFFFFF',
+                            marginBottom: '8px',
+                          }}>
+                            Code Will Appear Here
+                          </h4>
+                          <p style={{
+                            fontSize: '13px',
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            textAlign: 'center',
+                            lineHeight: 1.6,
+                            margin: 0,
+                          }}>
+                            Describe your trading strategy to generate AFL code. The file will auto-download when ready.
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+
+              {/* Quick Actions */}
+              {editorCode && (
+                <div style={{
+                  padding: '12px 20px',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                  display: 'flex',
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                  background: 'rgba(0, 0, 0, 0.2)',
+                }}>
+                  {[
+                    { label: 'Optimize', prompt: `Optimize this AFL code for better performance:\n\`\`\`afl\n${editorCode}\n\`\`\`` },
+                    { label: 'Debug', prompt: `Debug this AFL code and find potential issues:\n\`\`\`afl\n${editorCode}\n\`\`\`` },
+                    { label: 'Explain', prompt: `Explain this AFL code line by line:\n\`\`\`afl\n${editorCode}\n\`\`\`` },
+                    { label: 'Feedback', prompt: '' },
+                  ].map(({ label, prompt }) => (
+                    <button
+                      key={label}
+                      onClick={() => {
+                        if (label === 'Feedback') {
+                          setShowFeedbackModal(true);
+                          return;
+                        }
+                        setInput(prompt);
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        backgroundColor: 'transparent',
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        cursor: 'pointer',
+                        fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Knowledge Base Panel */}
+        <KnowledgeBasePanel
+          isOpen={showKBPanel}
+          onClose={() => setShowKBPanel(false)}
+          selectedDocIds={selectedKBDocIds}
+          onSelectedDocIdsChange={setSelectedKBDocIds}
+          onAddToMessage={handleAddKBDocs}
+          isDark={isDark}
+        />
+
+        {/* Settings Modal */}
         <AnimatePresence>
-          {showKBPanel && (
-            <KnowledgeBasePanel
-              isOpen={showKBPanel}
-              onClose={() => setShowKBPanel(false)}
-              selectedDocIds={selectedKBDocIds}
-              onSelectionChange={setSelectedKBDocIds}
-              onAttachDocs={(docs) => {
-                setAttachedKBDocs(prev => {
-                  const existingIds = new Set(prev.map(d => d.id));
-                  const newDocs = docs.filter(d => !existingIds.has(d.id));
-                  return [...prev, ...newDocs];
-                });
-                setShowKBPanel(false);
-              }}
+          {showSettings && (
+            <SettingsModal
+              isOpen={showSettings}
+              onClose={() => setShowSettings(false)}
+              settings={backtestSettings}
+              onSettingsChange={setBacktestSettings}
+              isDark={isDark}
             />
           )}
         </AnimatePresence>
 
-        {/* Strategy History Panel */}
-        <AnimatePresence>
-          {showStrategyHistory && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 flex items-center justify-end bg-black/60 backdrop-blur-md"
-              onClick={() => setShowStrategyHistory(false)}
-            >
-              <motion.div
-                initial={{ x: 400, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 400, opacity: 0 }}
-                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                onClick={(e) => e.stopPropagation()}
-                className="h-full w-full max-w-md flex flex-col afl-glass"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(12, 12, 16, 0.98) 0%, rgba(8, 8, 10, 0.95) 100%)',
-                  borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
-                  boxShadow: '-24px 0 48px -12px rgba(0, 0, 0, 0.5)',
-                }}
-              >
-                {/* Header */}
-                <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ background: 'linear-gradient(135deg, #00DED1 0%, #00B8AC 100%)' }}
-                    >
-                      <History size={20} className="text-black" strokeWidth={2.5} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-white tracking-wide uppercase">
-                        Strategy History
-                      </h2>
-                      <p className="text-xs text-white/50">Generated AFL codes</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowStrategyHistory(false)}
-                    className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                  >
-                    <X size={18} className="text-white/60" />
-                  </button>
-                </div>
-
-                {/* Strategy List */}
-                <ScrollArea className="flex-1">
-                  <div className="p-4 space-y-3">
-                    {allMessages.filter(m => {
-                      if (m.role !== 'assistant') return false;
-                      const content = typeof m.content === 'string' ? m.content : '';
-                      return extractAFLCode(content) !== null;
-                    }).map((msg, idx) => {
-                      const content = typeof msg.content === 'string' ? msg.content : '';
-                      const code = extractAFLCode(content);
-                      const preview = code?.split('\n').slice(0, 3).join('\n') || '';
-                      const timestamp = msg.createdAt || new Date();
-                      
-                      return (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.05 }}
-                          className="group relative p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-[#00DED1]/20 transition-all cursor-pointer"
-                          onClick={() => {
-                            if (code) {
-                              setEditorCode(code);
-                              setGeneratedCode(code);
-                              setShowStrategyHistory(false);
-                              toast.success('Strategy loaded into editor');
-                            }
-                          }}
-                        >
-                          {/* Strategy Info */}
-                          <div className="flex items-start gap-3 mb-3">
-                            <div className="w-9 h-9 rounded-lg bg-[#00DED1]/15 flex items-center justify-center shrink-0">
-                              <Code2 size={16} className="text-[#00DED1]" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-semibold text-white mb-1">
-                                Strategy #{allMessages.filter(m => {
-                                  if (m.role !== 'assistant') return false;
-                                  const c = typeof m.content === 'string' ? m.content : '';
-                                  return extractAFLCode(c) !== null;
-                                }).length - idx}
-                              </h4>
-                              <p className="text-[10px] text-white/40 flex items-center gap-1.5">
-                                <Clock size={10} />
-                                {new Date(timestamp).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Code Preview */}
-                          <div className="relative">
-                            <pre className="text-[10px] leading-relaxed text-white/60 font-mono bg-black/30 rounded-lg p-3 overflow-hidden">
-                              {preview}...
-                            </pre>
-                            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
-                          </div>
-
-                          {/* Hover Actions */}
-                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (code) {
-                                  navigator.clipboard.writeText(code);
-                                  toast.success('Code copied to clipboard');
-                                }
-                              }}
-                              className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
-                            >
-                              <Copy size={12} className="text-white/80" />
-                            </button>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-
-                    {/* Empty State */}
-                    {allMessages.filter(m => {
-                      if (m.role !== 'assistant') return false;
-                      const content = typeof m.content === 'string' ? m.content : '';
-                      return extractAFLCode(content) !== null;
-                    }).length === 0 && (
-                      <div className="flex flex-col items-center justify-center py-16">
-                        <div 
-                          className="w-16 h-16 rounded-xl flex items-center justify-center mb-4"
-                          style={{ 
-                            background: 'linear-gradient(135deg, rgba(0, 222, 209, 0.1) 0%, rgba(0, 222, 209, 0.02) 100%)',
-                            border: '1px solid rgba(0, 222, 209, 0.1)'
-                          }}
-                        >
-                          <History size={24} className="text-[#00DED1]/50" />
-                        </div>
-                        <p className="text-sm font-medium text-white/60 mb-1">No Strategies Yet</p>
-                        <p className="text-xs text-white/30 text-center px-8">
-                          Generated AFL codes will appear here for quick access
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <ScrollBar />
-                </ScrollArea>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Settings Modal */}
-      <AnimatePresence>
-        {showSettings && (
-          <SettingsModal
-            isOpen={showSettings}
-            onClose={() => setShowSettings(false)}
-            settings={backtestSettings}
-            onSettingsChange={setBacktestSettings}
+        {/* Feedback Modal */}
+        {showFeedbackModal && (
+          <FeedbackModal
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+            generatedCode={editorCode || generatedCode}
+            conversationId={selectedConversation?.id}
           />
         )}
-      </AnimatePresence>
-
-      {/* Feedback Modal */}
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => setShowFeedbackModal(false)}
-        feedbackType="negative"
-        context={{}}
-      />
+      </div>
     </>
   );
 }
