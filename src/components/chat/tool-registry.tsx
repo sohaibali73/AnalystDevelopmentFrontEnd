@@ -458,11 +458,23 @@ function renderInvokeSkill(
   // ── Check if output looks like React/artifact code result ───────────────────
   // Check multiple places where code might be stored
   const outputText = output?.text || output?.code || output?.data?.text || output?.data?.code || '';
-  const looksLikeReactArtifact = outputText && (
+  
+  // Helper: check if text looks like a file list (not code)
+  const looksLikeFileList = (text: string) => {
+    if (!text || text.length < 20) return false;
+    const lines = text.trim().split('\n').filter((l: string) => l.trim());
+    if (lines.length < 3) return false;
+    const fileNameLines = lines.filter((l: string) => /^\s*[\w-]+\.(md|txt|json|yaml|yml|ts|tsx|js|jsx|py|css|html)\s*$/.test(l.trim()));
+    return fileNameLines.length > lines.length * 0.5;
+  };
+  
+  const looksLikeReactArtifact = outputText && !looksLikeFileList(outputText) && (
+    // Has code fence with React-like language
     /```(jsx|tsx|react|javascript|js)\s*\n/.test(outputText) ||
-    (/function\s+[A-Z][a-zA-Z]*/.test(outputText) && /<[A-Z][a-zA-Z]*[\s/>]/.test(outputText)) ||
-    // Direct code property with React patterns
-    (output?.code && /return\s*[\(\<]/.test(output.code) && /<[A-Z]/.test(output.code)) ||
+    // Has a component function and JSX - must also have return statement
+    (/function\s+[A-Z][a-zA-Z]*/.test(outputText) && /<[A-Z][a-zA-Z]*[\s/>]/.test(outputText) && /return\s*[\(\<]/.test(outputText)) ||
+    // Direct code property with React patterns (must have all three: component, JSX, return)
+    (output?.code && output.code.length > 50 && /return\s*[\(\<]/.test(output.code) && /<[A-Z]/.test(output.code) && /(?:function|const|let|var)\s+[A-Z]/.test(output.code)) ||
     // Has explicit language indicator
     (output?.language && ['jsx', 'tsx', 'react'].includes(output.language?.toLowerCase()))
   );

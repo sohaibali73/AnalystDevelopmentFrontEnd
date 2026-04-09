@@ -92,22 +92,14 @@ export function ReactArtifact({ code, isDark, onError }: ReactArtifactProps) {
           window[key] = window.Recharts[key];
         });
       }
-      
-      // Make React hooks available globally
-      var useState = React.useState;
-      var useEffect = React.useEffect;
-      var useRef = React.useRef;
-      var useMemo = React.useMemo;
-      var useCallback = React.useCallback;
-      var useContext = React.useContext;
-      var useReducer = React.useReducer;
-      var createContext = React.createContext;
-      var Fragment = React.Fragment;
     </script>
 
     <script type="text/babel" data-presets="react">
       try {
-        // User code — var declarations are function-scoped, so they're accessible below
+        // Make React hooks available globally
+        const { useState, useEffect, useRef, useMemo, useCallback, useContext, useReducer, createContext, Fragment } = React;
+        
+        // User code
         ${cleanCode}
         
         // Detect the component
@@ -142,7 +134,7 @@ export function ReactArtifact({ code, isDark, onError }: ReactArtifactProps) {
         console.error("Artifact Error:", err);
         document.getElementById('root').innerHTML = 
           '<div class="artifact-error">' +
-          '<strong>⚠ Render Error</strong>\\n\\n' +
+          '<strong>Render Error</strong>\\n\\n' +
           (err.message || String(err)).replace(/</g, '&lt;') +
           '</div>';
         window.parent.postMessage({ type: 'REACT_ARTIFACT_ERROR', error: err.message || String(err) }, '*');

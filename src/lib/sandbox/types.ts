@@ -9,7 +9,8 @@
 export type SandboxLanguage = 'python' | 'javascript' | 'react';
 
 // Display types returned from sandbox execution
-export type SandboxDisplayType = 'text' | 'image' | 'html' | 'react' | 'json';
+// v3 adds: 'plotly' for interactive charts, 'file' for downloadable files
+export type SandboxDisplayType = 'text' | 'image' | 'html' | 'react' | 'json' | 'plotly' | 'file';
 
 // Artifact encoding
 export type ArtifactEncoding = 'base64' | 'utf-8';
@@ -23,14 +24,22 @@ export interface ExecuteCodeRequest {
   session_id?: string; // Pass same ID across turns to share state
 }
 
+// File artifact metadata (v3) - for display_type="file"
+export interface FileArtifactMetadata {
+  filename: string;
+  size_bytes: number;
+  extension: string;
+  downloadable: boolean;
+}
+
 // Sandbox artifact returned from execution
 export interface SandboxArtifact {
   artifact_id: string;
-  type: string; // e.g., 'image/png', 'text/html'
+  type: string; // e.g., 'image/png', 'text/html', 'text/csv', 'application/vnd.openxmlformats-...'
   display_type: SandboxDisplayType;
-  data: string; // base64 for images, HTML for react/html
+  data: string; // base64 for images, HTML for react/html/plotly, file content for files
   encoding: ArtifactEncoding;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | FileArtifactMetadata;
   created_at?: number;
 }
 

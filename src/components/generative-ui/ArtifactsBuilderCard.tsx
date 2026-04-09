@@ -45,12 +45,36 @@ function extractCodeBlocks(text: string): Array<{ code: string; language: string
 function isRenderableReact(code: string, language: string): boolean {
   const reactLangs = ['jsx', 'tsx', 'react', 'javascript', 'js', 'typescript', 'ts'];
   if (!reactLangs.includes(language.toLowerCase())) return false;
+  
+  // Must have actual JSX syntax, not just HTML-like strings
   const hasJSX = /<[A-Z][a-zA-Z]*[\s/>]/.test(code) ||
     /<div|<span|<button|<input|<form|<section|<main|<header|<p[ >]|<h[1-6]/.test(code);
   if (!hasJSX) return false;
+  
+  // Must have a component definition
   const hasComponent = /(?:function|const|let|var|class)\s+[A-Z][a-zA-Z]*/.test(code) ||
     /export\s+default\s+function/.test(code);
-  return hasComponent && (/return\s*\(/.test(code) || /return\s*</.test(code));
+  if (!hasComponent) return false;
+  
+  // Must have a return with JSX
+  const hasReturn = /return\s*\(/.test(code) || /return\s*</.test(code);
+  if (!hasReturn) return false;
+  
+  // Additional sanity: must have some minimal code length and not look like a file list
+  if (code.length < 50) return false;
+  if (/^\s*[\w-]+\.(?:md|txt|json|yaml|yml|ts|tsx|js|jsx)\s*$/m.test(code)) return false;
+  
+  return true;
+}
+
+/** Check if text looks like a file list (not code) */
+function looksLikeFileList(text: string): boolean {
+  if (!text) return false;
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 3) return false;
+  // If most lines are just filenames (word.extension format), it's a file list
+  const fileNameLines = lines.filter(l => /^\s*[\w-]+\.(md|txt|json|yaml|yml|ts|tsx|js|jsx|py|css|html)\s*$/.test(l.trim()));
+  return fileNameLines.length > lines.length * 0.5;
 }
 
 /** Clean code for iframe execution */
@@ -437,6 +461,17 @@ export function ArtifactsBuilderCard(props: ArtifactsBuilderCardProps) {
         {props.error}
       </div>
     );
+  }
+
+  // Check if this looks like a file list (not actual artifact content)
+  const isFileList = useMemo(() => {
+    return looksLikeFileList(props.text || '');
+  }, [props.text]);
+
+  // If this is a file list, don't render as artifacts builder - return null to fall through to default
+  // This prevents non-artifact content from being displayed incorrectly
+  if (isFileList && !props.code) {
+    return null;
   }
 
   // Extract code blocks from text
