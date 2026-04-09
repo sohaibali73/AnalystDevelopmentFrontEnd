@@ -95,11 +95,11 @@ export function ReactArtifact({ code, isDark, onError }: ReactArtifactProps) {
     </script>
 
     <script type="text/babel" data-presets="react">
-      (function() {
-        // Make React hooks available in this scope
+      try {
+        // Make React hooks available globally
         const { useState, useEffect, useRef, useMemo, useCallback, useContext, useReducer, createContext, Fragment } = React;
         
-        // User code — using function scope for proper variable handling
+        // User code
         ${cleanCode}
         
         // Detect the component
@@ -130,12 +130,11 @@ export function ReactArtifact({ code, isDark, onError }: ReactArtifactProps) {
             "\\n\\nDetected names: " + typeof ${componentName}
           );
         }
-      })(); // Close IIFE
       } catch (err) {
         console.error("Artifact Error:", err);
         document.getElementById('root').innerHTML = 
           '<div class="artifact-error">' +
-          '<strong>⚠ Render Error</strong>\\n\\n' +
+          '<strong>Render Error</strong>\\n\\n' +
           (err.message || String(err)).replace(/</g, '&lt;') +
           '</div>';
         window.parent.postMessage({ type: 'REACT_ARTIFACT_ERROR', error: err.message || String(err) }, '*');
