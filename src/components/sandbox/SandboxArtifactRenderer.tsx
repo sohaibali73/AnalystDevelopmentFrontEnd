@@ -62,8 +62,21 @@ export function SandboxArtifactRenderer({
     }
   };
 
-  // Error state
-  if (!result.success) {
+  // Handle malformed or missing result
+  if (!result || typeof result !== 'object') {
+    return (
+      <div className={`sandbox-result ${className}`} style={styles.errorContainer}>
+        <div style={styles.errorHeader}>
+          <AlertCircle size={16} style={{ color: '#ef4444' }} />
+          <span style={styles.errorTitle}>Invalid Result</span>
+        </div>
+        <pre style={styles.errorContent}>No execution result available</pre>
+      </div>
+    );
+  }
+
+  // Error state (success explicitly false, or error present)
+  if (result.success === false || result.error) {
     return (
       <div className={`sandbox-result sandbox-result--error ${className}`} style={styles.errorContainer}>
         <div style={styles.errorHeader}>
@@ -98,10 +111,12 @@ export function SandboxArtifactRenderer({
           )}
         </div>
         <div style={styles.headerRight}>
-          <span style={styles.execTime}>
-            <Clock size={12} />
-            {result.execution_time_ms.toFixed(0)}ms
-          </span>
+          {result.execution_time_ms != null && (
+            <span style={styles.execTime}>
+              <Clock size={12} />
+              {result.execution_time_ms.toFixed(0)}ms
+            </span>
+          )}
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
             style={styles.iconButton}
@@ -163,17 +178,21 @@ export function SandboxArtifactRenderer({
         </div>
       )}
 
-      {/* Meta footer */}
-      <div style={styles.footer}>
-        <span style={styles.footerText}>
-          Session: {result.session_id?.slice(0, 8)}...
-        </span>
-        {result.execution_id && (
-          <span style={styles.footerText}>
-            Exec: {result.execution_id.slice(0, 8)}...
-          </span>
-        )}
-      </div>
+      {/* Meta footer - only show if we have session/execution IDs */}
+      {(result.session_id || result.execution_id) && (
+        <div style={styles.footer}>
+          {result.session_id && (
+            <span style={styles.footerText}>
+              Session: {result.session_id.slice(0, 8)}...
+            </span>
+          )}
+          {result.execution_id && (
+            <span style={styles.footerText}>
+              Exec: {result.execution_id.slice(0, 8)}...
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
