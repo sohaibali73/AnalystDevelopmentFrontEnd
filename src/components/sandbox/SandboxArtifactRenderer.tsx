@@ -45,7 +45,7 @@ interface SandboxArtifactRendererProps {
  * Main renderer component for sandbox execution results
  */
 export function SandboxArtifactRenderer({ 
-  result, 
+  result: rawResult, 
   onRerun,
   className = '',
 }: SandboxArtifactRendererProps) {
@@ -63,7 +63,7 @@ export function SandboxArtifactRenderer({
   };
 
   // Handle malformed or missing result
-  if (!result || typeof result !== 'object') {
+  if (!rawResult || typeof rawResult !== 'object') {
     return (
       <div className={`sandbox-result ${className}`} style={styles.errorContainer}>
         <div style={styles.errorHeader}>
@@ -75,8 +75,42 @@ export function SandboxArtifactRenderer({
     );
   }
 
-  // Error state (success explicitly false, or error present)
-  if (result.success === false || result.error) {
+  // Normalize the result - handle various backend response shapes
+  // The result could be:
+  // 1. Direct ExecutionResult: { success, output, display_type, artifacts, ... }
+  // 2. Nested in data: { data: { success, output, ... } }
+  // 3. Wrapped result: { result: { success, output, ... } }
+  const result: ExecutionResult = {
+    // Start with defaults
+    success: true,
+    output: '',
+    language: 'python',
+    display_type: 'text',
+    artifacts: [],
+    // Spread the raw result (handles direct format)
+    ...(rawResult as any),
+    // Handle nested formats
+    ...(rawResult.data && typeof rawResult.data === 'object' ? rawResult.data : {}),
+    ...(rawResult.result && typeof rawResult.result === 'object' ? rawResult.result : {}),
+  };
+
+  // Ensure artifacts is always an array
+  if (!Array.isArray(result.artifacts)) {
+    result.artifacts = [];
+  }
+
+  // If we have artifacts but no display_type, infer from first artifact
+  if (result.artifacts.length > 0 && !result.display_type) {
+    result.display_type = result.artifacts[0].display_type || 'text';
+  }
+
+  // Check for error conditions
+  const hasError = result.success === false || 
+    !!result.error || 
+    (typeof rawResult.success === 'boolean' && rawResult.success === false);
+
+  // Error state
+  if (hasError) {
     return (
       <div className={`sandbox-result sandbox-result--error ${className}`} style={styles.errorContainer}>
         <div style={styles.errorHeader}>
@@ -111,10 +145,10 @@ export function SandboxArtifactRenderer({
           )}
         </div>
         <div style={styles.headerRight}>
-          {result.execution_time_ms != null && (
+          {typeof result.execution_time_ms === 'number' && (
             <span style={styles.execTime}>
               <Clock size={12} />
-              {result.execution_time_ms.toFixed(0)}ms
+              {Number(result.execution_time_ms).toFixed(0)}ms
             </span>
           )}
           <button
@@ -201,7 +235,7 @@ export function SandboxArtifactRenderer({
  * Individual artifact renderer
  */
 function ArtifactItem({ 
-  artifact, 
+  artifact: rawArtifact, 
   isFullscreen 
 }: { 
   artifact: SandboxArtifact; 
@@ -209,6 +243,27 @@ function ArtifactItem({
 }) {
   const [viewMode, setViewMode] = useState<'preview' | 'data'>('preview');
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Normalize artifact - handle missing/malformed properties
+  const artifact: SandboxArtifact = {
+    artifact_id: rawArtifact?.artifact_id || `artifact-${Date.now()}`,
+    type: rawArtifact?.type || 'text/plain',
+    display_type: rawArtifact?.display_type || 'text',
+    data: rawArtifact?.data || '',
+    encoding: rawArtifact?.encoding || 'utf-8',
+    metadata: rawArtifact?.metadata,
+  };
+
+  // Early return if no data
+  if (!artifact.data) {
+    return (
+      <div style={styles.artifactContainer}>
+        <div style={styles.artifactHeader}>
+          <span style={{ color: '#8b949e', fontSize: 13 }}>Empty artifact</span>
+        </div>
+      </div>
+    );
+  }
 
   // Auto-resize iframe to content height
   const handleIframeLoad = useCallback(() => {
@@ -232,7 +287,8 @@ function ArtifactItem({
       'application/json': '.json',
     };
     const ext = extensions[artifact.type] || '.txt';
-    const filename = `artifact-${artifact.artifact_id.slice(0, 8)}${ext}`;
+    const artifactIdSlice = artifact.artifact_id?.slice(0, 8) || 'unknown';
+    const filename = `artifact-${artifactIdSlice}${ext}`;
     
     let blob: Blob;
     if (artifact.encoding === 'base64' && artifact.type.startsWith('image/')) {
@@ -383,7 +439,13 @@ function ArtifactItem({
         {/* JSON - formatted display */}
         {artifact.display_type === 'json' && (
           <pre style={styles.jsonContent}>
-            {JSON.stringify(JSON.parse(artifact.data), null, 2)}
+            {(() => {
+              try {
+                return JSON.stringify(JSON.parse(artifact.data), null, 2);
+              } catch {
+                return artifact.data; // Show raw data if parse fails
+              }
+            })()}
           </pre>
         )}
 

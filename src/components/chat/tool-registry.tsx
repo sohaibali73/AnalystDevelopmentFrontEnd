@@ -214,7 +214,7 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   sandbox_execute:          { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Sandbox' },
   code_execution:           { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Code Execution' },
 
-  // ── AFL Tools ────────────────────────────────────────────────────────────
+  // ── AFL Tools ────────────────────────────────────────────���───────────────
   generate_afl_code:        { component: AFLGenerateCard },
   validate_afl:             { component: AFLValidateCard },
   debug_afl_code:           { component: AFLDebugCard },
@@ -803,8 +803,16 @@ export function renderToolPart(
       case 'output-error': {
         // Pass the output to SandboxArtifactRenderer
         // It handles success/error states internally based on result.success
-        const sandboxResult = part.output || externalOutput;
+        // Try multiple sources for the result data
+        const sandboxResult = part.output || externalOutput || part.result;
         if (sandboxResult && typeof sandboxResult === 'object') {
+          // Add debugging for issues
+          console.log('[v0] Rendering sandbox result:', {
+            toolName,
+            hasArtifacts: !!(sandboxResult as any).artifacts?.length,
+            displayType: (sandboxResult as any).display_type,
+            language: (sandboxResult as any).language,
+          });
           return (
             <SandboxArtifactRenderer
               key={pIdx}
@@ -816,7 +824,19 @@ export function renderToolPart(
         if (part.state === 'output-error') {
           return <ToolError key={pIdx} toolName={displayName} errorText={part.errorText} output={part.output} />;
         }
-        return null;
+        // Show empty state instead of nothing
+        return (
+          <div key={pIdx} style={{ 
+            padding: '12px 16px', 
+            background: 'rgba(254, 192, 15, 0.1)', 
+            borderRadius: 8,
+            border: '1px solid rgba(254, 192, 15, 0.2)',
+            color: '#FEC00F',
+            fontSize: 13,
+          }}>
+            {displayName} completed but returned no visible output
+          </div>
+        );
       }
       default:
         return null;
