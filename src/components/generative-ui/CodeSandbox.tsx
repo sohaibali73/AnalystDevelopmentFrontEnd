@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
-import { Play, Copy, Check, RotateCcw, Terminal, Code2, ChevronDown, ChevronRight, Maximize2, Minimize2, Download, ExternalLink } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Play, Copy, Check, RotateCcw, Terminal, Code2, ChevronDown, ChevronRight, Maximize2, Minimize2, Download, ExternalLink, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { sandboxService, sessionManager, type SandboxLanguage, SandboxError } from '@/lib/sandbox';
 
 interface CodeSandboxProps {
   code: string;
@@ -12,6 +13,8 @@ interface CodeSandboxProps {
   editable?: boolean;
   autorun?: boolean;
   files?: Array<{ name: string; code: string; language?: string }>;
+  /** Use backend sandbox execution instead of client-side */
+  useBackend?: boolean;
   /** Callback to open in the full interactive sandbox */
   onOpenInSandbox?: (code: string, language: string) => void;
 }
@@ -64,6 +67,7 @@ export function CodeSandbox({
   editable = true,
   autorun = false,
   files = [],
+  useBackend = true,
   onOpenInSandbox,
 }: CodeSandboxProps) {
   const [code, setCode] = useState(initialCode);
@@ -74,37 +78,80 @@ export function CodeSandbox({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeFile, setActiveFile] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [executionSuccess, setExecutionSuccess] = useState<boolean | null>(null);
+  const [executionTime, setExecutionTime] = useState<number | null>(null);
+  const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const langStyle = languageColors[language.toLowerCase()] || languageColors.json;
+
+  // Check backend connection on mount
+  useEffect(() => {
+    if (useBackend) {
+      sandboxService.healthCheck().then(setBackendConnected).catch(() => setBackendConnected(false));
+    }
+  }, [useBackend]);
 
   const handleRun = useCallback(async () => {
     setIsRunning(true);
     setShowOutput(true);
     setOutput('Running...');
+    setExecutionSuccess(null);
+    setExecutionTime(null);
 
-    // Simulate execution (in a real app, this would call a backend API)
-    await new Promise(r => setTimeout(r, 800 + Math.random() * 1200));
-    
     try {
-      // Try to evaluate JavaScript/simple expressions
-      if (language === 'javascript' || language === 'typescript') {
-        try {
-          // Very limited safe eval for demo
-          const result = new Function(`"use strict"; ${code}; return typeof result !== 'undefined' ? result : 'Code executed successfully.';`)();
-          setOutput(String(result));
-        } catch (e: any) {
-          setOutput(`Error: ${e.message}`);
+      // Use backend sandbox if available and enabled
+      if (useBackend && backendConnected) {
+        const sandboxLanguage: SandboxLanguage = language === 'javascript' || language === 'typescript' ? 'javascript' : 'python';
+        
+        const result = await sandboxService.execute({
+          code,
+          language: sandboxLanguage,
+          timeout: 30,
+        });
+
+        setExecutionSuccess(result.success);
+        setExecutionTime(result.execution_time_ms);
+        
+        if (result.success) {
+          setOutput(result.output || 'Code executed successfully (no output)');
+        } else {
+          setOutput(`Error: ${result.error}`);
         }
+
+        // Add to session history
+        const session = sessionManager.getOrCreateActiveSession();
+        sessionManager.addExecution(session.id, {
+          code,
+          language: sandboxLanguage,
+          result,
+        });
       } else {
-        setOutput(`[${language}] Code executed successfully.\n\nNote: Server-side execution not connected.\nCode length: ${code.length} chars, ${code.split('\n').length} lines.`);
+        // Fallback to client-side execution
+        await new Promise(r => setTimeout(r, 500));
+        
+        if (language === 'javascript' || language === 'typescript') {
+          try {
+            const result = new Function(`"use strict"; ${code}; return typeof result !== 'undefined' ? result : 'Code executed successfully.';`)();
+            setOutput(String(result));
+            setExecutionSuccess(true);
+          } catch (e: any) {
+            setOutput(`Error: ${e.message}`);
+            setExecutionSuccess(false);
+          }
+        } else {
+          setOutput(`[${language}] Code parsed successfully.\n\nNote: Connect to backend for full ${language} execution.\nCode: ${code.split('\n').length} lines, ${code.length} chars.`);
+          setExecutionSuccess(true);
+        }
       }
-    } catch {
-      setOutput('Execution completed.');
+    } catch (err) {
+      const message = err instanceof SandboxError ? err.message : 'Execution failed';
+      setOutput(`Error: ${message}`);
+      setExecutionSuccess(false);
     }
 
     setIsRunning(false);
-  }, [code, language]);
+  }, [code, language, useBackend, backendConnected]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
@@ -156,14 +203,26 @@ export function CodeSandbox({
             {language}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          {/* Backend status indicator */}
+          {useBackend && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px',
+              borderRadius: '6px', fontSize: '10px', fontWeight: 500,
+              backgroundColor: backendConnected === null ? 'rgba(255,193,7,0.1)' : backendConnected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+              color: backendConnected === null ? '#FFC107' : backendConnected ? '#22C55E' : '#EF4444',
+            }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: backendConnected === null ? '#FFC107' : backendConnected ? '#22C55E' : '#EF4444' }} />
+              {backendConnected === null ? 'Checking' : backendConnected ? 'Connected' : 'Offline'}
+            </div>
+          )}
           <button onClick={handleRun} disabled={isRunning} style={{
             display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 12px',
             borderRadius: '6px', border: 'none', cursor: isRunning ? 'not-allowed' : 'pointer',
             backgroundColor: isRunning ? 'rgba(34,197,94,0.1)' : '#22C55E',
             color: isRunning ? '#22C55E' : '#fff', fontSize: '11px', fontWeight: 700,
           }}>
-            <Play size={12} />
+            {isRunning ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={12} />}
             {isRunning ? 'Running...' : 'Run'}
           </button>
           <button onClick={handleCopy} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -268,19 +327,37 @@ export function CodeSandbox({
             onClick={() => setShowOutput(!showOutput)}
             style={{
               width: '100%', padding: '8px 16px', background: 'rgba(255,255,255,0.02)',
-              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: 600,
             }}
           >
-            <Terminal size={12} />
-            {showOutput ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            Output
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Terminal size={12} />
+              {showOutput ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Output
+              {executionSuccess !== null && (
+                <span style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '2px 6px', borderRadius: '4px', fontSize: '10px',
+                  backgroundColor: executionSuccess ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                  color: executionSuccess ? '#22C55E' : '#EF4444',
+                }}>
+                  {executionSuccess ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
+                  {executionSuccess ? 'Success' : 'Error'}
+                </span>
+              )}
+            </div>
+            {executionTime !== null && (
+              <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>
+                {executionTime.toFixed(2)}ms
+              </span>
+            )}
           </button>
           {showOutput && (
             <pre style={{
               margin: 0, padding: '12px 16px', backgroundColor: '#010409',
               fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', lineHeight: 1.6,
-              color: output.startsWith('Error') ? '#F97583' : '#7EE787',
+              color: executionSuccess === false || output.startsWith('Error') ? '#F97583' : '#7EE787',
               whiteSpace: 'pre-wrap', maxHeight: '200px', overflow: 'auto',
             }}>
               {output || 'No output yet. Click "Run" to execute.'}

@@ -19,6 +19,10 @@
   100% { transform: translateX(100%); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 5px var(--accent-glow); }
   50% { box-shadow: 0 0 20px var(--accent-glow), 0 0 30px var(--accent-glow); }
