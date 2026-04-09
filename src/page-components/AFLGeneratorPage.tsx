@@ -7,7 +7,7 @@ import {
   Loader2, RefreshCw, Search, Pencil, X, Copy, ThumbsUp, 
   ThumbsDown, Download, Code2, Settings2, Sparkles, Check, 
   Database, BookOpen, PanelLeft, FileText, Zap, TrendingUp,
-  BarChart3, Activity, MessageSquare, Clock, ChevronDown
+  BarChart3, Activity, MessageSquare, Clock, ChevronDown, History
 } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -188,9 +188,9 @@ function SettingsModal({
               <Settings2 size={20} className="text-black" strokeWidth={2.5} />
             </div>
             <div>
-              <h2 className="font-sans text-base font-bold text-white tracking-wide uppercase">
-                Backtest Settings
-              </h2>
+                  <h2 className="text-base font-bold text-white tracking-wide uppercase">
+                    Backtest Settings
+                  </h2>
               <p className="text-xs text-white/50">Configure parameters</p>
             </div>
           </div>
@@ -346,6 +346,7 @@ export function AFLGeneratorPage() {
   const [generatedCode, setGeneratedCode] = useState('');
   const [editorCode, setEditorCode] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [showStrategyHistory, setShowStrategyHistory] = useState(false);
   const [backtestSettings, setBacktestSettings] = useState({
     initial_equity: 100000,
     position_size: '100',
@@ -822,6 +823,18 @@ export function AFLGeneratorPage() {
             {/* Header Actions */}
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowStrategyHistory(!showStrategyHistory)}
+                className={`px-3.5 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold transition-all ${
+                  showStrategyHistory 
+                    ? 'bg-[#00DED1]/15 border border-[#00DED1]/30 text-[#00DED1]' 
+                    : 'bg-white/[0.04] border border-white/[0.06] text-white/60 hover:text-white/80 hover:bg-white/[0.06]'
+                }`}
+              >
+                <History size={14} />
+                <span className="hidden sm:inline">Strategy History</span>
+              </button>
+
+              <button
                 onClick={() => setShowKBPanel(!showKBPanel)}
                 className={`px-3.5 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold transition-all ${
                   showKBPanel 
@@ -1175,6 +1188,160 @@ export function AFLGeneratorPage() {
                 setShowKBPanel(false);
               }}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Strategy History Panel */}
+        <AnimatePresence>
+          {showStrategyHistory && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 flex items-center justify-end bg-black/60 backdrop-blur-md"
+              onClick={() => setShowStrategyHistory(false)}
+            >
+              <motion.div
+                initial={{ x: 400, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 400, opacity: 0 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                onClick={(e) => e.stopPropagation()}
+                className="h-full w-full max-w-md flex flex-col afl-glass"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(12, 12, 16, 0.98) 0%, rgba(8, 8, 10, 0.95) 100%)',
+                  borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+                  boxShadow: '-24px 0 48px -12px rgba(0, 0, 0, 0.5)',
+                }}
+              >
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, #00DED1 0%, #00B8AC 100%)' }}
+                    >
+                      <History size={20} className="text-black" strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-white tracking-wide uppercase">
+                        Strategy History
+                      </h2>
+                      <p className="text-xs text-white/50">Generated AFL codes</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowStrategyHistory(false)}
+                    className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                  >
+                    <X size={18} className="text-white/60" />
+                  </button>
+                </div>
+
+                {/* Strategy List */}
+                <ScrollArea className="flex-1">
+                  <div className="p-4 space-y-3">
+                    {allMessages.filter(m => {
+                      if (m.role !== 'assistant') return false;
+                      const content = typeof m.content === 'string' ? m.content : '';
+                      return extractAFLCode(content) !== null;
+                    }).map((msg, idx) => {
+                      const content = typeof msg.content === 'string' ? msg.content : '';
+                      const code = extractAFLCode(content);
+                      const preview = code?.split('\n').slice(0, 3).join('\n') || '';
+                      const timestamp = msg.createdAt || new Date();
+                      
+                      return (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          className="group relative p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-[#00DED1]/20 transition-all cursor-pointer"
+                          onClick={() => {
+                            if (code) {
+                              setEditorCode(code);
+                              setGeneratedCode(code);
+                              setShowStrategyHistory(false);
+                              toast.success('Strategy loaded into editor');
+                            }
+                          }}
+                        >
+                          {/* Strategy Info */}
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="w-9 h-9 rounded-lg bg-[#00DED1]/15 flex items-center justify-center shrink-0">
+                              <Code2 size={16} className="text-[#00DED1]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-semibold text-white mb-1">
+                                Strategy #{allMessages.filter(m => {
+                                  if (m.role !== 'assistant') return false;
+                                  const c = typeof m.content === 'string' ? m.content : '';
+                                  return extractAFLCode(c) !== null;
+                                }).length - idx}
+                              </h4>
+                              <p className="text-[10px] text-white/40 flex items-center gap-1.5">
+                                <Clock size={10} />
+                                {new Date(timestamp).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Code Preview */}
+                          <div className="relative">
+                            <pre className="text-[10px] leading-relaxed text-white/60 font-mono bg-black/30 rounded-lg p-3 overflow-hidden">
+                              {preview}...
+                            </pre>
+                            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+                          </div>
+
+                          {/* Hover Actions */}
+                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (code) {
+                                  navigator.clipboard.writeText(code);
+                                  toast.success('Code copied to clipboard');
+                                }
+                              }}
+                              className="w-7 h-7 rounded-lg bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+                            >
+                              <Copy size={12} className="text-white/80" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+
+                    {/* Empty State */}
+                    {allMessages.filter(m => {
+                      if (m.role !== 'assistant') return false;
+                      const content = typeof m.content === 'string' ? m.content : '';
+                      return extractAFLCode(content) !== null;
+                    }).length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-16">
+                        <div 
+                          className="w-16 h-16 rounded-xl flex items-center justify-center mb-4"
+                          style={{ 
+                            background: 'linear-gradient(135deg, rgba(0, 222, 209, 0.1) 0%, rgba(0, 222, 209, 0.02) 100%)',
+                            border: '1px solid rgba(0, 222, 209, 0.1)'
+                          }}
+                        >
+                          <History size={24} className="text-[#00DED1]/50" />
+                        </div>
+                        <p className="text-sm font-medium text-white/60 mb-1">No Strategies Yet</p>
+                        <p className="text-xs text-white/30 text-center px-8">
+                          Generated AFL codes will appear here for quick access
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <ScrollBar />
+                </ScrollArea>
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
