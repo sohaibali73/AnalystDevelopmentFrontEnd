@@ -69,7 +69,7 @@ interface ToolPartState {
   toolName?: string;
 }
 
-type ToolRenderMode = 'standard' | 'persistent' | 'document-generation' | 'flight-search';
+type ToolRenderMode = 'standard' | 'persistent' | 'document-generation' | 'flight-search' | 'sandbox';
 
 interface ToolRegistryEntry {
   component: React.ComponentType<any>;
@@ -198,9 +198,21 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   get_options_snapshot:     { component: OptionsSnapshot },
 
   // ── Code & Knowledge Base ────────────────────────────────────────────────
-  execute_python:           { component: CodeExecution },
   search_knowledge_base:    { component: KnowledgeBaseResults },
   code_sandbox:             { component: CodeSandbox },
+  
+  // ── Sandbox Execution (uses SandboxArtifactRenderer for live previews) ───
+  execute_python:           { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Python' },
+  execute_react:            { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'React' },
+  execute_javascript:       { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'JavaScript' },
+  executePython:            { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Python' },
+  executeReact:             { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'React' },
+  executeJavascript:        { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'JavaScript' },
+  run_code:                 { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Code Execution' },
+  run_python:               { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Python' },
+  run_react:                { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'React' },
+  sandbox_execute:          { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Sandbox' },
+  code_execution:           { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Code Execution' },
 
   // ── AFL Tools ────────────────────────────────────────────────────────────
   generate_afl_code:        { component: AFLGenerateCard },
@@ -779,6 +791,38 @@ export function renderToolPart(
     }
   }
 
+  // ── Sandbox execution (execute_react, execute_python, etc.) ────────────────
+  // Renders live React previews, matplotlib charts, and other sandbox artifacts
+  if (entry?.mode === 'sandbox') {
+    const displayName = entry.displayName || toolName;
+    switch (part.state) {
+      case 'input-streaming':
+      case 'input-available':
+        return <ToolLoading key={pIdx} toolName={displayName} input={part.input} />;
+      case 'output-available':
+      case 'output-error': {
+        // Pass the output to SandboxArtifactRenderer
+        // It handles success/error states internally based on result.success
+        const sandboxResult = part.output || externalOutput;
+        if (sandboxResult && typeof sandboxResult === 'object') {
+          return (
+            <SandboxArtifactRenderer
+              key={pIdx}
+              result={sandboxResult}
+            />
+          );
+        }
+        // Fallback if no usable output
+        if (part.state === 'output-error') {
+          return <ToolError key={pIdx} toolName={displayName} errorText={part.errorText} output={part.output} />;
+        }
+        return null;
+      }
+      default:
+        return null;
+    }
+  }
+
   // ── Unknown / dynamic tool — smart fallback ────────────────────────────────
   return renderDynamicTool(part, pIdx, toolName);
 }
@@ -794,6 +838,28 @@ function renderDynamicTool(
   // This allows us to show usable artifacts even after errors
   const hasOutput = typeof part.output === 'object' && part.output;
   const out = (hasOutput ? part.output : {}) as any;
+  
+  // ── Check for sandbox execution output (execute_react, execute_python, etc.) ────
+  // Sandbox results have: success, output, execution_time_ms, language, artifacts, display_type
+  const looksLikeSandboxOutput = out && (
+    // Has sandbox-specific fields
+    (out.execution_id && out.session_id) ||
+    (out.execution_time_ms !== undefined && out.language && ['python', 'javascript', 'react'].includes(out.language)) ||
+    (out.display_type && ['text', 'image', 'html', 'react', 'json'].includes(out.display_type)) ||
+    // Has artifacts array with sandbox artifact structure
+    (out.artifacts && Array.isArray(out.artifacts) && out.artifacts.length > 0 && 
+     (out.artifacts[0].artifact_id || out.artifacts[0].display_type))
+  );
+  
+  // Render sandbox output with SandboxArtifactRenderer for live previews
+  if (looksLikeSandboxOutput && (part.state === 'output-available' || part.state === 'output-error')) {
+    return (
+      <SandboxArtifactRenderer
+        key={pIdx}
+        result={out}
+      />
+    );
+  }
   
   // ── Check for React artifact output (works for both success and error states) ────
   const outputText = out.text || out.code || out.data?.text || out.data?.code || '';
