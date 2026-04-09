@@ -92,22 +92,14 @@ export function ReactArtifact({ code, isDark, onError }: ReactArtifactProps) {
           window[key] = window.Recharts[key];
         });
       }
-      
-      // Make React hooks available globally
-      var useState = React.useState;
-      var useEffect = React.useEffect;
-      var useRef = React.useRef;
-      var useMemo = React.useMemo;
-      var useCallback = React.useCallback;
-      var useContext = React.useContext;
-      var useReducer = React.useReducer;
-      var createContext = React.createContext;
-      var Fragment = React.Fragment;
     </script>
 
     <script type="text/babel" data-presets="react">
-      try {
-        // User code — var declarations are function-scoped, so they're accessible below
+      (function() {
+        // Make React hooks available in this scope
+        const { useState, useEffect, useRef, useMemo, useCallback, useContext, useReducer, createContext, Fragment } = React;
+        
+        // User code — using function scope for proper variable handling
         ${cleanCode}
         
         // Detect the component
@@ -138,6 +130,7 @@ export function ReactArtifact({ code, isDark, onError }: ReactArtifactProps) {
             "\\n\\nDetected names: " + typeof ${componentName}
           );
         }
+      })(); // Close IIFE
       } catch (err) {
         console.error("Artifact Error:", err);
         document.getElementById('root').innerHTML = 
