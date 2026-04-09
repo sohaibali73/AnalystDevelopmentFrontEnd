@@ -60,6 +60,17 @@ const IconGeneric = ({ size = 20, color = 'currentColor' }) => (
   </svg>
 );
 
+// Potomac-branded document icon with distinctive style
+const IconPotomacDoc = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="2" width="13" height="17" rx="2" fill={color} opacity="0.18" stroke={color} strokeWidth="1.5"/>
+    <path d="M7 7h6M7 10h6M7 13h4" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    {/* Potomac "P" mark */}
+    <circle cx="17" cy="17" r="5" fill={color} opacity="0.9"/>
+    <path d="M15.5 14.5v5M15.5 14.5h2a1.25 1.25 0 1 1 0 2.5h-2" stroke="#111" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const IconDownload = ({ size = 14, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -96,7 +107,7 @@ const IconClock = ({ size = 12, color = 'currentColor' }) => (
 
 // ─── File Type Definitions ───────────────────────────────────────────────────
 
-type FileType = 'docx' | 'pptx' | 'xlsx' | 'pdf' | 'afl' | 'datapack' | 'generic';
+type FileType = 'docx' | 'pptx' | 'xlsx' | 'pdf' | 'afl' | 'datapack' | 'potomac_docx' | 'generic';
 
 interface FileTypeMeta {
   IconComponent: React.ComponentType<{ size?: number; color?: string }>;
@@ -205,6 +216,22 @@ const FILE_TYPES: Record<FileType, FileTypeMeta> = {
       'Packaging files',
     ],
   },
+  potomac_docx: {
+    IconComponent: IconPotomacDoc,
+    label: 'Potomac Document',
+    color: '#F5B800',  // Potomac yellow
+    gradient: 'linear-gradient(135deg, #F5B800 0%, #FFD54F 100%)',
+    bgLight: 'rgba(245,184,0,0.10)',
+    bgDark: 'rgba(245,184,0,0.18)',
+    phases: [
+      'Processing document specification',
+      'Structuring sections and content',
+      'Applying Potomac branding',
+      'Building tables and formatting',
+      'Generating DOCX file',
+      'Finalising Potomac document',
+    ],
+  },
   generic: {
     IconComponent: IconGeneric,
     label: 'File',
@@ -241,6 +268,8 @@ interface DocumentGenerationCardProps {
 function detectFileType(toolName: string, input?: any): FileType {
   const name = (toolName || '').toLowerCase();
   const inputStr = JSON.stringify(input || {}).toLowerCase();
+  // Check for Potomac's generate_docx tool specifically (server-side DOCX generator)
+  if (name === 'generate_docx') return 'potomac_docx';
   if (name.includes('docx') || name.includes('word') || name.includes('document')) return 'docx';
   if (name.includes('pptx') || name.includes('powerpoint') || name.includes('presentation') || name.includes('slide') || name.includes('deck')) return 'pptx';
   if (name.includes('xlsx') || name.includes('excel') || name.includes('spreadsheet')) return 'xlsx';
@@ -524,7 +553,8 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = outputData?.filename || outputData?.title || `generated-file.${fileType === 'generic' ? 'bin' : fileType}`;
+      const fileExt = fileType === 'generic' ? 'bin' : fileType === 'potomac_docx' ? 'docx' : fileType;
+      link.download = outputData?.filename || outputData?.title || `generated-file.${fileExt}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -559,7 +589,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   // ── Fetch and parse file for preview ─────────────────────────────────────
   const loadPreview = useCallback(async () => {
     if (!downloadUrl || !isComplete) return;
-    const supportedTypes = ['docx', 'xlsx', 'pdf'];
+    const supportedTypes = ['docx', 'potomac_docx', 'xlsx', 'pdf'];
     if (!supportedTypes.includes(fileType)) return;
 
     setPreviewLoading(true);
@@ -570,7 +600,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
       });
       if (!response.ok) throw new Error('Failed to fetch file');
       const blob = await response.blob();
-      const filename = outputData?.filename || `file.${fileType}`;
+      const filename = outputData?.filename || `file.${fileType === 'potomac_docx' ? 'docx' : fileType}`;
       const parsed = await parseFileForPreview(blob, filename);
       setParsedDoc(parsed);
     } catch (err) {
@@ -582,7 +612,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   }, [downloadUrl, isComplete, fileType, outputData]);
 
   useEffect(() => {
-    if (previewOpen && isComplete && downloadUrl && (fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf')) {
+    if (previewOpen && isComplete && downloadUrl && (fileType === 'docx' || fileType === 'potomac_docx' || fileType === 'xlsx' || fileType === 'pdf')) {
       loadPreview();
     }
   }, [previewOpen, isComplete, downloadUrl, fileType, loadPreview]);
@@ -929,7 +959,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           </div>
         )}
 
-        {/* ── Error section ─────────────────────────────────────────────────── */}
+        {/* ── Error section ───────────────────────────────────────────────��─── */}
         {isError && (
           <div style={{
             padding: '11px 13px',
@@ -1010,7 +1040,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                         letterSpacing: '0.5px',
                         textTransform: 'uppercase',
                       }}>
-                        {fileType.toUpperCase()}
+                        {fileType === 'potomac_docx' ? 'DOCX' : fileType.toUpperCase()}
                       </span>
                       {formatSize() && <span>{formatSize()}</span>}
                       <span style={{ opacity: 0.35 }}>·</span>
@@ -1030,7 +1060,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     borderRadius: '9px',
                     border: 'none',
                     background: meta.gradient,
-                    color: '#FFFFFF',
+                    color: fileType === 'potomac_docx' ? '#111111' : '#FFFFFF',
                     fontWeight: 700,
                     fontSize: '12px',
                     cursor: 'pointer',
@@ -1050,8 +1080,8 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     e.currentTarget.style.boxShadow = `0 4px 14px ${meta.color}35`;
                   }}
                 >
-                  <IconDownload size={13} color="#fff" />
-                  Download {fileType.toUpperCase()}
+                  <IconDownload size={13} color={fileType === 'potomac_docx' ? '#111' : '#fff'} />
+                  Download {fileType === 'potomac_docx' ? 'DOCX' : fileType.toUpperCase()}
                 </button>
               </div>
             )}
@@ -1093,8 +1123,32 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
               )}
               <div style={{ fontSize: '11.5px', color: mutedCol, display: 'flex', alignItems: 'center', gap: '3px' }}>
                 <span style={{ fontWeight: 700, color: textColor }}>Time </span>
-                {formatTime(elapsedTime)}
+                {/* Show exec_time_ms from generate_docx response if available, otherwise use elapsed time */}
+                {outputData.exec_time_ms
+                  ? `${(outputData.exec_time_ms / 1000).toFixed(1)}s`
+                  : formatTime(elapsedTime)}
               </div>
+              {/* Show Potomac branding for generate_docx */}
+              {fileType === 'potomac_docx' && (
+                <div style={{
+                  fontSize: '10px',
+                  color: meta.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase',
+                  fontFamily: "'DM Mono', monospace",
+                  marginLeft: 'auto',
+                }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" fill={meta.color} opacity="0.15" stroke={meta.color} strokeWidth="1.5"/>
+                    <path d="M9 8v8M9 8h3a2 2 0 1 1 0 4H9" stroke={meta.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  POTOMAC
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -1110,7 +1164,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     borderRadius: '9px',
                     border: 'none',
                     background: meta.gradient,
-                    color: '#FFFFFF',
+                    color: fileType === 'potomac_docx' ? '#111111' : '#FFFFFF',
                     fontWeight: 700,
                     fontSize: '12.5px',
                     cursor: 'pointer',
@@ -1128,8 +1182,8 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     e.currentTarget.style.boxShadow = `0 3px 10px ${meta.color}28`;
                   }}
                 >
-                  <IconDownload size={13} color="#fff" />
-                  DOWNLOAD {fileType.toUpperCase()}
+                  <IconDownload size={13} color={fileType === 'potomac_docx' ? '#111' : '#fff'} />
+                  DOWNLOAD {fileType === 'potomac_docx' ? 'DOCX' : fileType.toUpperCase()}
                 </button>
               )}
 
@@ -1210,7 +1264,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         )}
 
         {/* ── Inline live preview panel (JS library-based) ────────────────────── */}
-        {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+        {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'potomac_docx' || fileType === 'xlsx' || fileType === 'pdf') && (
           <div style={{
             marginTop: '12px',
             borderRadius: '10px',
@@ -1504,7 +1558,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         )}
 
         {/* ── Collapsed preview toggle ──────────────────────────────────────── */}
-        {isComplete && downloadUrl && !previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+        {isComplete && downloadUrl && !previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'potomac_docx' || fileType === 'xlsx' || fileType === 'pdf') && (
           <div style={{ marginTop: '10px' }}>
             <button
               onClick={() => setPreviewOpen(true)}
@@ -1525,7 +1579,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         )}
 
         {/* ── Open in new tab button (when preview is shown) ────────────────── */}
-        {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+        {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'potomac_docx' || fileType === 'xlsx' || fileType === 'pdf') && (
           <div style={{ marginTop: '8px', display: 'flex', gap: '7px' }}>
             <button
               onClick={() => window.open(resolveUrl(downloadUrl), '_blank')}
