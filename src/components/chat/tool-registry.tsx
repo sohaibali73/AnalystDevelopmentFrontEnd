@@ -143,6 +143,13 @@ const INVOKE_ARTIFACTS_SLUGS = new Set([
   'create_artifact',
   'react_component',
   'component_builder',
+  'react',           // Direct react skill
+  'jsx',             // JSX variants
+  'tsx',
+  'sandbox',         // Sandbox artifacts
+  'code_artifact',
+  'create_react',
+  'react_artifact',
 ]);
 
 const INVOKE_DCF_SLUGS = new Set([
@@ -255,6 +262,15 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   // Generic skill cards
   ai_elements:              { component: SkillResultCard,      displayName: 'AI Elements' },
   artifacts_builder:        { component: ArtifactsBuilderCard, displayName: 'Artifacts Builder' },
+  
+  // ── React/Artifact tools (direct tool calls) ─────────────────────────────────
+  react:                    { component: ArtifactsBuilderCard, displayName: 'React' },
+  jsx:                      { component: ArtifactsBuilderCard, displayName: 'JSX' },
+  tsx:                      { component: ArtifactsBuilderCard, displayName: 'TSX' },
+  react_artifact:           { component: ArtifactsBuilderCard, displayName: 'React Artifact' },
+  create_react:             { component: ArtifactsBuilderCard, displayName: 'React Component' },
+  code_artifact:            { component: ArtifactsBuilderCard, displayName: 'Code Artifact' },
+  sandbox_artifact:         { component: ArtifactsBuilderCard, displayName: 'Sandbox Artifact' },
 
   // ── Document Generation (direct tool calls, not via invoke_skill) ─────────
   create_word_document:     { component: DocumentGenerationCard, mode: 'document-generation' },
@@ -288,17 +304,55 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
 
 // ─── Error Component ──────────────────────────────────────────────────────────
 
-function ToolError({ toolName, errorText }: { toolName: string; errorText?: string }) {
+function ToolError({ toolName, errorText, output }: { toolName: string; errorText?: string; output?: any }) {
+  // If there's output data despite the error, show it in a collapsed section
+  const hasOutput = output && typeof output === 'object' && Object.keys(output).length > 0;
+  const [showOutput, setShowOutput] = React.useState(false);
+  
   return (
     <div style={{
       padding: '12px',
-      backgroundColor: 'var(--error-dim)',
+      backgroundColor: 'var(--error-dim, rgba(239,68,68,0.1))',
       borderRadius: '12px',
       marginTop: '8px',
-      color: 'var(--error)',
+      color: 'var(--error, #ef4444)',
       fontSize: '13px',
+      border: '1px solid var(--error-border, rgba(239,68,68,0.2))',
     }}>
-      {toolName.replace(/_/g, ' ')} error: {errorText || 'Unknown error'}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>{toolName.replace(/_/g, ' ')} error: {errorText || 'Execution failed - output may still be available'}</span>
+        {hasOutput && (
+          <button 
+            onClick={() => setShowOutput(!showOutput)}
+            style={{
+              padding: '4px 8px',
+              fontSize: '11px',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              border: '1px solid currentColor',
+              borderRadius: '4px',
+              color: 'inherit',
+              cursor: 'pointer',
+            }}
+          >
+            {showOutput ? 'Hide' : 'Show'} Output
+          </button>
+        )}
+      </div>
+      {hasOutput && showOutput && (
+        <pre style={{
+          marginTop: '8px',
+          padding: '8px',
+          backgroundColor: 'rgba(0,0,0,0.2)',
+          borderRadius: '6px',
+          fontSize: '11px',
+          overflow: 'auto',
+          maxHeight: '200px',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}>
+          {JSON.stringify(output, null, 2)}
+        </pre>
+      )}
     </div>
   );
 }
@@ -373,9 +427,15 @@ function renderInvokeSkill(
   );
 
   // ── Check if output looks like React/artifact code result ───────────────────
-  const looksLikeReactArtifact = output && output.text && (
-    /```(jsx|tsx|react|javascript|js)\s*\n/.test(output.text) ||
-    (/function\s+[A-Z][a-zA-Z]*/.test(output.text) && /<[A-Z][a-zA-Z]*[\s/>]/.test(output.text))
+  // Check multiple places where code might be stored
+  const outputText = output?.text || output?.code || output?.data?.text || output?.data?.code || '';
+  const looksLikeReactArtifact = outputText && (
+    /```(jsx|tsx|react|javascript|js)\s*\n/.test(outputText) ||
+    (/function\s+[A-Z][a-zA-Z]*/.test(outputText) && /<[A-Z][a-zA-Z]*[\s/>]/.test(outputText)) ||
+    // Direct code property with React patterns
+    (output?.code && /return\s*[\(\<]/.test(output.code) && /<[A-Z]/.test(output.code)) ||
+    // Has explicit language indicator
+    (output?.language && ['jsx', 'tsx', 'react'].includes(output.language?.toLowerCase()))
   );
 
   // ── Check if output looks like presentation result ─────────────────────────
@@ -405,21 +465,26 @@ function renderInvokeSkill(
   }
 
   // ── Artifacts Builder skills → ArtifactsBuilderCard (ALL states for live preview) ────
-  // Also detect by output shape if it contains React code
-  if (INVOKE_ARTIFACTS_SLUGS.has(slug) || (part.state === 'output-available' && looksLikeReactArtifact)) {
+  // Also detect by output shape if it contains React code - INCLUDING error states with usable output
+  // This ensures artifacts persist on page refresh even if the tool technically errored
+  if (INVOKE_ARTIFACTS_SLUGS.has(slug) || looksLikeReactArtifact) {
     // For loading states, show the tool loading spinner
     if (part.state === 'input-streaming' || part.state === 'input-available') {
       return <ToolLoading key={pIdx} toolName={displaySlug} input={part.input} />;
     }
-    // For output, render the artifacts builder with live preview
-    return (
-      <ArtifactsBuilderCard
-        key={pIdx}
-        skill={slug}
-        skill_name={displaySlug}
-        {...(typeof part.output === 'object' && part.output ? part.output : {})}
-      />
-    );
+    // For output (including error states with usable data), render the artifacts builder with live preview
+    // This allows artifacts to persist even after page refresh if we have the code
+    if (part.state === 'output-available' || (part.state === 'output-error' && looksLikeReactArtifact)) {
+      return (
+        <ArtifactsBuilderCard
+          key={pIdx}
+          skill={slug}
+          skill_name={displaySlug}
+          success={part.state === 'output-available'}
+          {...(typeof part.output === 'object' && part.output ? part.output : {})}
+        />
+      );
+    }
   }
 
   // ── Analysis/Research skills → specific cards (check FIRST) ─────────────
@@ -468,8 +533,53 @@ function renderInvokeSkill(
         />
       );
     }
-    case 'output-error':
-      return <ToolError key={pIdx} toolName={displaySlug} errorText={part.errorText} />;
+    case 'output-error': {
+      // Before showing error, check if we have usable artifact data to display instead
+      // This handles cases where the tool "errored" but still produced viewable content
+      if (looksLikeReactArtifact) {
+        return (
+          <ArtifactsBuilderCard
+            key={pIdx}
+            skill={slug}
+            skill_name={displaySlug}
+            success={false}
+            {...(typeof part.output === 'object' && part.output ? part.output : {})}
+          />
+        );
+      }
+      if (looksLikeAFLOutput) {
+        return (
+          <AFLGenerationCard
+            key={pIdx}
+            toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+            toolName={slug || 'afl_generation'}
+            input={part.input}
+            output={part.output}
+            externalOutput={externalOutput}
+            state={'output-available' as any}
+            errorText={part.errorText}
+            conversationId={conversationId || undefined}
+          />
+        );
+      }
+      if (looksLikeDocumentOutput) {
+        return (
+          <DocumentGenerationCard
+            key={pIdx}
+            toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+            toolName={slug || 'invoke_skill'}
+            input={part.input}
+            output={part.output}
+            externalOutput={externalOutput}
+            state={'output-available' as any}
+            errorText={part.errorText}
+            conversationId={conversationId || undefined}
+          />
+        );
+      }
+      // No usable output data - show the error
+      return <ToolError key={pIdx} toolName={displaySlug} errorText={part.errorText} output={part.output} />;
+    }
     default:
       return null;
   }
@@ -507,23 +617,63 @@ export function renderToolPart(
   const entry = TOOL_REGISTRY[toolName];
 
   // ── Standard tool ──────────────────────────────────────────────────────────
+  // Check if this is an artifact-type tool that needs special prop passing
+  const isArtifactTool = entry?.component === ArtifactsBuilderCard || 
+    ['react', 'jsx', 'tsx', 'react_artifact', 'code_artifact', 'sandbox_artifact', 'create_react', 'artifacts_builder'].includes(toolName);
+  
   if (entry && (!entry.mode || entry.mode === 'standard')) {
     const loadingName = entry.displayName || toolName;
+    const hasUsableOutput = typeof part.output === 'object' && part.output && Object.keys(part.output).length > 0;
     switch (part.state) {
       case 'input-streaming':
       case 'input-available':
         return <ToolLoading key={pIdx} toolName={loadingName} input={part.input} />;
       case 'output-available': {
         const Component = entry.component;
+        // For artifact tools, pass skill metadata along with output
+        if (isArtifactTool) {
+          return (
+            <Component
+              key={pIdx}
+              skill={toolName}
+              skill_name={loadingName}
+              success={true}
+              {...(hasUsableOutput ? part.output : {})}
+            />
+          );
+        }
         return (
           <Component
             key={pIdx}
-            {...(typeof part.output === 'object' && part.output ? part.output : {})}
+            {...(hasUsableOutput ? part.output : {})}
           />
         );
       }
-      case 'output-error':
-        return <ToolError key={pIdx} toolName={toolName} errorText={part.errorText} />;
+      case 'output-error': {
+        // If we have usable output despite the error, show the component instead of error
+        if (hasUsableOutput) {
+          const Component = entry.component;
+          // For artifact tools, pass skill metadata
+          if (isArtifactTool) {
+            return (
+              <Component
+                key={pIdx}
+                skill={toolName}
+                skill_name={loadingName}
+                success={false}
+                {...part.output}
+              />
+            );
+          }
+          return (
+            <Component
+              key={pIdx}
+              {...part.output}
+            />
+          );
+        }
+        return <ToolError key={pIdx} toolName={toolName} errorText={part.errorText} output={part.output} />;
+      }
       default:
         return null;
     }
@@ -576,7 +726,7 @@ export function renderToolPart(
           />
         );
       case 'output-error':
-        return <ToolError key={pIdx} toolName="search_flights" errorText={part.errorText} />;
+        return <ToolError key={pIdx} toolName="search_flights" errorText={part.errorText} output={part.output} />;
       default:
         return null;
     }
@@ -593,9 +743,34 @@ function renderDynamicTool(
   pIdx: number,
   toolName: string,
 ): React.ReactNode {
-  if (part.state === 'output-available' && typeof part.output === 'object' && part.output) {
-    const out = part.output as any;
+  // Check output for both output-available AND output-error states
+  // This allows us to show usable artifacts even after errors
+  const hasOutput = typeof part.output === 'object' && part.output;
+  const out = (hasOutput ? part.output : {}) as any;
+  
+  // ── Check for React artifact output (works for both success and error states) ────
+  const outputText = out.text || out.code || out.data?.text || out.data?.code || '';
+  const looksLikeReactArtifact = outputText && (
+    /```(jsx|tsx|react|javascript|js)\s*\n/.test(outputText) ||
+    (/function\s+[A-Z][a-zA-Z]*/.test(outputText) && /<[A-Z][a-zA-Z]*[\s/>]/.test(outputText)) ||
+    (out.code && /return\s*[\(\<]/.test(out.code) && /<[A-Z]/.test(out.code)) ||
+    (out.language && ['jsx', 'tsx', 'react'].includes(out.language?.toLowerCase()))
+  );
+  
+  // Render React artifacts even in error state to preserve persistence
+  if (looksLikeReactArtifact && (part.state === 'output-available' || part.state === 'output-error')) {
+    return (
+      <ArtifactsBuilderCard
+        key={pIdx}
+        skill={toolName}
+        skill_name={toolName}
+        success={part.state === 'output-available'}
+        {...out}
+      />
+    );
+  }
 
+  if ((part.state === 'output-available' || part.state === 'output-error') && hasOutput) {
     // ── AFL code output detection → use rich AFLGenerationCard ─────────────────
     if (
       out.afl_code ||
@@ -612,7 +787,7 @@ function renderDynamicTool(
           toolName={toolName}
           input={part.input}
           output={out}
-          state={part.state as any}
+          state={'output-available' as any}
           errorText={part.errorText}
         />
       );
