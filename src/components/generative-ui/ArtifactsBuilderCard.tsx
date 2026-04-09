@@ -143,8 +143,20 @@ window.addEventListener('message', function handler(e) {
         throw new Error('No renderable component found');
       }
     } catch(err) {
-      document.getElementById('root').innerHTML = '<div class="err"><strong>Render Error<\\/strong>\\n\\n' + String(err.message||err).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '<\\/div>';
-      window.parent.postMessage({ type: 'PREVIEW_ERROR', error: String(err.message||err) }, '*');
+      var errorMsg = String(err.message||err);
+      var helpText = '';
+      
+      // Add helpful hints for common errors
+      if (errorMsg.includes('Unexpected token, expected ":"')) {
+        helpText = '\\n\\nHint: This is usually caused by an incomplete ternary operator (? :). Check that all ternary expressions have both the true and false cases.';
+      } else if (errorMsg.includes('Unexpected token')) {
+        helpText = '\\n\\nHint: There is a syntax error in the generated code. The AI may have produced invalid JSX.';
+      } else if (errorMsg.includes('is not defined')) {
+        helpText = '\\n\\nHint: A variable or component is being used before it is defined. Check imports and declarations.';
+      }
+      
+      document.getElementById('root').innerHTML = '<div class="err"><strong>Render Error<\\/strong>\\n\\n' + errorMsg.replace(/</g,'&lt;').replace(/>/g,'&gt;') + helpText + '<\\/div>';
+      window.parent.postMessage({ type: 'PREVIEW_ERROR', error: errorMsg }, '*');
     }
   }
   waitAndRender();
@@ -330,18 +342,36 @@ if(_C)ReactDOM.createRoot(document.getElementById('root')).render(React.createEl
         {tab === 'preview' && error && !loading && (
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 3,
-            padding: '10px 14px', background: 'rgba(220,38,38,.12)', borderTop: '1px solid #dc2626',
-            color: '#f87171', fontSize: 12, fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 14px', background: 'rgba(220,38,38,.15)', borderTop: '1px solid #dc2626',
+            color: '#f87171', fontSize: 12, fontFamily: 'monospace',
           }}>
-            <AlertTriangle size={14} />
-            <span style={{ flex: 1 }}>{error.length > 100 ? error.slice(0, 100) + '...' : error}</span>
-            <button onClick={handleRetry} style={{
-              padding: '4px 10px', borderRadius: 4, border: '1px solid #dc2626',
-              background: 'rgba(220,38,38,.15)', color: '#f87171', cursor: 'pointer',
-              fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              <RefreshCw size={11} /> Retry
-            </button>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, marginBottom: 4, color: '#fca5a5' }}>
+                  Code Compilation Error
+                </div>
+                <div style={{ 
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  maxHeight: 80, overflow: 'auto', lineHeight: 1.4,
+                }}>
+                  {error}
+                </div>
+                {error.includes('expected ":"') && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: '#fbbf24', fontStyle: 'italic' }}>
+                    Tip: Incomplete ternary expression - ask the AI to fix the code
+                  </div>
+                )}
+              </div>
+              <button onClick={handleRetry} style={{
+                padding: '6px 12px', borderRadius: 5, border: '1px solid #dc2626',
+                background: 'rgba(220,38,38,.2)', color: '#f87171', cursor: 'pointer',
+                fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5,
+                flexShrink: 0,
+              }}>
+                <RefreshCw size={12} /> Retry
+              </button>
+            </div>
           </div>
         )}
 
