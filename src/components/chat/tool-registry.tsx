@@ -55,6 +55,7 @@ import DocumentGenerationCard from '@/components/generative-ui/DocumentGeneratio
 import AFLGenerationCard from '@/components/generative-ui/AFLGenerationCard';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
+import { SandboxArtifactRenderer } from '@/components/sandbox';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -156,6 +157,22 @@ const INVOKE_DCF_SLUGS = new Set([
   'dcf_model',
   'run_dcf_model',
   'create_dcf_model',
+]);
+
+// Sandbox execution skills - these render with SandboxArtifactRenderer
+const INVOKE_SANDBOX_SLUGS = new Set([
+  'execute_sandbox',
+  'executesandbox',
+  'sandbox_execute',
+  'run_code',
+  'execute_code',
+  'code_execution',
+  'python_execute',
+  'javascript_execute',
+  'run_python',
+  'run_javascript',
+  'run_react',
+  'sandbox',
 ]);
 
 // ─── Tool Registry ────────────────────────────────────────────────────────────
@@ -462,6 +479,36 @@ function renderInvokeSkill(
         conversationId={conversationId || undefined}
       />
     );
+  }
+
+  // ── Check if output looks like sandbox execution result ─────────────────────
+  // Sandbox results have: success, output, execution_time_ms, language, artifacts
+  const looksLikeSandboxOutput = output && (
+    (output.execution_id && output.session_id) ||
+    (output.execution_time_ms !== undefined && output.language && ['python', 'javascript', 'react'].includes(output.language)) ||
+    (output.display_type && ['text', 'image', 'html', 'react', 'json'].includes(output.display_type)) ||
+    (output.artifacts && Array.isArray(output.artifacts) && output.artifacts.length > 0 && output.artifacts[0].artifact_id)
+  );
+
+  // ── Sandbox execution skills → SandboxArtifactRenderer ──────────────────────
+  // Renders code execution results with proper artifact display (charts, React components, etc)
+  if (INVOKE_SANDBOX_SLUGS.has(slug) || looksLikeSandboxOutput) {
+    // For loading states, show the tool loading spinner
+    if (part.state === 'input-streaming' || part.state === 'input-available') {
+      return <ToolLoading key={pIdx} toolName={displaySlug || 'Code Execution'} input={part.input} />;
+    }
+    // For output states, render with SandboxArtifactRenderer
+    if (part.state === 'output-available' || part.state === 'output-error') {
+      const sandboxResult = part.output || externalOutput;
+      if (sandboxResult) {
+        return (
+          <SandboxArtifactRenderer
+            key={pIdx}
+            result={sandboxResult}
+          />
+        );
+      }
+    }
   }
 
   // ── Artifacts Builder skills → ArtifactsBuilderCard (ALL states for live preview) ────

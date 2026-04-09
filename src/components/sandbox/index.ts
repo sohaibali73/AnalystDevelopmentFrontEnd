@@ -5,3 +5,4 @@
 
 export { PersistentSandboxPanel } from './PersistentSandboxPanel';
 export { default as PersistentSandboxPanelDefault } from './PersistentSandboxPanel';
+export { SandboxArtifactRenderer, default as SandboxArtifactRendererDefault } from './SandboxArtifactRenderer';

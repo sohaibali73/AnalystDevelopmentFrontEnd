@@ -3,220 +3,447 @@
 /**
  * useSandbox - React hook for sandbox integration
  * Provides easy access to sandbox functionality with state management
+ * 
+ * Supports conversation-based session management where each conversation
+ * maintains its own sandbox_session_id for persistent Python state.
+ * 
+ * Based on: SANDBOX_GUIDE.md Section 6 - Session Management Across Turns
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   sandboxService,
-  sessionManager,
   SandboxError,
-  type SandboxSession,
-  type SandboxArtifact,
   type SandboxLanguage,
   type ExecutionResult,
   type ExecuteCodeRequest,
+  type SessionHistoryResponse,
+  type SessionVariablesResponse,
 } from '@/lib/sandbox';
 
 export interface UseSandboxOptions {
-  autoCreateSession?: boolean;
+  /** Conversation ID to associate sandbox session with */
+  conversationId?: string;
+  /** Default programming language */
   defaultLanguage?: SandboxLanguage;
+  /** Auto-check backend connection on mount */
+  autoConnect?: boolean;
 }
 
 export interface UseSandboxReturn {
   // State
-  session: SandboxSession | null;
-  sessions: SandboxSession[];
+  sessionId: string | null;
   isConnected: boolean | null;
   isExecuting: boolean;
   lastResult: ExecutionResult | null;
   error: string | null;
+  history: SessionHistoryResponse | null;
+  variables: Record<string, unknown>;
   
   // Actions
-  execute: (request: ExecuteCodeRequest) => Promise<ExecutionResult>;
-  executeLLM: (request: ExecuteCodeRequest) => Promise<ExecutionResult>;
-  createSession: (name?: string) => SandboxSession;
-  switchSession: (sessionId: string) => void;
-  deleteSession: (sessionId: string) => void;
-  addArtifact: (artifact: Omit<SandboxArtifact, 'id' | 'createdAt' | 'updatedAt'>) => SandboxArtifact | null;
-  clearHistory: () => void;
+  execute: (code: string, language?: SandboxLanguage, options?: Partial<ExecuteCodeRequest>) => Promise<ExecutionResult>;
+  executeReact: (code: string) => Promise<ExecutionResult>;
+  executeLLM: (code: string, language?: SandboxLanguage) => Promise<ExecutionResult>;
   checkConnection: () => Promise<boolean>;
+  loadHistory: () => Promise<SessionHistoryResponse | null>;
+  loadVariables: () => Promise<SessionVariablesResponse | null>;
+  clearSession: () => Promise<boolean>;
+  setSessionId: (id: string) => void;
   
-  // Utilities
+  // Package management
   getPackages: (language: SandboxLanguage) => Promise<string[]>;
   installPackages: (language: SandboxLanguage, packages: string[]) => Promise<boolean>;
+  getPackageStatus: (language: SandboxLanguage, packageName: string) => Promise<boolean>;
+}
+
+/**
+ * Generate a UUID for new sessions
+ */
+function generateSessionId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+/**
+ * Local storage key for session mapping
+ */
+const SESSION_STORAGE_KEY = 'sandbox_sessions';
+
+/**
+ * Get or create session ID for a conversation
+ */
+function getOrCreateSessionForConversation(conversationId?: string): string {
+  if (typeof window === 'undefined') {
+    return generateSessionId();
+  }
+
+  try {
+    const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+    const sessions: Record<string, string> = stored ? JSON.parse(stored) : {};
+    
+    if (conversationId) {
+      if (sessions[conversationId]) {
+        return sessions[conversationId];
+      }
+      // Create new session for this conversation
+      const newId = generateSessionId();
+      sessions[conversationId] = newId;
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+      return newId;
+    }
+    
+    // No conversation ID - use a global session
+    if (sessions['__global__']) {
+      return sessions['__global__'];
+    }
+    const globalId = generateSessionId();
+    sessions['__global__'] = globalId;
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+    return globalId;
+  } catch {
+    return generateSessionId();
+  }
 }
 
 export function useSandbox(options: UseSandboxOptions = {}): UseSandboxReturn {
-  const { autoCreateSession = true, defaultLanguage = 'python' } = options;
+  const { 
+    conversationId, 
+    defaultLanguage = 'python',
+    autoConnect = true,
+  } = options;
 
   // State
-  const [session, setSession] = useState<SandboxSession | null>(null);
-  const [sessions, setSessions] = useState<SandboxSession[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [lastResult, setLastResult] = useState<ExecutionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<SessionHistoryResponse | null>(null);
+  const [variables, setVariables] = useState<Record<string, unknown>>({});
+  
+  // Track if component is mounted
+  const mountedRef = useRef(true);
 
-  // Initialize
+  // Initialize session ID based on conversation
   useEffect(() => {
-    // Load sessions
-    const allSessions = sessionManager.getAllSessions();
-    setSessions(allSessions);
+    const sid = getOrCreateSessionForConversation(conversationId);
+    setSessionId(sid);
+  }, [conversationId]);
 
-    // Get or create active session
-    if (autoCreateSession) {
-      const activeSession = sessionManager.getOrCreateActiveSession();
-      setSession(activeSession);
-    } else {
-      const activeSession = sessionManager.getActiveSession();
-      setSession(activeSession || null);
+  // Check connection on mount
+  useEffect(() => {
+    mountedRef.current = true;
+    
+    if (autoConnect) {
+      sandboxService.healthCheck()
+        .then(connected => {
+          if (mountedRef.current) {
+            setIsConnected(connected);
+          }
+        })
+        .catch(() => {
+          if (mountedRef.current) {
+            setIsConnected(false);
+          }
+        });
     }
 
-    // Check connection
-    sandboxService.healthCheck().then(setIsConnected).catch(() => setIsConnected(false));
-
-    // Subscribe to changes
-    const unsubscribe = sessionManager.subscribe(() => {
-      setSessions(sessionManager.getAllSessions());
-      const active = sessionManager.getActiveSession();
-      setSession(active || null);
-    });
-
-    return unsubscribe;
-  }, [autoCreateSession]);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [autoConnect]);
 
   // Execute code
-  const execute = useCallback(async (request: ExecuteCodeRequest): Promise<ExecutionResult> => {
+  const execute = useCallback(async (
+    code: string, 
+    language: SandboxLanguage = defaultLanguage,
+    options: Partial<ExecuteCodeRequest> = {}
+  ): Promise<ExecutionResult> => {
+    if (!sessionId) {
+      const errorResult: ExecutionResult = {
+        success: false,
+        output: null,
+        error: 'No session ID available',
+        execution_time_ms: 0,
+        language,
+        execution_id: '',
+        session_id: '',
+        display_type: 'text',
+        artifacts: [],
+      };
+      setLastResult(errorResult);
+      return errorResult;
+    }
+
     setIsExecuting(true);
     setError(null);
 
     try {
-      const result = await sandboxService.execute(request);
-      setLastResult(result);
+      const result = await sandboxService.execute({
+        code,
+        language,
+        session_id: sessionId, // Key: pass session for persistence
+        timeout: options.timeout || 30,
+        context: options.context,
+      });
 
-      // Add to session history
-      if (session) {
-        sessionManager.addExecution(session.id, {
-          code: request.code,
-          language: request.language || 'python',
-          result,
-        });
+      if (mountedRef.current) {
+        setLastResult(result);
+        // Update variables if returned
+        if (result.variables) {
+          setVariables(prev => ({ ...prev, ...result.variables }));
+        }
       }
 
       return result;
     } catch (err) {
       const message = err instanceof SandboxError ? err.message : 'Execution failed';
-      setError(message);
+      if (mountedRef.current) {
+        setError(message);
+      }
       
       const errorResult: ExecutionResult = {
         success: false,
-        output: '',
+        output: null,
         error: message,
         execution_time_ms: 0,
-        language: request.language || 'python',
+        language,
+        execution_id: '',
+        session_id: sessionId,
+        display_type: 'text',
+        artifacts: [],
       };
-      setLastResult(errorResult);
+      
+      if (mountedRef.current) {
+        setLastResult(errorResult);
+      }
       
       return errorResult;
     } finally {
-      setIsExecuting(false);
+      if (mountedRef.current) {
+        setIsExecuting(false);
+      }
     }
-  }, [session]);
+  }, [sessionId, defaultLanguage]);
+
+  // Execute React code (convenience wrapper)
+  const executeReact = useCallback(async (code: string): Promise<ExecutionResult> => {
+    if (!sessionId) {
+      const errorResult: ExecutionResult = {
+        success: false,
+        output: null,
+        error: 'No session ID available',
+        execution_time_ms: 0,
+        language: 'react',
+        execution_id: '',
+        session_id: '',
+        display_type: 'text',
+        artifacts: [],
+      };
+      setLastResult(errorResult);
+      return errorResult;
+    }
+
+    setIsExecuting(true);
+    setError(null);
+
+    try {
+      const result = await sandboxService.executeReact(code, sessionId);
+      
+      if (mountedRef.current) {
+        setLastResult(result);
+      }
+
+      return result;
+    } catch (err) {
+      const message = err instanceof SandboxError ? err.message : 'React execution failed';
+      if (mountedRef.current) {
+        setError(message);
+      }
+      
+      const errorResult: ExecutionResult = {
+        success: false,
+        output: null,
+        error: message,
+        execution_time_ms: 0,
+        language: 'react',
+        execution_id: '',
+        session_id: sessionId,
+        display_type: 'react',
+        artifacts: [],
+      };
+      
+      if (mountedRef.current) {
+        setLastResult(errorResult);
+      }
+      
+      return errorResult;
+    } finally {
+      if (mountedRef.current) {
+        setIsExecuting(false);
+      }
+    }
+  }, [sessionId]);
 
   // Execute in LLM sandbox (Docker)
-  const executeLLM = useCallback(async (request: ExecuteCodeRequest): Promise<ExecutionResult> => {
+  const executeLLM = useCallback(async (
+    code: string, 
+    language: SandboxLanguage = defaultLanguage
+  ): Promise<ExecutionResult> => {
+    if (!sessionId) {
+      const errorResult: ExecutionResult = {
+        success: false,
+        output: null,
+        error: 'No session ID available',
+        execution_time_ms: 0,
+        language,
+        execution_id: '',
+        session_id: '',
+        display_type: 'text',
+        artifacts: [],
+      };
+      setLastResult(errorResult);
+      return errorResult;
+    }
+
     setIsExecuting(true);
     setError(null);
 
     try {
-      const result = await sandboxService.executeLLM(request);
-      setLastResult(result);
+      const result = await sandboxService.executeLLM({
+        code,
+        language,
+        session_id: sessionId,
+        timeout: 60,
+      });
 
-      // Add to session history
-      if (session) {
-        sessionManager.addExecution(session.id, {
-          code: request.code,
-          language: request.language || 'python',
-          result,
-        });
+      if (mountedRef.current) {
+        setLastResult(result);
+        if (result.variables) {
+          setVariables(prev => ({ ...prev, ...result.variables }));
+        }
       }
 
       return result;
     } catch (err) {
-      const message = err instanceof SandboxError ? err.message : 'Execution failed';
-      setError(message);
+      const message = err instanceof SandboxError ? err.message : 'LLM execution failed';
+      if (mountedRef.current) {
+        setError(message);
+      }
       
       const errorResult: ExecutionResult = {
         success: false,
-        output: '',
+        output: null,
         error: message,
         execution_time_ms: 0,
-        language: request.language || 'python',
+        language,
+        execution_id: '',
+        session_id: sessionId,
+        display_type: 'text',
+        artifacts: [],
       };
-      setLastResult(errorResult);
+      
+      if (mountedRef.current) {
+        setLastResult(errorResult);
+      }
       
       return errorResult;
     } finally {
-      setIsExecuting(false);
-    }
-  }, [session]);
-
-  // Create session
-  const createSession = useCallback((name?: string): SandboxSession => {
-    const newSession = sessionManager.createSession(name);
-    setSession(newSession);
-    return newSession;
-  }, []);
-
-  // Switch session
-  const switchSession = useCallback((sessionId: string): void => {
-    sessionManager.setActiveSessionId(sessionId);
-    const switched = sessionManager.getSession(sessionId);
-    if (switched) {
-      setSession(switched);
-    }
-  }, []);
-
-  // Delete session
-  const deleteSession = useCallback((sessionId: string): void => {
-    sessionManager.deleteSession(sessionId);
-    
-    // If deleted current session, switch to another
-    if (session?.id === sessionId) {
-      const remaining = sessionManager.getAllSessions();
-      if (remaining.length > 0) {
-        switchSession(remaining[0].id);
-      } else if (autoCreateSession) {
-        createSession();
-      } else {
-        setSession(null);
+      if (mountedRef.current) {
+        setIsExecuting(false);
       }
     }
-  }, [session, switchSession, createSession, autoCreateSession]);
-
-  // Add artifact
-  const addArtifact = useCallback(
-    (artifact: Omit<SandboxArtifact, 'id' | 'createdAt' | 'updatedAt'>): SandboxArtifact | null => {
-      if (!session) return null;
-      return sessionManager.addArtifact(session.id, artifact);
-    },
-    [session]
-  );
-
-  // Clear history
-  const clearHistory = useCallback((): void => {
-    if (!session) return;
-    sessionManager.clearHistory(session.id);
-  }, [session]);
+  }, [sessionId, defaultLanguage]);
 
   // Check connection
   const checkConnection = useCallback(async (): Promise<boolean> => {
-    const connected = await sandboxService.healthCheck();
-    setIsConnected(connected);
-    return connected;
+    try {
+      const connected = await sandboxService.healthCheck();
+      if (mountedRef.current) {
+        setIsConnected(connected);
+      }
+      return connected;
+    } catch {
+      if (mountedRef.current) {
+        setIsConnected(false);
+      }
+      return false;
+    }
   }, []);
 
-  // Get packages
+  // Load session history
+  const loadHistory = useCallback(async (): Promise<SessionHistoryResponse | null> => {
+    if (!sessionId) return null;
+    
+    try {
+      const historyData = await sandboxService.getSessionHistory(sessionId);
+      if (mountedRef.current) {
+        setHistory(historyData);
+      }
+      return historyData;
+    } catch {
+      return null;
+    }
+  }, [sessionId]);
+
+  // Load session variables
+  const loadVariables = useCallback(async (): Promise<SessionVariablesResponse | null> => {
+    if (!sessionId) return null;
+    
+    try {
+      const varsData = await sandboxService.getSessionVariables(sessionId);
+      if (mountedRef.current) {
+        setVariables(varsData.variables);
+      }
+      return varsData;
+    } catch {
+      return null;
+    }
+  }, [sessionId]);
+
+  // Clear/delete session
+  const clearSession = useCallback(async (): Promise<boolean> => {
+    if (!sessionId) return false;
+    
+    try {
+      await sandboxService.deleteSession(sessionId);
+      
+      // Generate new session ID
+      const newId = generateSessionId();
+      
+      // Update storage
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+          const sessions: Record<string, string> = stored ? JSON.parse(stored) : {};
+          const key = conversationId || '__global__';
+          sessions[key] = newId;
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+        } catch { /* ignore */ }
+      }
+      
+      if (mountedRef.current) {
+        setSessionId(newId);
+        setHistory(null);
+        setVariables({});
+        setLastResult(null);
+        setError(null);
+      }
+      
+      return true;
+    } catch {
+      return false;
+    }
+  }, [sessionId, conversationId]);
+
+  // Get packages for language
   const getPackages = useCallback(async (language: SandboxLanguage): Promise<string[]> => {
     try {
       const result = await sandboxService.getPackages(language);
@@ -227,39 +454,69 @@ export function useSandbox(options: UseSandboxOptions = {}): UseSandboxReturn {
   }, []);
 
   // Install packages
-  const installPackages = useCallback(
-    async (language: SandboxLanguage, packages: string[]): Promise<boolean> => {
+  const installPackages = useCallback(async (
+    language: SandboxLanguage, 
+    packages: string[]
+  ): Promise<boolean> => {
+    try {
+      const result = await sandboxService.installPackages({
+        language,
+        packages,
+        user_id: sessionId || undefined,
+      });
+      return result.success;
+    } catch {
+      return false;
+    }
+  }, [sessionId]);
+
+  // Get package status
+  const getPackageStatus = useCallback(async (
+    language: SandboxLanguage,
+    packageName: string
+  ): Promise<boolean> => {
+    try {
+      const status = await sandboxService.getPackageStatus(language, packageName);
+      return status.installed;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Manual session ID setter (for integration with conversation loading)
+  const setSessionIdManually = useCallback((id: string) => {
+    setSessionId(id);
+    
+    // Also update storage
+    if (typeof window !== 'undefined' && conversationId) {
       try {
-        const result = await sandboxService.installPackages({
-          language,
-          packages,
-          user_id: session?.id,
-        });
-        return result.success;
-      } catch {
-        return false;
-      }
-    },
-    [session]
-  );
+        const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+        const sessions: Record<string, string> = stored ? JSON.parse(stored) : {};
+        sessions[conversationId] = id;
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+      } catch { /* ignore */ }
+    }
+  }, [conversationId]);
 
   return {
-    session,
-    sessions,
+    sessionId,
     isConnected,
     isExecuting,
     lastResult,
     error,
+    history,
+    variables,
     execute,
+    executeReact,
     executeLLM,
-    createSession,
-    switchSession,
-    deleteSession,
-    addArtifact,
-    clearHistory,
     checkConnection,
+    loadHistory,
+    loadVariables,
+    clearSession,
+    setSessionId: setSessionIdManually,
     getPackages,
     installPackages,
+    getPackageStatus,
   };
 }
 
