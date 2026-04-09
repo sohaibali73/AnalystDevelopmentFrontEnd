@@ -547,6 +547,66 @@ export function AFLGeneratorPage() {
 
   // Auto-extract AFL code and auto-download
   const lastExtractedCodeRef = useRef<string | null>(null);
+  const lastFetchedFileIdRef = useRef<string | null>(null);
+  const [isLoadingCode, setIsLoadingCode] = useState(false);
+
+  // API base URL for fetching files
+  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
+
+  // Fetch AFL file content from download URL
+  const fetchAFLContent = useCallback(async (downloadUrl: string, filename: string, fileId: string) => {
+    // Don't fetch the same file twice
+    if (lastFetchedFileIdRef.current === fileId) return;
+    lastFetchedFileIdRef.current = fileId;
+    
+    setIsLoadingCode(true);
+    try {
+      const token = getToken();
+      // Make URL absolute if it's relative
+      const absoluteUrl = downloadUrl.startsWith('/') 
+        ? `${API_BASE_URL}${downloadUrl}` 
+        : downloadUrl;
+      
+      console.log('[v0] Fetching AFL file from:', absoluteUrl);
+      
+      const response = await fetch(absoluteUrl, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status}`);
+      }
+      
+      const code = await response.text();
+      console.log('[v0] Fetched AFL code length:', code.length);
+      
+      if (code && code.trim()) {
+        setGeneratedCode(code);
+        setEditorCode(code);
+        lastExtractedCodeRef.current = code;
+        
+        // Auto-download the file
+        if (lastDownloadedCodeRef.current !== code) {
+          lastDownloadedCodeRef.current = code;
+          const blob = new Blob([code], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename || 'strategy.afl';
+          a.click();
+          URL.revokeObjectURL(url);
+          toast.success('AFL file auto-downloaded', { description: filename || 'strategy.afl' });
+        }
+      }
+    } catch (err) {
+      console.error('[v0] Error fetching AFL file:', err);
+      toast.error('Failed to load AFL code');
+    } finally {
+      setIsLoadingCode(false);
+    }
+  }, [API_BASE_URL]);
 
   useEffect(() => {
     if (streamMessages.length === 0) return;
@@ -560,7 +620,26 @@ export function AFLGeneratorPage() {
       let extractedCode: string | null = null;
       let strategyName: string | undefined;
 
+      // Check for invoke_skill tool with AFL file output
       for (const part of parts) {
+        // Handle invoke_skill tool output with file_type: "afl"
+        if ((part.type === 'tool-invoke_skill' || part.type === 'dynamic-tool') && part.state === 'output-available') {
+          const output = (part as any).output || {};
+          const fileType = output.file_type || '';
+          const downloadUrl = output.download_url || '';
+          const filename = output.filename || '';
+          const fileId = output.file_id || '';
+          
+          console.log('[v0] Found tool output:', { fileType, filename, fileId, hasDownloadUrl: !!downloadUrl });
+          
+          if (fileType === 'afl' && downloadUrl && fileId) {
+            // Fetch the AFL content from the download URL
+            fetchAFLContent(downloadUrl, filename, fileId);
+            return; // Exit early, the fetch will update the state
+          }
+        }
+        
+        // Also check for generate_afl_code tool
         if (part.type === 'tool-generate_afl_code' && part.state === 'output-available') {
           const aflCode = (part as any).output?.code || (part as any).output?.afl_code;
           if (aflCode) {
@@ -571,6 +650,7 @@ export function AFLGeneratorPage() {
         }
       }
 
+      // Fallback: try to extract code from text (code blocks)
       if (!extractedCode) {
         extractedCode = extractAFLCode(fullText);
       }
@@ -600,7 +680,7 @@ export function AFLGeneratorPage() {
       }
       break;
     }
-  }, [streamMessages, isStreaming]);
+  }, [streamMessages, isStreaming, fetchAFLContent]);
 
   // Sync conversationIdRef
   useEffect(() => {
@@ -1665,10 +1745,18 @@ export function AFLGeneratorPage() {
                     </h3>
                     <span style={{
                       fontSize: '10px',
-                      color: 'rgba(255, 255, 255, 0.5)',
+                      color: isLoadingCode ? '#FEC00F' : 'rgba(255, 255, 255, 0.5)',
                       fontFamily: "var(--font-quicksand), 'Quicksand', sans-serif",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
                     }}>
-                      {editorCode ? 'Editable' : 'Waiting for generation'}
+                      {isLoadingCode ? (
+                        <>
+                          <Loader2 size={10} className="animate-spin" />
+                          Loading code...
+                        </>
+                      ) : editorCode ? 'Editable' : 'Waiting for generation'}
                     </span>
                   </div>
                 </div>
@@ -1748,37 +1836,75 @@ export function AFLGeneratorPage() {
                     gap: '16px',
                     padding: '60px 40px',
                   }}>
-                    <div style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '16px',
-                      background: 'rgba(254, 192, 15, 0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <Code2 size={32} color="rgba(255, 255, 255, 0.3)" strokeWidth={1.5} />
-                    </div>
-                    <div className="text-center" style={{ maxWidth: '280px' }}>
-                      <h4 style={{
-                        fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
-                        fontSize: '16px',
-                        fontWeight: 700,
-                        color: '#FFFFFF',
-                        marginBottom: '8px',
-                      }}>
-                        Code Will Appear Here
-                      </h4>
-                      <p style={{
-                        fontSize: '13px',
-                        color: 'rgba(255, 255, 255, 0.5)',
-                        textAlign: 'center',
-                        lineHeight: 1.6,
-                        margin: 0,
-                      }}>
-                        Describe your trading strategy to generate AFL code. The file will auto-download when ready.
-                      </p>
-                    </div>
+                    {isLoadingCode ? (
+                      <>
+                        <div style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '16px',
+                          background: 'rgba(254, 192, 15, 0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <Loader2 size={28} color="#FEC00F" className="animate-spin" />
+                        </div>
+                        <div className="text-center" style={{ maxWidth: '280px' }}>
+                          <h4 style={{
+                            fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                            fontSize: '16px',
+                            fontWeight: 700,
+                            color: '#FFFFFF',
+                            marginBottom: '8px',
+                          }}>
+                            Loading Code...
+                          </h4>
+                          <p style={{
+                            fontSize: '13px',
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            textAlign: 'center',
+                            lineHeight: 1.6,
+                            margin: 0,
+                          }}>
+                            Fetching generated AFL code from the server.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '16px',
+                          background: 'rgba(254, 192, 15, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <Code2 size={32} color="rgba(255, 255, 255, 0.3)" strokeWidth={1.5} />
+                        </div>
+                        <div className="text-center" style={{ maxWidth: '280px' }}>
+                          <h4 style={{
+                            fontFamily: "var(--font-rajdhani), 'Rajdhani', sans-serif",
+                            fontSize: '16px',
+                            fontWeight: 700,
+                            color: '#FFFFFF',
+                            marginBottom: '8px',
+                          }}>
+                            Code Will Appear Here
+                          </h4>
+                          <p style={{
+                            fontSize: '13px',
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            textAlign: 'center',
+                            lineHeight: 1.6,
+                            margin: 0,
+                          }}>
+                            Describe your trading strategy to generate AFL code. The file will auto-download when ready.
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
