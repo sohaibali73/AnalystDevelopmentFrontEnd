@@ -130,7 +130,14 @@ const IconClock = ({ size = 12, color = 'currentColor' }) => (
 
 // ─── File Type Definitions ───────────────────────────────────────────────────
 
-type FileType = 'docx' | 'pptx' | 'xlsx' | 'pdf' | 'afl' | 'datapack' | 'potomac_docx' | 'potomac_pptx' | 'potomac_xlsx' | 'generic';
+type FileType = 
+  | 'docx' | 'pptx' | 'xlsx' | 'pdf' | 'afl' | 'datapack' | 'generic'
+  // Potomac generation tools (return downloadable files)
+  | 'potomac_docx' | 'potomac_pptx' | 'potomac_xlsx'
+  // Potomac analysis tools (return JSON profiles, instant ~50-300ms)
+  | 'potomac_analyze_pptx' | 'potomac_analyze_xlsx'
+  // Potomac revision/transform tools (return modified files, very fast ~100-500ms)
+  | 'potomac_revise_pptx' | 'potomac_transform_xlsx';
 
 interface FileTypeMeta {
   IconComponent: React.ComponentType<{ size?: number; color?: string }>;
@@ -287,6 +294,62 @@ const FILE_TYPES: Record<FileType, FileTypeMeta> = {
       'Finalising Potomac workbook',
     ],
   },
+  potomac_analyze_pptx: {
+    IconComponent: IconPotomacAnalyze,
+    label: 'Potomac PPTX Analysis',
+    color: '#8B5CF6',  // Purple for analysis
+    gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
+    bgLight: 'rgba(139,92,246,0.10)',
+    bgDark: 'rgba(139,92,246,0.18)',
+    phases: [
+      'Reading presentation file',
+      'Extracting slide structure',
+      'Analysing brand compliance',
+      'Building profile data',
+    ],
+  },
+  potomac_analyze_xlsx: {
+    IconComponent: IconPotomacAnalyze,
+    label: 'Potomac Data Analysis',
+    color: '#8B5CF6',  // Purple for analysis
+    gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
+    bgLight: 'rgba(139,92,246,0.10)',
+    bgDark: 'rgba(139,92,246,0.18)',
+    phases: [
+      'Reading spreadsheet file',
+      'Profiling columns and types',
+      'Computing statistics',
+      'Building profile data',
+    ],
+  },
+  potomac_revise_pptx: {
+    IconComponent: IconPotomacRevise,
+    label: 'Potomac PPTX Revision',
+    color: '#10B981',  // Green for revision/success
+    gradient: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
+    bgLight: 'rgba(16,185,129,0.10)',
+    bgDark: 'rgba(16,185,129,0.18)',
+    phases: [
+      'Loading existing presentation',
+      'Applying find-replace operations',
+      'Updating tables and content',
+      'Saving revised PPTX',
+    ],
+  },
+  potomac_transform_xlsx: {
+    IconComponent: IconPotomacTransform,
+    label: 'Potomac Data Transform',
+    color: '#0EA5E9',  // Blue for transform
+    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)',
+    bgLight: 'rgba(14,165,233,0.10)',
+    bgDark: 'rgba(14,165,233,0.18)',
+    phases: [
+      'Loading source data',
+      'Applying transformations',
+      'Formatting output',
+      'Generating Potomac workbook',
+    ],
+  },
   generic: {
     IconComponent: IconGeneric,
     label: 'File',
@@ -323,10 +386,15 @@ interface DocumentGenerationCardProps {
 function detectFileType(toolName: string, input?: any): FileType {
   const name = (toolName || '').toLowerCase();
   const inputStr = JSON.stringify(input || {}).toLowerCase();
-  // Check for Potomac's server-side document generators specifically
+  // Check for Potomac's server-side office tools specifically (exact match for speed)
   if (name === 'generate_docx') return 'potomac_docx';
   if (name === 'generate_pptx') return 'potomac_pptx';
   if (name === 'generate_xlsx') return 'potomac_xlsx';
+  if (name === 'analyze_pptx') return 'potomac_analyze_pptx';
+  if (name === 'analyze_xlsx') return 'potomac_analyze_xlsx';
+  if (name === 'revise_pptx') return 'potomac_revise_pptx';
+  if (name === 'transform_xlsx') return 'potomac_transform_xlsx';
+  // Fallback to generic detection
   if (name.includes('docx') || name.includes('word') || name.includes('document')) return 'docx';
   if (name.includes('pptx') || name.includes('powerpoint') || name.includes('presentation') || name.includes('slide') || name.includes('deck')) return 'pptx';
   if (name.includes('xlsx') || name.includes('excel') || name.includes('spreadsheet')) return 'xlsx';
@@ -339,15 +407,24 @@ function detectFileType(toolName: string, input?: any): FileType {
   return 'generic';
 }
 
-// Potomac-branded file types (server-side generators with yellow branding)
-const POTOMAC_TYPES = ['potomac_docx', 'potomac_pptx', 'potomac_xlsx'] as const;
-const isPotomacType = (ft: FileType) => POTOMAC_TYPES.includes(ft as any);
+// All Potomac server-side tools (grouped by function)
+const POTOMAC_GEN_TYPES = ['potomac_docx', 'potomac_pptx', 'potomac_xlsx'] as const;  // Generation (yellow)
+const POTOMAC_ANALYZE_TYPES = ['potomac_analyze_pptx', 'potomac_analyze_xlsx'] as const;  // Analysis (purple)
+const POTOMAC_REVISE_TYPES = ['potomac_revise_pptx', 'potomac_transform_xlsx'] as const;  // Revision (green/blue)
+const ALL_POTOMAC_TYPES = [...POTOMAC_GEN_TYPES, ...POTOMAC_ANALYZE_TYPES, ...POTOMAC_REVISE_TYPES] as const;
 
-// Get the actual file extension for Potomac types
+// Check if it's a Potomac generation tool (yellow branding, dark text on buttons)
+const isPotomacGenType = (ft: FileType) => POTOMAC_GEN_TYPES.includes(ft as any);
+// Check if it's any Potomac tool
+const isPotomacType = (ft: FileType) => ALL_POTOMAC_TYPES.includes(ft as any);
+// Check if it's an analysis tool (returns JSON profile, no download)
+const isAnalysisType = (ft: FileType) => POTOMAC_ANALYZE_TYPES.includes(ft as any);
+
+// Get the actual file extension for all file types
 const getFileExtension = (ft: FileType): string => {
   if (ft === 'potomac_docx') return 'docx';
-  if (ft === 'potomac_pptx') return 'pptx';
-  if (ft === 'potomac_xlsx') return 'xlsx';
+  if (ft === 'potomac_pptx' || ft === 'potomac_revise_pptx' || ft === 'potomac_analyze_pptx') return 'pptx';
+  if (ft === 'potomac_xlsx' || ft === 'potomac_transform_xlsx' || ft === 'potomac_analyze_xlsx') return 'xlsx';
   if (ft === 'generic') return 'bin';
   return ft;
 };
@@ -355,14 +432,19 @@ const getFileExtension = (ft: FileType): string => {
 // Get display label for file type badge
 const getDisplayType = (ft: FileType): string => {
   if (ft === 'potomac_docx') return 'DOCX';
-  if (ft === 'potomac_pptx') return 'PPTX';
-  if (ft === 'potomac_xlsx') return 'XLSX';
+  if (ft === 'potomac_pptx' || ft === 'potomac_revise_pptx') return 'PPTX';
+  if (ft === 'potomac_xlsx' || ft === 'potomac_transform_xlsx') return 'XLSX';
+  if (ft === 'potomac_analyze_pptx') return 'ANALYSIS';
+  if (ft === 'potomac_analyze_xlsx') return 'PROFILE';
   return ft.toUpperCase();
 };
 
-// Types that support preview
+// Types that support preview (downloadable files)
 const supportsPreview = (ft: FileType) => 
-  ['docx', 'pptx', 'xlsx', 'pdf', 'potomac_docx', 'potomac_pptx', 'potomac_xlsx'].includes(ft);
+  ['docx', 'pptx', 'xlsx', 'pdf', 'potomac_docx', 'potomac_pptx', 'potomac_xlsx', 'potomac_revise_pptx', 'potomac_transform_xlsx'].includes(ft);
+
+// Check if the tool returns a downloadable file (vs JSON profile)
+const hasDownloadableFile = (ft: FileType) => !isAnalysisType(ft);
 
 function extractTitle(input: any, toolName: string): string {
   if (!input) return 'Generating file';
@@ -1140,7 +1222,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     borderRadius: '9px',
                     border: 'none',
                     background: meta.gradient,
-                    color: isPotomacType(fileType) ? '#111111' : '#FFFFFF',
+                    color: isPotomacGenType(fileType) ? '#111111' : '#FFFFFF',
                     fontWeight: 700,
                     fontSize: '12px',
                     cursor: 'pointer',
@@ -1160,7 +1242,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     e.currentTarget.style.boxShadow = `0 4px 14px ${meta.color}35`;
                   }}
                 >
-                  <IconDownload size={13} color={isPotomacType(fileType) ? '#111' : '#fff'} />
+                  <IconDownload size={13} color={isPotomacGenType(fileType) ? '#111' : '#fff'} />
                   Download {getDisplayType(fileType)}
                 </button>
               </div>
@@ -1244,7 +1326,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     borderRadius: '9px',
                     border: 'none',
                     background: meta.gradient,
-                    color: isPotomacType(fileType) ? '#111111' : '#FFFFFF',
+                    color: isPotomacGenType(fileType) ? '#111111' : '#FFFFFF',
                     fontWeight: 700,
                     fontSize: '12.5px',
                     cursor: 'pointer',
@@ -1262,7 +1344,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     e.currentTarget.style.boxShadow = `0 3px 10px ${meta.color}28`;
                   }}
                 >
-                  <IconDownload size={13} color={isPotomacType(fileType) ? '#111' : '#fff'} />
+                  <IconDownload size={13} color={isPotomacGenType(fileType) ? '#111' : '#fff'} />
                   DOWNLOAD {getDisplayType(fileType)}
                 </button>
               )}
