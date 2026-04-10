@@ -17,14 +17,13 @@
  *   - KB panel        → src/components/chat/KnowledgeBasePanel.tsx
  *   - Utilities       → src/components/chat/chat-utils.ts
  *   - Message cache   → src/hooks/useMessageCache.ts
- *   - Code Sandbox    → src/components/chat/InteractiveCodeSandbox.tsx
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   PaperclipIcon, ChevronRight, RefreshCw,
-  CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye, Code2,
+  CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye,
   FileText as FileTextIcon, FileCode as FileCodeIcon,
   FileSpreadsheet as FileSpreadsheetIcon, File as FileIconLucide,
   XIcon, ImageIcon, Music2Icon, VideoIcon,
@@ -108,7 +107,7 @@ import {
   WebPreview, WebPreviewNavigation, WebPreviewBody, WebPreviewConsole,
 } from '@/components/ai-elements/web-preview';
 import { Image as AIImage } from '@/components/ai-elements/image';
-import InteractiveCodeSandbox from '@/components/chat/InteractiveCodeSandbox';
+
 import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineReactPreview';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import { Database } from 'lucide-react';
@@ -614,9 +613,7 @@ export function ChatPage() {
   const [previewChatFile, setPreviewChatFile] = useState<ChatPreviewFile | null>(null);
   const [input, setInput] = useState('');
   const [artifactsByConv, setArtifactsByConv] = useState<Record<string, any[]>>({});
-  // Code sandbox state
-  const [codeSandboxOpen, setCodeSandboxOpen] = useState(false);
-  const [sandboxCode, setSandboxCode] = useState('');
+
   const [kbPanelOpen, setKbPanelOpen] = useState(false);
   const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
   const [backendAvailable, setBackendAvailable] = useState(true);
@@ -2178,12 +2175,7 @@ export function ChatPage() {
                         </span>
                       )}
                     </PromptInputButton>
-                    <PromptInputButton
-                      tooltip="Open Code Sandbox"
-                      onClick={() => setCodeSandboxOpen(true)}
-                    >
-                      <Code2 className="size-4" />
-                    </PromptInputButton>
+
                     <ChatSkillSelector
                       forcedSkillSlug={forcedSkillSlug}
                       forcedSkillName={forcedSkillName}
@@ -2240,13 +2232,7 @@ export function ChatPage() {
         document.body,
       )}
 
-      {/* ── Interactive Code Sandbox ─────────────────────────────────────────── */}
-      <InteractiveCodeSandbox
-        isOpen={codeSandboxOpen}
-        onClose={() => setCodeSandboxOpen(false)}
-        initialCode={sandboxCode}
-        isDark={isDark}
-      />
+
     </div>
     </>
   );
