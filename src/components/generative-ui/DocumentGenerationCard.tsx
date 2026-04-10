@@ -94,6 +94,37 @@ const IconPotomacXLSX = ({ size = 20, color = 'currentColor' }) => (
   </svg>
 );
 
+// Potomac analysis icon (magnifying glass with P badge)
+const IconPotomacAnalyze = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <circle cx="10" cy="10" r="7" fill={color} opacity="0.15" stroke={color} strokeWidth="1.5"/>
+    <path d="M15 15l5 5" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M7 8h6M7 12h4" stroke={color} strokeWidth="1.2" strokeLinecap="round" opacity="0.7"/>
+    <circle cx="18" cy="18" r="4" fill={color} opacity="0.9"/>
+    <path d="M16.8 16v4M16.8 16h1.5a0.9 0.9 0 1 1 0 1.8h-1.5" stroke="#111" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Potomac revision icon (pencil with P badge)
+const IconPotomacRevise = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M12 20h9" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill={color} opacity="0.15" stroke={color} strokeWidth="1.5"/>
+    <circle cx="18" cy="18" r="4" fill={color} opacity="0.9"/>
+    <path d="M16.8 16v4M16.8 16h1.5a0.9 0.9 0 1 1 0 1.8h-1.5" stroke="#111" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Potomac transform icon (arrows)
+const IconPotomacTransform = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="4" width="8" height="6" rx="1" fill={color} opacity="0.15" stroke={color} strokeWidth="1.3"/>
+    <rect x="14" y="14" width="8" height="6" rx="1" fill={color} opacity="0.15" stroke={color} strokeWidth="1.3"/>
+    <path d="M6 10v2a2 2 0 0 0 2 2h4M18 14v-2a2 2 0 0 0-2-2h-4" stroke={color} strokeWidth="1.3" strokeLinecap="round"/>
+    <path d="M10 12l2 2-2 2M14 8l-2 2 2 2" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const IconDownload = ({ size = 14, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -749,7 +780,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
     return null;
   };
 
-  // ── Fetch and parse file for preview ─────────────────────────────────────
+  // ── Fetch and parse file for preview ────────────────────────���────────────
   const loadPreview = useCallback(async () => {
     if (!downloadUrl || !isComplete) return;
     if (!supportsPreview(fileType)) return;
@@ -1121,7 +1152,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
           </div>
         )}
 
-        {/* ── Error section ───────────────────────────────────────────────��─── */}
+        {/* ── Error section ─────────────────────────────���─────────────────��─── */}
         {isError && (
           <div style={{
             padding: '11px 13px',
