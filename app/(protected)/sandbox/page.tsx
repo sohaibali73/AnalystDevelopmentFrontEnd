@@ -48,7 +48,7 @@ import {
   sandboxService,
   sessionManager,
   type SandboxLanguage,
-  type SandboxSession,
+  type LocalSandboxSession,
   type SandboxArtifact,
   type ExecutionResult,
   type ExecutionHistoryItem,
@@ -73,6 +73,13 @@ const LANGUAGE_CONFIG: Record<
     bgColor: 'rgba(247,223,30,0.15)',
     extension: 'js',
     icon: 'js',
+  },
+  react: {
+    label: 'React',
+    color: '#61DAFB',
+    bgColor: 'rgba(97,218,251,0.15)',
+    extension: 'jsx',
+    icon: 'react',
   },
 };
 
@@ -153,6 +160,39 @@ const analyzePortfolio = async (symbols) => {
 // Run analysis
 analyzePortfolio(['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META']);
 `,
+  react: `// React Component Example
+import React, { useState } from 'react';
+
+export default function StockAnalyzer() {
+  const [symbol, setSymbol] = useState('AAPL');
+  
+  const stockData = {
+    AAPL: { price: 150, change: 2.5 },
+    GOOGL: { price: 140, change: 1.2 },
+    MSFT: { price: 380, change: 3.1 },
+  };
+
+  const data = stockData[symbol] || stockData.AAPL;
+
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>Stock Analyzer</h1>
+      <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
+        {Object.keys(stockData).map((s) => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+      </select>
+      <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ccc' }}>
+        <p>Symbol: {symbol}</p>
+        <p>Price: \${data.price}</p>
+        <p style={{ color: data.change >= 0 ? 'green' : 'red' }}>
+          Change: {data.change >= 0 ? '+' : ''}{data.change}%
+        </p>
+      </div>
+    </div>
+  );
+}
+`,
 };
 
 // Simple syntax highlighting
@@ -197,8 +237,8 @@ export default function SandboxPage() {
   const isDark = theme === 'dark';
 
   // State
-  const [session, setSession] = useState<SandboxSession | null>(null);
-  const [allSessions, setAllSessions] = useState<SandboxSession[]>([]);
+const [session, setSession] = useState<LocalSandboxSession | null>(null);
+const [allSessions, setAllSessions] = useState<LocalSandboxSession[]>([]);
   const [code, setCode] = useState(CODE_TEMPLATES.python);
   const [language, setLanguage] = useState<SandboxLanguage>('python');
   const [output, setOutput] = useState<ExecutionResult | null>(null);
@@ -279,28 +319,20 @@ export default function SandboxPage() {
         result,
       });
 
-      // Auto-create artifact for successful executions
-      if (result.success) {
-        sessionManager.addArtifact(session.id, {
-          type: 'code',
-          title: `${language} - ${new Date().toLocaleTimeString()}`,
-          content: code,
-          language,
-          metadata: {
-            output: result.output,
-            executionTime: result.execution_time_ms,
-          },
-        });
-      }
+      // Execution is already added to history above
     } catch (err) {
       const message = err instanceof SandboxError ? err.message : 'Execution failed';
       setError(message);
       setOutput({
         success: false,
-        output: '',
+        output: null,
         error: message,
         execution_time_ms: 0,
         language,
+        execution_id: `error-${Date.now()}`,
+        session_id: session.id,
+        display_type: 'text',
+        artifacts: [],
       });
     } finally {
       setIsRunning(false);
@@ -354,8 +386,9 @@ export default function SandboxPage() {
         setLanguage(lastExecution.language);
         setOutput(lastExecution.result);
       } else {
-        setCode(CODE_TEMPLATES[switchedSession.activeLanguage]);
-        setLanguage(switchedSession.activeLanguage);
+        const lang = switchedSession.activeLanguage as SandboxLanguage;
+        setCode(CODE_TEMPLATES[lang]);
+        setLanguage(lang);
         setOutput(null);
       }
     }
@@ -557,11 +590,6 @@ export default function SandboxPage() {
                 <TabsTrigger value="artifacts" className="gap-2 data-[state=active]:text-[#FEC00F]">
                   <Layers size={14} />
                   Artifacts
-                  {session && session.artifacts.length > 0 && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#FEC00F]/20 text-[#FEC00F]">
-                      {session.artifacts.length}
-                    </span>
-                  )}
                 </TabsTrigger>
                 <TabsTrigger value="packages" className="gap-2 data-[state=active]:text-[#FEC00F]">
                   <Package size={14} />
@@ -646,36 +674,10 @@ export default function SandboxPage() {
               </TabsContent>
 
               <TabsContent value="artifacts" className="flex-1 overflow-auto p-4 m-0">
-                {session && session.artifacts.length > 0 ? (
-                  <div className="space-y-3">
-                    {session.artifacts.map((artifact) => (
-                      <div
-                        key={artifact.id}
-                        className={`p-3 rounded-lg border ${isDark ? 'border-white/5' : 'border-gray-200'}`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Zap size={14} className="text-[#FEC00F]" />
-                            <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                              {artifact.title}
-                            </span>
-                          </div>
-                          <span className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                            {new Date(artifact.createdAt).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <pre className={`text-xs font-mono p-2 rounded ${isDark ? 'bg-black/50' : 'bg-gray-50'} ${isDark ? 'text-white/70' : 'text-gray-600'} truncate`}>
-                          {artifact.content.slice(0, 100)}...
-                        </pre>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={`flex flex-col items-center justify-center h-full ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-                    <Layers size={48} className="mb-4 opacity-50" />
-                    <p>No artifacts yet. Run code to generate artifacts.</p>
-                  </div>
-                )}
+                <div className={`flex flex-col items-center justify-center h-full ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
+                  <Layers size={48} className="mb-4 opacity-50" />
+                  <p>Artifacts storage coming soon.</p>
+                </div>
               </TabsContent>
 
               <TabsContent value="packages" className="flex-1 overflow-auto p-4 m-0">

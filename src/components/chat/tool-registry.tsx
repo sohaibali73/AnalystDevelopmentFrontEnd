@@ -836,7 +836,7 @@ export function renderToolPart(
         // Pass the output to SandboxArtifactRenderer
         // It handles success/error states internally based on result.success
         // Try multiple sources for the result data
-        const sandboxResult = part.output || externalOutput || part.result;
+        const sandboxResult = part.output || externalOutput;
         if (sandboxResult && typeof sandboxResult === 'object') {
           // Add debugging for issues
           console.log('[v0] Rendering sandbox result:', {
