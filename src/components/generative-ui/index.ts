@@ -113,6 +113,31 @@ export { default as PersistentGenerationCard } from './PersistentGenerationCard'
 // NEW: Document Generation Card with real progress tracking (DOCX, PPTX, XLSX, PDF, AFL, Datapack)
 export { default as DocumentGenerationCard } from './DocumentGenerationCard';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// OFFICE TOOL CARDS — One card per tool (PPTX, DOCX, XLSX)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// PPTX — generate_pptx, generate_pptx_template, generate_pptx_freestyle, potomac_pptx
+export { PptxGenerationCard } from './PptxGenerationCard';
+
+// PPTX — analyze_pptx (brand compliance check, violations list)
+export { PptxAnalysisCard } from './PptxAnalysisCard';
+
+// PPTX — revise_pptx (find-replace, before/after changes)
+export { PptxRevisionCard } from './PptxRevisionCard';
+
+// DOCX — generate_docx, potomac_docx (Word document with HTML preview)
+export { DocxGenerationCard } from './DocxGenerationCard';
+
+// XLSX — generate_xlsx, potomac_xlsx (Excel with sheet tabs + data preview)
+export { XlsxGenerationCard } from './XlsxGenerationCard';
+
+// XLSX — analyze_xlsx (data quality report: nulls, duplicates, numeric stats)
+export { XlsxAnalysisCard } from './XlsxAnalysisCard';
+
+// XLSX — transform_xlsx (pipeline preview, before/after row counts, download)
+export { XlsxTransformCard } from './XlsxTransformCard';
+
 // NEW: AFL Generation Card with code preview and download (amibroker-afl-developer skill)
 export { default as AFLGenerationCard } from './AFLGenerationCard';
 

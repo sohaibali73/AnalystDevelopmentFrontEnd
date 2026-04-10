@@ -49,6 +49,14 @@ import {
   FinancialResearchCard,
   DocInterpreterCard,
   ArtifactsBuilderCard,
+  // ── Office tool cards (one per tool) ───────────────────────────────────────
+  PptxGenerationCard,
+  PptxAnalysisCard,
+  PptxRevisionCard,
+  DocxGenerationCard,
+  XlsxGenerationCard,
+  XlsxAnalysisCard,
+  XlsxTransformCard,
 } from '@/components/generative-ui';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
@@ -81,26 +89,68 @@ interface ToolRegistryEntry {
 // These determine which card invoke_skill renders based on the skill_slug.
 // Normalised to lowercase with underscores (hyphens replaced).
 
-const INVOKE_FILE_SLUGS = new Set([
-  'potomac_xlsx',
+// ── PPTX generate (all variants that produce a .pptx to download) ────────────
+const INVOKE_PPTX_GEN_SLUGS = new Set([
+  'generate_pptx',
+  'generate_pptx_template',
+  'generate_pptx_freestyle',
   'potomac_pptx',
   'potomac_pptx_skill',
-  'potomac_docx_skill',
+  'create_pptx',
+  'create_powerpoint',
+  'generate_presentation',
+]);
+
+// ── PPTX analyze ────────────────────────────────────────────────────────────
+const INVOKE_PPTX_ANALYZE_SLUGS = new Set([
+  'analyze_pptx',
+  'analyse_pptx',
+]);
+
+// ── PPTX revise ────────────────────────────────────────────────────────────
+const INVOKE_PPTX_REVISE_SLUGS = new Set([
+  'revise_pptx',
+  'update_pptx',
+]);
+
+// ── DOCX generate ──────────────────────────────────────────────────────────
+const INVOKE_DOCX_GEN_SLUGS = new Set([
+  'generate_docx',
   'potomac_docx',
+  'potomac_docx_skill',
+  'create_docx',
+  'create_word',
+  'create_document',
+  'generate_document',
+]);
+
+// ── XLSX generate ──────────────────────────────────────────────────────────
+const INVOKE_XLSX_GEN_SLUGS = new Set([
+  'generate_xlsx',
+  'potomac_xlsx',
+  'create_xlsx',
+  'create_excel',
+  'generate_spreadsheet',
+]);
+
+// ── XLSX analyze ───────────────────────────────────────────────────────────
+const INVOKE_XLSX_ANALYZE_SLUGS = new Set([
+  'analyze_xlsx',
+  'analyse_xlsx',
+]);
+
+// ── XLSX transform ─────────────────────────────────────────────────────────
+const INVOKE_XLSX_TRANSFORM_SLUGS = new Set([
+  'transform_xlsx',
+  'clean_xlsx',
+  'process_xlsx',
+]);
+
+// ── Generic file-producing skills (PDF, datapack, etc.) ─────────────────────
+const INVOKE_FILE_SLUGS = new Set([
   'dcf_model',
   'datapack_builder',
   'build_datapack',
-  // pptx-automizer tools
-  'generate_pptx_template',
-  'generate_pptx',
-  'generate_pptx_freestyle',
-  'revise_pptx',
-  'analyze_pptx',
-  // Document generation tools
-  'generate_docx',
-  'generate_xlsx',
-  'transform_xlsx',
-  'analyze_xlsx',
 ]);
 
 const INVOKE_RESEARCH_SLUGS = new Set([
@@ -313,42 +363,46 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   code_artifact:            { component: ArtifactsBuilderCard, displayName: 'Code Artifact' },
   sandbox_artifact:         { component: ArtifactsBuilderCard, displayName: 'Sandbox Artifact' },
 
-  // ── Document Generation (direct tool calls, not via invoke_skill) ─────────
-  create_word_document:     { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_pptx_with_skill:   { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_presentation:      { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_document:          { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_docx:              { component: DocumentGenerationCard, mode: 'document-generation' },
-  generate_document:        { component: DocumentGenerationCard, mode: 'document-generation' },
-  generate_docx:            { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_word_doc:          { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_pptx:              { component: DocumentGenerationCard, mode: 'document-generation' },
-  generate_pptx:            { component: DocumentGenerationCard, mode: 'document-generation' },
-  generate_presentation:    { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_powerpoint:        { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_xlsx:              { component: DocumentGenerationCard, mode: 'document-generation' },
-  generate_xlsx:            { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_spreadsheet:       { component: DocumentGenerationCard, mode: 'document-generation' },
-  generate_spreadsheet:     { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_excel:             { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_pdf:               { component: DocumentGenerationCard, mode: 'document-generation' },
-  generate_pdf:             { component: DocumentGenerationCard, mode: 'document-generation' },
-  potomac_docx:             { component: DocumentGenerationCard, mode: 'document-generation' },
-  potomac_pptx:             { component: DocumentGenerationCard, mode: 'document-generation' },
-  potomac_xlsx:             { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_potomac_docx:      { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_potomac_pptx:      { component: DocumentGenerationCard, mode: 'document-generation' },
-  create_potomac_xlsx:      { component: DocumentGenerationCard, mode: 'document-generation' },
-  datapack_builder:         { component: DocumentGenerationCard, mode: 'document-generation' },
-  build_datapack:           { component: DocumentGenerationCard, mode: 'document-generation' },
+  // ── PPTX Tools — dedicated per-tool cards ─────────────────────────────────
+  generate_pptx:            { component: PptxGenerationCard, mode: 'document-generation', displayName: 'PowerPoint' },
+  generate_pptx_template:   { component: PptxGenerationCard, mode: 'document-generation', displayName: 'Template Presentation' },
+  generate_pptx_freestyle:  { component: PptxGenerationCard, mode: 'document-generation', displayName: 'Custom Presentation' },
+  create_pptx:              { component: PptxGenerationCard, mode: 'document-generation', displayName: 'PowerPoint' },
+  create_pptx_with_skill:   { component: PptxGenerationCard, mode: 'document-generation', displayName: 'PowerPoint' },
+  create_powerpoint:        { component: PptxGenerationCard, mode: 'document-generation', displayName: 'PowerPoint' },
+  create_presentation:      { component: PptxGenerationCard, mode: 'document-generation', displayName: 'Presentation' },
+  generate_presentation:    { component: PptxGenerationCard, mode: 'document-generation', displayName: 'Presentation' },
+  potomac_pptx:             { component: PptxGenerationCard, mode: 'document-generation', displayName: 'Potomac Presentation' },
+  create_potomac_pptx:      { component: PptxGenerationCard, mode: 'document-generation', displayName: 'Potomac Presentation' },
+  revise_pptx:              { component: PptxRevisionCard,   mode: 'document-generation', displayName: 'Revise Presentation' },
+  analyze_pptx:             { component: PptxAnalysisCard,   mode: 'document-generation', displayName: 'Analyse Presentation' },
 
-  // ── PPTX Automizer Tools (server-side template manipulation) ──────────────
-  generate_pptx_template:   { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Template Update' },
-  generate_pptx_freestyle:  { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Custom Presentation' },
-  revise_pptx:              { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Presentation Revision' },
-  analyze_pptx:             { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'PPTX Analysis' },
-  transform_xlsx:           { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Excel Transform' },
-  analyze_xlsx:             { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Excel Analysis' },
+  // ── DOCX Tools — dedicated card ───────────────────────────────────────────
+  generate_docx:            { component: DocxGenerationCard, mode: 'document-generation', displayName: 'Word Document' },
+  create_docx:              { component: DocxGenerationCard, mode: 'document-generation', displayName: 'Word Document' },
+  create_document:          { component: DocxGenerationCard, mode: 'document-generation', displayName: 'Document' },
+  generate_document:        { component: DocxGenerationCard, mode: 'document-generation', displayName: 'Document' },
+  create_word_document:     { component: DocxGenerationCard, mode: 'document-generation', displayName: 'Word Document' },
+  create_word_doc:          { component: DocxGenerationCard, mode: 'document-generation', displayName: 'Word Document' },
+  potomac_docx:             { component: DocxGenerationCard, mode: 'document-generation', displayName: 'Potomac Document' },
+  create_potomac_docx:      { component: DocxGenerationCard, mode: 'document-generation', displayName: 'Potomac Document' },
+
+  // ── XLSX Tools — dedicated per-tool cards ─────────────────────────────────
+  generate_xlsx:            { component: XlsxGenerationCard,  mode: 'document-generation', displayName: 'Excel Spreadsheet' },
+  create_xlsx:              { component: XlsxGenerationCard,  mode: 'document-generation', displayName: 'Excel Spreadsheet' },
+  create_excel:             { component: XlsxGenerationCard,  mode: 'document-generation', displayName: 'Excel Spreadsheet' },
+  create_spreadsheet:       { component: XlsxGenerationCard,  mode: 'document-generation', displayName: 'Spreadsheet' },
+  generate_spreadsheet:     { component: XlsxGenerationCard,  mode: 'document-generation', displayName: 'Spreadsheet' },
+  potomac_xlsx:             { component: XlsxGenerationCard,  mode: 'document-generation', displayName: 'Potomac Spreadsheet' },
+  create_potomac_xlsx:      { component: XlsxGenerationCard,  mode: 'document-generation', displayName: 'Potomac Spreadsheet' },
+  transform_xlsx:           { component: XlsxTransformCard,   mode: 'document-generation', displayName: 'Transform Data' },
+  analyze_xlsx:             { component: XlsxAnalysisCard,    mode: 'document-generation', displayName: 'Analyse Data' },
+
+  // ── Generic file-producing tools (PDF, datapack) ──────────────────────────
+  create_pdf:               { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'PDF Document' },
+  generate_pdf:             { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'PDF Document' },
+  datapack_builder:         { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Data Pack' },
+  build_datapack:           { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Data Pack' },
 };
 
 // ─── Error Component ──────────────────────────────────────────────────────────
@@ -436,10 +490,126 @@ function renderInvokeSkill(
     (output.filename && /\.(docx|pptx|xlsx|pdf)$/i.test(output.filename))
   );
 
-  // ── File-producing skills → DocumentGenerationCard (ALL states) ─────────
-  // This MUST come before the early-return switch below so the rich generation
-  // animation is shown for DOCX / PPTX / XLSX / datapack skills.
-  // Also render DocumentGenerationCard if the output looks like a document result.
+  // ── PPTX generate → PptxGenerationCard ────────────────────────────────────
+  if (INVOKE_PPTX_GEN_SLUGS.has(slug) || (part.state !== 'output-error' && output?.presentation_id && !output?.violations)) {
+    return (
+      <PptxGenerationCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'generate_pptx'}
+        input={part.input}
+        output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
+  // ── PPTX analyze → PptxAnalysisCard ───────────────────────────────────────
+  if (INVOKE_PPTX_ANALYZE_SLUGS.has(slug)) {
+    return (
+      <PptxAnalysisCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'analyze_pptx'}
+        input={part.input}
+        output={part.output}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
+  // ── PPTX revise → PptxRevisionCard ────────────────────────────────────────
+  if (INVOKE_PPTX_REVISE_SLUGS.has(slug)) {
+    return (
+      <PptxRevisionCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'revise_pptx'}
+        input={part.input}
+        output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
+  // ── DOCX generate → DocxGenerationCard ────────────────────────────────────
+  if (INVOKE_DOCX_GEN_SLUGS.has(slug) || (looksLikeDocumentOutput && output?.filename && /\.docx$/i.test(output.filename))) {
+    return (
+      <DocxGenerationCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'generate_docx'}
+        input={part.input}
+        output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
+  // ── XLSX generate → XlsxGenerationCard ────────────────────────────────────
+  if (INVOKE_XLSX_GEN_SLUGS.has(slug) || (looksLikeDocumentOutput && output?.filename && /\.xlsx$/i.test(output.filename))) {
+    return (
+      <XlsxGenerationCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'generate_xlsx'}
+        input={part.input}
+        output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
+  // ── XLSX analyze → XlsxAnalysisCard ───────────────────────────────────────
+  if (INVOKE_XLSX_ANALYZE_SLUGS.has(slug)) {
+    return (
+      <XlsxAnalysisCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'analyze_xlsx'}
+        input={part.input}
+        output={part.output}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
+  // ── XLSX transform → XlsxTransformCard ────────────────────────────────────
+  if (INVOKE_XLSX_TRANSFORM_SLUGS.has(slug)) {
+    return (
+      <XlsxTransformCard
+        key={pIdx}
+        toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+        toolName={slug || 'transform_xlsx'}
+        input={part.input}
+        output={part.state === 'output-available' ? part.output : undefined}
+        externalOutput={externalOutput}
+        state={part.state as any}
+        errorText={part.errorText}
+        conversationId={conversationId || undefined}
+      />
+    );
+  }
+
+  // ── Generic file-producing skills (PDF, datapack) → DocumentGenerationCard ─
   if (INVOKE_FILE_SLUGS.has(slug) || (part.state === 'output-available' && looksLikeDocumentOutput)) {
     return (
       <DocumentGenerationCard
@@ -770,10 +940,20 @@ export function renderToolPart(
     }
   }
 
-  // ── Document generation ────────────────────────────────────────────────────
+  // ── Document / Office tool generation ─────────────────────────────────────
+  // Uses entry.component so each tool renders its own dedicated card:
+  //   generate_pptx     → PptxGenerationCard
+  //   revise_pptx       → PptxRevisionCard
+  //   analyze_pptx      → PptxAnalysisCard
+  //   generate_docx     → DocxGenerationCard
+  //   generate_xlsx     → XlsxGenerationCard
+  //   analyze_xlsx      → XlsxAnalysisCard
+  //   transform_xlsx    → XlsxTransformCard
+  //   create_pdf et al. → DocumentGenerationCard (generic fallback)
   if (entry?.mode === 'document-generation') {
+    const DocComponent = entry.component || DocumentGenerationCard;
     return (
-      <DocumentGenerationCard
+      <DocComponent
         key={pIdx}
         toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
         toolName={toolName}
