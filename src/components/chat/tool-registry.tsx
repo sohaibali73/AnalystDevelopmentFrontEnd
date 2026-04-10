@@ -86,9 +86,21 @@ const INVOKE_FILE_SLUGS = new Set([
   'potomac_pptx',
   'potomac_pptx_skill',
   'potomac_docx_skill',
+  'potomac_docx',
   'dcf_model',
   'datapack_builder',
   'build_datapack',
+  // pptx-automizer tools
+  'generate_pptx_template',
+  'generate_pptx',
+  'generate_pptx_freestyle',
+  'revise_pptx',
+  'analyze_pptx',
+  // Document generation tools
+  'generate_docx',
+  'generate_xlsx',
+  'transform_xlsx',
+  'analyze_xlsx',
 ]);
 
 const INVOKE_RESEARCH_SLUGS = new Set([
@@ -214,7 +226,7 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   sandbox_execute:          { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Sandbox' },
   code_execution:           { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Code Execution' },
 
-  // ── AFL Tools ────────────────────────────────────────────���───────────────
+  // ── AFL Tools ────────────────────────────────────────────�����───────────────
   generate_afl_code:        { component: AFLGenerateCard },
   validate_afl:             { component: AFLValidateCard },
   debug_afl_code:           { component: AFLDebugCard },
@@ -329,6 +341,14 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   create_potomac_xlsx:      { component: DocumentGenerationCard, mode: 'document-generation' },
   datapack_builder:         { component: DocumentGenerationCard, mode: 'document-generation' },
   build_datapack:           { component: DocumentGenerationCard, mode: 'document-generation' },
+
+  // ── PPTX Automizer Tools (server-side template manipulation) ──────────────
+  generate_pptx_template:   { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Template Update' },
+  generate_pptx_freestyle:  { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Custom Presentation' },
+  revise_pptx:              { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Presentation Revision' },
+  analyze_pptx:             { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'PPTX Analysis' },
+  transform_xlsx:           { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Excel Transform' },
+  analyze_xlsx:             { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Excel Analysis' },
 };
 
 // ─── Error Component ──────────────────────────────────────────────────────────
@@ -680,7 +700,7 @@ export function renderToolPart(
     toolName = 'unknown';
   }
 
-  // ── invoke_skill: dynamic routing by skill_slug ────────────────────────────
+  // ── invoke_skill: dynamic routing by skill_slug ─────────────────────────��──
   if (toolName === 'invoke_skill') {
     return renderInvokeSkill(part, pIdx, messageId, conversationId, externalOutput);
   }

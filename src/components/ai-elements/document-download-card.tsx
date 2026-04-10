@@ -134,6 +134,7 @@ type PreviewState =
 interface DocumentDownloadCardProps {
   output: {
     success?: boolean;
+    status?: 'success' | 'error';
     tool?: string;
     title?: string;
     subtitle?: string;
@@ -141,14 +142,27 @@ interface DocumentDownloadCardProps {
     doc_type?: string;
     document_id?: string;
     presentation_id?: string;
+    file_id?: string;
     download_url?: string;
     file_size_kb?: number;
+    size_kb?: number;
     slide_count?: number;
     skill_used?: string;
     execution_time?: number;
+    exec_time_ms?: number;
     method?: string;
     content_preview?: string;
     error?: string;
+    message?: string;
+    // pptx-automizer specific fields
+    mode?: 'update' | 'assembly';
+    warnings?: string[];
+    operations_applied?: number;
+    replacements_made?: number;
+    // xlsx analysis/transform fields
+    columns?: string[];
+    row_count?: number;
+    sheet_count?: number;
   };
   onPreview?: (file: { url?: string; filename: string; mediaType?: string }) => void;
 }
@@ -238,14 +252,17 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
   const xlsxTableId = useRef(`xlsxt_${++_xlsxIdCounter}`).current;
   const pptxSlidesRef = useRef<string[]>([]);
 
-  if (!output || !output.success) {
+  // Handle both `success: true` and `status: 'success'` patterns from different backends
+  const isSuccess = output?.success === true || output?.status === 'success' || output?.download_url || output?.file_id;
+  
+  if (!output || (!isSuccess && output?.status === 'error')) {
     return (
       <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 my-3">
         <div className="flex items-center gap-2 text-red-400">
           <FileIcon className="h-5 w-5" />
           <span className="font-medium">Document Generation Failed</span>
         </div>
-        <p className="text-sm text-red-300 mt-2">{output?.error || 'Unknown error occurred'}</p>
+        <p className="text-sm text-red-300 mt-2">{output?.error || output?.message || 'Unknown error occurred'}</p>
       </div>
     );
   }
@@ -354,7 +371,7 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
         return;
       }
 
-      // ── HTML ─────────────────────────────────────────────────────────────
+      // ── HTML ─────���───────────────────────────────────────────────────────
       if (ext === 'html' || ext === 'htm') {
         const content = await blob.text();
         setPreview({ status: 'html', content });
@@ -631,15 +648,46 @@ export default function DocumentDownloadCard({ output, onPreview }: DocumentDown
         </div>
       )}
 
+      {/* Warnings from pptx-automizer */}
+      {output.warnings && output.warnings.length > 0 && (
+        <div className="mt-3 ml-14">
+          <details className="group">
+            <summary className="text-xs text-amber-500 cursor-pointer hover:text-amber-400 transition-colors">
+              {output.warnings.length} warning{output.warnings.length > 1 ? 's' : ''} during generation
+            </summary>
+            <ul className="mt-2 space-y-1">
+              {output.warnings.map((warning, idx) => (
+                <li key={idx} className="text-xs text-amber-400/80 font-mono pl-3 border-l-2 border-amber-500/30">
+                  {warning}
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      )}
+
       {/* Footer metadata */}
-      <div className="flex items-center gap-4 mt-3 ml-14">
+      <div className="flex items-center flex-wrap gap-4 mt-3 ml-14">
         {output.skill_used && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-800 text-[10px] text-zinc-400 border border-zinc-700/50">
-            ⚡ {output.skill_used}
+            {output.skill_used}
           </span>
         )}
-        {output.execution_time && (
-          <span className="text-[10px] text-zinc-500">Generated in {output.execution_time}s</span>
+        {output.mode && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500/10 text-[10px] text-blue-400 border border-blue-500/20 font-mono uppercase">
+            {output.mode}
+          </span>
+        )}
+        {(output.execution_time || output.exec_time_ms) && (
+          <span className="text-[10px] text-zinc-500">
+            Generated in {output.execution_time || (output.exec_time_ms ? (output.exec_time_ms / 1000).toFixed(1) : 0)}s
+          </span>
+        )}
+        {output.operations_applied != null && (
+          <span className="text-[10px] text-zinc-500">{output.operations_applied} operations</span>
+        )}
+        {output.replacements_made != null && (
+          <span className="text-[10px] text-zinc-500">{output.replacements_made} replacements</span>
         )}
         {output.method && (
           <span className="text-[10px] text-zinc-500">via {output.method.replace(/_/g, ' ')}</span>
