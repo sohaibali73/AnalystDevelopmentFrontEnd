@@ -262,22 +262,86 @@ export async function parseJson(blob: Blob): Promise<ParsedDocument> {
   }
 }
 
-// ─── PPTX Parser (not supported in browser - returns placeholder) ───────────
-// PPTX parsing requires server-side processing or CDN scripts loaded at runtime.
-// Use ChatFilePreviewModal or DocumentDownloadCard for PPTX preview which use PPTXjs CDN.
+// ─── PPTX Parser (uses custom pptx-parser) ──────────────────────────────────
+// Full client-side PPTX parsing using our custom parser based on BrowserPPTX
 
-export async function parsePptx(_blob: Blob): Promise<ParsedDocument> {
-  // PPTX parsing is handled by the UI components using PPTXjs CDN
-  // This function returns a placeholder - use the preview components instead
-  return {
-    type: 'html',
-    content: '<div style="padding:40px;text-align:center;color:#666;"><p>PPTX preview is available in the document viewer</p></div>',
-    metadata: {
-      pages: 0,
-      wordCount: 0,
-      charCount: 0,
-    },
-  };
+export async function parsePptx(blob: Blob): Promise<ParsedDocument> {
+  try {
+    const { parsePptx: parsePptxFile, emuToPx } = await import('@/lib/pptx-parser');
+    const presentation = await parsePptxFile(blob);
+    
+    // Generate HTML preview for all slides
+    const slideCount = presentation.slides.length;
+    const slideWidthPx = emuToPx(presentation.slideWidth);
+    const slideHeightPx = emuToPx(presentation.slideHeight);
+    
+    // Extract text content for word count
+    let allText = '';
+    presentation.slides.forEach((slide, idx) => {
+      allText += `\n--- Slide ${idx + 1} ---\n`;
+      slide.elements.forEach(element => {
+        if (element.type === 'textbox' || (element.type === 'shape' && element.paragraphs)) {
+          const paragraphs = element.type === 'textbox' ? element.paragraphs : element.paragraphs || [];
+          paragraphs.forEach(para => {
+            para.runs.forEach(run => {
+              allText += run.text + ' ';
+            });
+          });
+        }
+        if (element.type === 'table') {
+          element.rows.forEach(row => {
+            row.cells.forEach(cell => {
+              cell.text.forEach(para => {
+                para.runs.forEach(run => {
+                  allText += run.text + ' ';
+                });
+              });
+            });
+          });
+        }
+      });
+    });
+    
+    const wordCount = allText.split(/\s+/).filter(w => w.length > 0).length;
+    
+    // Generate HTML summary (actual rendering is done by PptxViewer component)
+    const html = `
+      <div style="text-align:center;padding:40px;font-family:system-ui,sans-serif;">
+        <div style="font-size:24px;font-weight:600;margin-bottom:12px;">PowerPoint Presentation</div>
+        <div style="color:#666;margin-bottom:24px;">${slideCount} slides | ${slideWidthPx}x${slideHeightPx}px</div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;">
+          ${presentation.slides.slice(0, 6).map((_, idx) => `
+            <div style="width:160px;height:90px;background:#f0f0f0;border-radius:4px;display:flex;align-items:center;justify-content:center;border:1px solid #ddd;">
+              <span style="color:#999;font-size:14px;">Slide ${idx + 1}</span>
+            </div>
+          `).join('')}
+          ${slideCount > 6 ? `<div style="width:160px;height:90px;display:flex;align-items:center;justify-content:center;color:#666;">+${slideCount - 6} more</div>` : ''}
+        </div>
+        <p style="color:#888;font-size:13px;margin-top:24px;">Use the full viewer for interactive preview</p>
+      </div>
+    `;
+    
+    return {
+      type: 'html',
+      content: html,
+      metadata: {
+        pages: slideCount,
+        wordCount,
+        charCount: allText.length,
+      },
+    };
+  } catch (error) {
+    console.error('PPTX parsing failed:', error);
+    return {
+      type: 'html',
+      content: '<div style="padding:40px;text-align:center;color:#ef4444;">Failed to parse PPTX file</div>',
+      metadata: {
+        pages: 0,
+        wordCount: 0,
+        charCount: 0,
+      },
+    };
+  }
 }
 
 // ─── HTML Parser ────────────────────────────────────────────────────────────

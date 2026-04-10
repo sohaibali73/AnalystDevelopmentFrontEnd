@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { parseFileForPreview, ParsedDocument } from '@/lib/filePreview';
+import { PptxViewer } from '@/components/pptx-viewer';
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
 
@@ -301,6 +302,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   const [safetyTimeout, setSafetyTimeout] = useState(false);
   const [parsedDoc, setParsedDoc] = useState<ParsedDocument | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [pptxBlob, setPptxBlob] = useState<Blob | null>(null);
 
   const startTimeRef = useRef<number>(Date.now());
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -559,7 +561,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   // ── Fetch and parse file for preview ─────────────────────────────────────
   const loadPreview = useCallback(async () => {
     if (!downloadUrl || !isComplete) return;
-    const supportedTypes = ['docx', 'xlsx', 'pdf'];
+    const supportedTypes = ['docx', 'xlsx', 'pdf', 'pptx'];
     if (!supportedTypes.includes(fileType)) return;
 
     setPreviewLoading(true);
@@ -570,6 +572,14 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
       });
       if (!response.ok) throw new Error('Failed to fetch file');
       const blob = await response.blob();
+      
+      // For PPTX, store the blob for PptxViewer component
+      if (fileType === 'pptx') {
+        setPptxBlob(blob);
+        setPreviewLoading(false);
+        return;
+      }
+      
       const filename = outputData?.filename || `file.${fileType}`;
       const parsed = await parseFileForPreview(blob, filename);
       setParsedDoc(parsed);
@@ -582,7 +592,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   }, [downloadUrl, isComplete, fileType, outputData]);
 
   useEffect(() => {
-    if (previewOpen && isComplete && downloadUrl && (fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf')) {
+    if (previewOpen && isComplete && downloadUrl && (fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf' || fileType === 'pptx')) {
       loadPreview();
     }
   }, [previewOpen, isComplete, downloadUrl, fileType, loadPreview]);
@@ -1286,7 +1296,20 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                   }} />
                   Loading preview…
                 </div>
-              ) : fileType === 'pptx' ? (
+              ) : fileType === 'pptx' && pptxBlob ? (
+                <div style={{ height: '450px' }}>
+                  <PptxViewer
+                    file={pptxBlob}
+                    filename={outputData?.filename || `${title}.pptx`}
+                    showHeader={true}
+                    showThumbnails={true}
+                    height="100%"
+                    darkMode={isDark}
+                    onDownload={handleDownload}
+                    onClose={() => setPreviewOpen(false)}
+                  />
+                </div>
+              ) : fileType === 'pptx' && !pptxBlob ? (
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -1297,9 +1320,15 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                   color: mutedCol,
                   fontSize: '12px',
                 }}>
-                  <FileIcon size={32} color={meta.color} />
-                  <span>PPTX preview is not available in-browser.</span>
-                  <span style={{ fontSize: '11px', opacity: 0.7 }}>Use the download button to open the file.</span>
+                  <span style={{
+                    width: '14px', height: '14px',
+                    border: `2px solid ${meta.color}`,
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'docGenSpin 0.8s linear infinite',
+                    display: 'inline-block',
+                  }} />
+                  Loading presentation...
                 </div>
               ) : parsedDoc ? (
                 <div style={{ padding: '14px 16px' }}>
