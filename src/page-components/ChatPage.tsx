@@ -2066,84 +2066,7 @@ export function ChatPage() {
                   const convId = await ensureConversation();
                   if (!convId) return;
 
-                  let messageText = text;
-                  const uploadedFiles: { file_id: string; filename: string; mediaType?: string }[] = [];
-
-                  // Upload files in parallel for speed - don't block on each one
-                  if (files.length > 0) {
-                    const token = getAuthToken();
-                    
-                    const uploadPromises = files.map(async (file) => {
-                      const fileName = file.filename || 'upload';
-                      try {
-                        let actualFile: File;
-                        if (file.url?.startsWith('blob:') || file.url?.startsWith('data:')) {
-                          const resp = await fetch(file.url);
-                          const blob = await resp.blob();
-                          actualFile = new File([blob], fileName, { type: file.mediaType || blob.type || 'application/octet-stream' });
-                        } else if (file.url) {
-                          const resp = await fetch(file.url);
-                          const blob = await resp.blob();
-                          actualFile = new File([blob], fileName, { type: file.mediaType || blob.type || 'application/octet-stream' });
-                        } else { 
-                          return null;
-                        }
-
-                        const formData = new FormData();
-                        formData.append('file', actualFile);
-
-                        const resp = await fetchWithTimeout(
-                          `/api/upload?conversationId=${convId}`,
-                          {
-                            method: 'POST',
-                            headers: { Authorization: token ? `Bearer ${token}` : '' },
-                            body: formData,
-                          },
-                          30000
-                        );
-                        if (!resp.ok) { 
-                          const e = await resp.json().catch(() => ({ detail: `HTTP ${resp.status}` })); 
-                          throw new Error(e.detail || e.error || `Upload failed: ${resp.status}`); 
-                        }
-                        const respData = await resp.json();
-                        const fileId = respData.file_id || respData.id;
-                        
-                        // Cache for later reference
-                        fileBlobCacheRef.current.set(fileName, { 
-                          url: file.url || undefined, 
-                          fileId, 
-                          filename: fileName, 
-                          mediaType: file.mediaType, 
-                          size: actualFile.size 
-                        });
-
-                        if (respData.is_template && respData.template_id) {
-                          toast.success(`${fileName} registered as template`, { duration: 4000 });
-                        }
-                        
-                        return { file_id: fileId, filename: fileName, mediaType: file.mediaType };
-                      } catch (err) { 
-                        const msg = err instanceof Error ? err.message : 'Unknown error';
-                        toast.error(`Upload failed for ${fileName}: ${msg}`, { duration: 5000 });
-                        if (msg.includes('fetch') || msg.includes('network') || msg.includes('aborted')) {
-                          setBackendAvailable(false);
-                        }
-                        return null;
-                      }
-                    });
-
-                    // Wait for all uploads in parallel
-                    const results = await Promise.all(uploadPromises);
-                    results.forEach(r => { if (r) uploadedFiles.push(r); });
-                    
-                    if (uploadedFiles.length > 0) {
-                      // Include file references in message text for context
-                      const fileList = uploadedFiles.map((f) => `[file: ${f.filename}]`).join('\n');
-                      messageText = text.trim() ? `${text}\n\n${fileList}` : fileList;
-                    }
-                  }
-
-                  // Send KB document refs as metadata only (not visible in message text)
+                  // Prepare KB document metadata
                   const kbDocIds = attachedKbDocs.map((d) => d.id);
                   const kbDocMetadata = attachedKbDocs.length > 0 ? attachedKbDocs.map((d) => ({
                     id: d.id,
@@ -2159,21 +2082,107 @@ export function ChatPage() {
                     setSelectedKbDocIds(new Set());
                   }
 
-                  // Send message with file_ids so backend tools can access them
-                  sendMessage(
-                    { text: messageText }, 
-                    { 
-                      body: { 
-                        conversationId: convId, 
-                        model: selectedModelRef.current, 
-                        skill_slug: forcedSkillSlugRef.current ?? undefined, 
-                        kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined, 
-                        kb_docs: kbDocMetadata,
-                        // Include uploaded file IDs so backend tools can access them
-                        uploaded_files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
-                      } 
+                  // If no files, send immediately
+                  if (files.length === 0) {
+                    sendMessage(
+                      { text }, 
+                      { 
+                        body: { 
+                          conversationId: convId, 
+                          model: selectedModelRef.current, 
+                          skill_slug: forcedSkillSlugRef.current ?? undefined, 
+                          kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined, 
+                          kb_docs: kbDocMetadata,
+                        } 
+                      }
+                    );
+                    return;
+                  }
+
+                  // For files: Upload in background, send when ready (but show message immediately via optimistic UI)
+                  const token = getAuthToken();
+                  const fileNames = files.map(f => f.filename || 'upload');
+                  const fileList = fileNames.map((f) => `[file: ${f}]`).join('\n');
+                  const messageText = text.trim() ? `${text}\n\n${fileList}` : fileList;
+
+                  // Start uploads immediately in parallel (non-blocking)
+                  const uploadPromises = files.map(async (file) => {
+                    const fileName = file.filename || 'upload';
+                    try {
+                      let actualFile: File;
+                      if (file.url?.startsWith('blob:') || file.url?.startsWith('data:')) {
+                        const resp = await fetch(file.url);
+                        const blob = await resp.blob();
+                        actualFile = new File([blob], fileName, { type: file.mediaType || blob.type || 'application/octet-stream' });
+                      } else if (file.url) {
+                        const resp = await fetch(file.url);
+                        const blob = await resp.blob();
+                        actualFile = new File([blob], fileName, { type: file.mediaType || blob.type || 'application/octet-stream' });
+                      } else { 
+                        return null;
+                      }
+
+                      const formData = new FormData();
+                      formData.append('file', actualFile);
+
+                      const resp = await fetchWithTimeout(
+                        `/api/upload?conversationId=${convId}`,
+                        {
+                          method: 'POST',
+                          headers: { Authorization: token ? `Bearer ${token}` : '' },
+                          body: formData,
+                        },
+                        30000
+                      );
+                      if (!resp.ok) { 
+                        const e = await resp.json().catch(() => ({ detail: `HTTP ${resp.status}` })); 
+                        throw new Error(e.detail || e.error || `Upload failed: ${resp.status}`); 
+                      }
+                      const respData = await resp.json();
+                      const fileId = respData.file_id || respData.id;
+                      
+                      // Cache for later reference
+                      fileBlobCacheRef.current.set(fileName, { 
+                        url: file.url || undefined, 
+                        fileId, 
+                        filename: fileName, 
+                        mediaType: file.mediaType, 
+                        size: actualFile.size 
+                      });
+
+                      if (respData.is_template && respData.template_id) {
+                        toast.success(`${fileName} registered as template`, { duration: 4000 });
+                      }
+                      
+                      return { file_id: fileId, filename: fileName, mediaType: file.mediaType };
+                    } catch (err) { 
+                      const msg = err instanceof Error ? err.message : 'Unknown error';
+                      toast.error(`Upload failed for ${fileName}: ${msg}`, { duration: 5000 });
+                      if (msg.includes('fetch') || msg.includes('network') || msg.includes('aborted')) {
+                        setBackendAvailable(false);
+                      }
+                      return null;
                     }
-                  );
+                  });
+
+                  // Wait for uploads to finish, then send message with file_ids
+                  Promise.all(uploadPromises).then((results) => {
+                    const uploadedFiles = results.filter((r): r is { file_id: string; filename: string; mediaType?: string } => r !== null);
+                    
+                    sendMessage(
+                      { text: messageText }, 
+                      { 
+                        body: { 
+                          conversationId: convId, 
+                          model: selectedModelRef.current, 
+                          skill_slug: forcedSkillSlugRef.current ?? undefined, 
+                          kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined, 
+                          kb_docs: kbDocMetadata,
+                          uploaded_files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+                        } 
+                      }
+                    );
+                  });
                 }}
               >
                 <AttachmentsDisplay 
