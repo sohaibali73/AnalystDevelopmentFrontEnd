@@ -101,6 +101,7 @@ export function PptxViewer({
   useEffect(() => {
     if (!file || externalPresentation) return;
     
+    const pptxFile = file; // capture narrowed value for use inside async function
     let cancelled = false;
     
     async function parse() {
@@ -109,7 +110,7 @@ export function PptxViewer({
       setErrorMessage('');
       
       try {
-        const result = await parsePptx(file, (msg, pct) => {
+        const result = await parsePptx(pptxFile, (msg, pct) => {
           if (!cancelled) {
             setProgressMessage(msg);
             setProgress(pct);

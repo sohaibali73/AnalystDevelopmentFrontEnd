@@ -52,7 +52,7 @@ import {
   sessionManager,
   type SandboxLanguage,
   type SandboxSession,
-  type SandboxArtifact,
+  type LocalSandboxArtifact,
   type ExecutionResult,
   type ExecutionHistoryItem,
   SandboxError,
@@ -74,6 +74,12 @@ const LANGUAGE_CONFIG: Record<
     color: '#F7DF1E',
     bgColor: 'rgba(247,223,30,0.15)',
     extension: 'js',
+  },
+  react: {
+    label: 'React',
+    color: '#61DAFB',
+    bgColor: 'rgba(97,218,251,0.15)',
+    extension: 'tsx',
   },
 };
 
@@ -111,6 +117,16 @@ console.log('Doubled:', doubled);
 const user = { name: 'Alice', age: 30 };
 const { name, age } = user;
 console.log(\`\${name} is \${age} years old\`);
+`,
+  react: `// React Component Sandbox
+export default function App() {
+  return (
+    <div style={{ padding: '24px', fontFamily: 'sans-serif' }}>
+      <h1>Hello from React!</h1>
+      <p>Edit this component and run to preview.</p>
+    </div>
+  );
+}
 `,
 };
 
@@ -157,7 +173,7 @@ interface PersistentSandboxPanelProps {
   initialCode?: string;
   initialLanguage?: SandboxLanguage;
   isDark?: boolean;
-  onArtifactGenerated?: (artifact: SandboxArtifact) => void;
+  onArtifactGenerated?: (artifact: LocalSandboxArtifact) => void;
 }
 
 export function PersistentSandboxPanel({
@@ -269,10 +285,14 @@ export function PersistentSandboxPanel({
       setError(message);
       setOutput({
         success: false,
-        output: '',
+        output: null,
         error: message,
         execution_time_ms: 0,
         language,
+        execution_id: '',
+        session_id: '',
+        display_type: 'text',
+        artifacts: [],
       });
     } finally {
       setIsRunning(false);
@@ -308,7 +328,7 @@ export function PersistentSandboxPanel({
   // Download output
   const handleDownloadOutput = useCallback(() => {
     if (!output) return;
-    const content = output.success ? output.output : `Error: ${output.error}`;
+    const content = output.success ? (output.output ?? '') : `Error: ${output.error ?? 'Unknown error'}`;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

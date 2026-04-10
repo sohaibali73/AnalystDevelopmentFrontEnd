@@ -147,6 +147,18 @@ export interface ArtifactsListResponse {
   count: number;
 }
 
+// Local artifact stored per session (distinct from API SandboxArtifact)
+export interface LocalSandboxArtifact {
+  id: string;
+  createdAt: number;
+  updatedAt: number;
+  type: string;
+  title: string;
+  content: string;
+  language?: SandboxLanguage;
+  metadata?: Record<string, unknown>;
+}
+
 // Local session for client-side persistence
 export interface LocalSandboxSession {
   id: string;
@@ -156,8 +168,12 @@ export interface LocalSandboxSession {
   updatedAt: number;
   activeLanguage: SandboxLanguage;
   executionHistory: ExecutionHistoryItem[];
+  artifacts: LocalSandboxArtifact[];
   variables: Record<string, unknown>;
 }
+
+// SandboxSession is the canonical alias for LocalSandboxSession (used throughout the codebase)
+export type SandboxSession = LocalSandboxSession;
 
 // Execution history item (local)
 export interface ExecutionHistoryItem {

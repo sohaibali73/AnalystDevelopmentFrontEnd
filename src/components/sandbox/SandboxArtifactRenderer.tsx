@@ -100,8 +100,8 @@ export function SandboxArtifactRenderer({
     // Spread the raw result (handles direct format)
     ...(rawResult as any),
     // Handle nested formats
-    ...(rawResult.data && typeof rawResult.data === 'object' ? rawResult.data : {}),
-    ...(rawResult.result && typeof rawResult.result === 'object' ? rawResult.result : {}),
+    ...((rawResult as any).data && typeof (rawResult as any).data === 'object' ? (rawResult as any).data : {}),
+    ...((rawResult as any).result && typeof (rawResult as any).result === 'object' ? (rawResult as any).result : {}),
   };
 
   // Ensure artifacts is always an array
@@ -381,7 +381,7 @@ function ArtifactItem({
       case 'plotly':
         return 'Interactive Chart';
       case 'image':
-        return artifact.metadata?.source === 'matplotlib' ? 'Chart' : 'Image';
+        return (artifact.metadata as Record<string, unknown>)?.source === 'matplotlib' ? 'Chart' : 'Image';
       case 'json':
         return 'JSON Data';
       case 'file': {

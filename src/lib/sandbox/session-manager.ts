@@ -5,7 +5,7 @@
 
 import type {
   SandboxSession,
-  SandboxArtifact,
+  LocalSandboxArtifact,
   ExecutionHistoryItem,
   SandboxLanguage,
   SandboxFile,
@@ -222,13 +222,13 @@ class SessionManager {
    */
   addArtifact(
     sessionId: string,
-    artifact: Omit<SandboxArtifact, 'id' | 'createdAt' | 'updatedAt'>
-  ): SandboxArtifact {
+    artifact: Omit<LocalSandboxArtifact, 'id' | 'createdAt' | 'updatedAt'>
+  ): LocalSandboxArtifact {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error('Session not found');
 
     const now = Date.now();
-    const newArtifact: SandboxArtifact = {
+    const newArtifact: LocalSandboxArtifact = {
       ...artifact,
       id: generateId(),
       createdAt: now,
@@ -248,7 +248,7 @@ class SessionManager {
   updateArtifact(
     sessionId: string,
     artifactId: string,
-    updates: Partial<SandboxArtifact>
+    updates: Partial<LocalSandboxArtifact>
   ): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;

@@ -883,7 +883,7 @@ export function AFLGeneratorPage() {
               <ChainOfThoughtContent>
                 {toolParts.map((tp: any, tIdx: number) => {
                   const tName = tp.type === 'dynamic-tool' ? (tp.toolName || 'unknown') : (tp.type?.replace('tool-', '') || 'unknown');
-                  return <ChainOfThoughtStep key={tIdx}>{tName}</ChainOfThoughtStep>;
+                  return <ChainOfThoughtStep key={tIdx} label={tName}>{tName}</ChainOfThoughtStep>;
                 })}
               </ChainOfThoughtContent>
             </ChainOfThought>
@@ -1660,7 +1660,7 @@ export function AFLGeneratorPage() {
                           }
                         }
 
-                        sendMessage({ content: messageText });
+                        sendMessage({ text: messageText }, { body: { conversationId: convId, skill_slug: 'amibroker_afl_developer' } });
                       }}
                     >
                       <AttachmentsDisplay 
