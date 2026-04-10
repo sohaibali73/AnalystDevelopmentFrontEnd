@@ -84,6 +84,10 @@ export async function POST(req: NextRequest) {
         use_prompt_caching: data.use_prompt_caching ?? true,
         max_iterations: data.max_iterations ?? 5,
         pin_model_version: data.pin_model_version ?? false,
+        // Pass uploaded file IDs so backend tools can access them
+        uploaded_files: body.uploaded_files || data.uploaded_files || null,
+        kb_doc_ids: body.kb_doc_ids || data.kb_doc_ids || null,
+        kb_docs: body.kb_docs || data.kb_docs || null,
       }),
     });
 
