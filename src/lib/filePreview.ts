@@ -19,12 +19,21 @@
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export interface ParsedSlide {
+  index: number;
+  title?: string;
+  content: string[];
+  notes?: string;
+}
+
 export interface ParsedDocument {
-  type: 'html' | 'text' | 'table' | 'json' | 'unsupported';
+  type: 'html' | 'text' | 'table' | 'json' | 'slides' | 'unsupported';
   content: string;
   tables?: ParsedTable[];
+  slides?: ParsedSlide[];
   metadata?: {
     pages?: number;
+    slides?: number;
     wordCount?: number;
     charCount?: number;
     lineCount?: number;
@@ -262,22 +271,109 @@ export async function parseJson(blob: Blob): Promise<ParsedDocument> {
   }
 }
 
-// ─── PPTX Parser (not supported in browser - returns placeholder) ───────────
-// PPTX parsing requires server-side processing or CDN scripts loaded at runtime.
-// Use ChatFilePreviewModal or DocumentDownloadCard for PPTX preview which use PPTXjs CDN.
+// ─── PPTX Parser (JSZip + XML parsing) ──────────────────────────────────────
+// PPTX files are ZIP archives containing XML. We extract slide content directly.
 
-export async function parsePptx(_blob: Blob): Promise<ParsedDocument> {
-  // PPTX parsing is handled by the UI components using PPTXjs CDN
-  // This function returns a placeholder - use the preview components instead
+export async function parsePptx(blob: Blob): Promise<ParsedDocument> {
+  const JSZip = (await import('jszip')).default;
+  const arrayBuffer = await blobToArrayBuffer(blob);
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  
+  // Find all slide files (ppt/slides/slide1.xml, slide2.xml, etc.)
+  const slideFiles: { name: string; index: number }[] = [];
+  zip.forEach((relativePath) => {
+    const match = relativePath.match(/^ppt\/slides\/slide(\d+)\.xml$/);
+    if (match) {
+      slideFiles.push({ name: relativePath, index: parseInt(match[1], 10) });
+    }
+  });
+  
+  // Sort by slide index
+  slideFiles.sort((a, b) => a.index - b.index);
+  
+  if (slideFiles.length === 0) {
+    return {
+      type: 'unsupported',
+      content: 'No slides found in PPTX file.',
+      metadata: { slides: 0 },
+    };
+  }
+  
+  const slides: ParsedSlide[] = [];
+  let allText = '';
+  
+  for (const slideFile of slideFiles) {
+    const file = zip.file(slideFile.name);
+    if (!file) continue;
+    
+    const xmlText = await file.async('text');
+    const slideContent = extractPptxSlideContent(xmlText);
+    
+    slides.push({
+      index: slideFile.index,
+      title: slideContent.title,
+      content: slideContent.textBlocks,
+    });
+    
+    // Build text summary
+    if (slideContent.title) {
+      allText += `\n--- Slide ${slideFile.index}: ${slideContent.title} ---\n`;
+    } else {
+      allText += `\n--- Slide ${slideFile.index} ---\n`;
+    }
+    allText += slideContent.textBlocks.join('\n') + '\n';
+  }
+  
+  const wordCount = allText.split(/\s+/).filter(w => w.length > 0).length;
+  
   return {
-    type: 'html',
-    content: '<div style="padding:40px;text-align:center;color:#666;"><p>PPTX preview is available in the document viewer</p></div>',
+    type: 'slides',
+    content: allText.trim(),
+    slides,
     metadata: {
-      pages: 0,
-      wordCount: 0,
-      charCount: 0,
+      slides: slides.length,
+      pages: slides.length,
+      wordCount,
+      charCount: allText.length,
     },
   };
+}
+
+/**
+ * Extract text content from a PPTX slide XML
+ */
+function extractPptxSlideContent(xml: string): { title?: string; textBlocks: string[] } {
+  const textBlocks: string[] = [];
+  let title: string | undefined;
+  
+  // Parse XML using DOMParser
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'application/xml');
+  
+  // Find all text elements (a:t tags contain text in PPTX)
+  // The namespace is usually 'http://schemas.openxmlformats.org/drawingml/2006/main'
+  const textNodes = doc.getElementsByTagName('a:t');
+  
+  const seenTexts = new Set<string>();
+  let isFirstTextBlock = true;
+  
+  for (let i = 0; i < textNodes.length; i++) {
+    const node = textNodes[i];
+    const text = node.textContent?.trim();
+    if (text && text.length > 0 && !seenTexts.has(text)) {
+      seenTexts.add(text);
+      
+      // First substantial text block is likely the title
+      if (isFirstTextBlock && text.length > 1) {
+        title = text;
+        isFirstTextBlock = false;
+      } else if (text !== title) {
+        textBlocks.push(text);
+      }
+    }
+  }
+  
+  return { title, textBlocks };
 }
 
 // ─── HTML Parser ────────────────────────────────────────────────────────────

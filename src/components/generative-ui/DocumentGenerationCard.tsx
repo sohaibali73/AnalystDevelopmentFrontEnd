@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
-import { parseFileForPreview, ParsedDocument } from '@/lib/filePreview';
+import { parseFileForPreview, ParsedDocument, ParsedSlide } from '@/lib/filePreview';
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
 
@@ -1533,21 +1533,6 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                   }} />
                   Loading preview…
                 </div>
-              ) : fileType === 'pptx' ? (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '200px',
-                  gap: '8px',
-                  color: mutedCol,
-                  fontSize: '12px',
-                }}>
-                  <FileIcon size={32} color={meta.color} />
-                  <span>PPTX preview is not available in-browser.</span>
-                  <span style={{ fontSize: '11px', opacity: 0.7 }}>Use the download button to open the file.</span>
-                </div>
               ) : parsedDoc ? (
                 <div style={{ padding: '14px 16px' }}>
                   {parsedDoc.type === 'html' && (
@@ -1653,6 +1638,105 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                       ))}
                     </div>
                   )}
+                  {/* ── Slides Preview (PPTX) ─────────────────────────────────── */}
+                  {parsedDoc.type === 'slides' && parsedDoc.slides && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {parsedDoc.slides.map((slide, sIdx) => (
+                        <div
+                          key={sIdx}
+                          style={{
+                            background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                            borderRadius: '10px',
+                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {/* Slide Header */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 14px',
+                            background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+                            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
+                          }}>
+                            <div style={{
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '6px',
+                              background: meta.gradient,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: isPotomacGenType(fileType) ? '#111' : '#fff',
+                              fontFamily: "'DM Mono', monospace",
+                            }}>
+                              {slide.index}
+                            </div>
+                            <div style={{
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              color: textColor,
+                              fontFamily: "'Syne', sans-serif",
+                              flex: 1,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                              {slide.title || `Slide ${slide.index}`}
+                            </div>
+                          </div>
+                          {/* Slide Content */}
+                          <div style={{
+                            padding: '12px 14px',
+                            fontSize: '12.5px',
+                            lineHeight: 1.65,
+                            color: textColor,
+                            fontFamily: "'Instrument Sans', sans-serif",
+                          }}>
+                            {slide.content.length > 0 ? (
+                              <ul style={{
+                                margin: 0,
+                                paddingLeft: '18px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '5px',
+                              }}>
+                                {slide.content.slice(0, 8).map((text, tIdx) => (
+                                  <li key={tIdx} style={{
+                                    color: tIdx === 0 ? textColor : mutedCol,
+                                  }}>
+                                    {text.length > 150 ? text.slice(0, 150) + '...' : text}
+                                  </li>
+                                ))}
+                                {slide.content.length > 8 && (
+                                  <li style={{ color: mutedCol, fontStyle: 'italic', fontSize: '11px' }}>
+                                    +{slide.content.length - 8} more items
+                                  </li>
+                                )}
+                              </ul>
+                            ) : (
+                              <span style={{ color: mutedCol, fontStyle: 'italic', fontSize: '11.5px' }}>
+                                No text content on this slide
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {parsedDoc.slides.length > 10 && (
+                        <div style={{
+                          fontSize: '10.5px',
+                          color: mutedCol,
+                          textAlign: 'center',
+                          fontStyle: 'italic',
+                        }}>
+                          Showing {Math.min(10, parsedDoc.slides.length)} of {parsedDoc.slides.length} slides
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {parsedDoc.type === 'unsupported' && (
                     <div style={{
                       display: 'flex',
@@ -1678,9 +1762,10 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                       color: mutedCol,
                       fontFamily: "'DM Mono', monospace",
                     }}>
-                      {parsedDoc.metadata.pages && <span>{parsedDoc.metadata.pages} pages</span>}
+                      {parsedDoc.metadata.slides && <span>{parsedDoc.metadata.slides} slides</span>}
+                      {parsedDoc.metadata.pages && !parsedDoc.metadata.slides && <span>{parsedDoc.metadata.pages} pages</span>}
                       {parsedDoc.metadata.wordCount && <span>{parsedDoc.metadata.wordCount.toLocaleString()} words</span>}
-                      {parsedDoc.metadata.lineCount && <span>{parsedDoc.metadata.lineCount} lines</span>}
+                      {parsedDoc.metadata.lineCount && !parsedDoc.metadata.slides && <span>{parsedDoc.metadata.lineCount} lines</span>}
                     </div>
                   )}
                 </div>
