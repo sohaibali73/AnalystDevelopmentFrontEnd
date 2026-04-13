@@ -498,6 +498,93 @@ function AttachmentButton({ disabled }: { disabled?: boolean }) {
   );
 }
 
+// ─── ThinkingAnimation: pulsing dots shown before first token arrives ─────────
+function ThinkingAnimation() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 2px' }}>
+      {[0, 1, 2].map(i => (
+        <span
+          key={i}
+          style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: 'rgba(99, 102, 241, 0.7)',
+            display: 'inline-block',
+            animation: `chat-pulse 1.1s ease-in-out ${i * 0.18}s infinite`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── ImmediateUploader: uploads files as soon as they are attached ─────────────
+// Must render inside PromptInput context (uses usePromptInputAttachments).
+function ImmediateUploader({
+  conversationIdRef,
+  ensureConversationFn,
+  onUploading,
+  onUploaded,
+  onUploadError,
+}: {
+  conversationIdRef: React.MutableRefObject<string | null>;
+  ensureConversationFn: () => Promise<string | null>;
+  onUploading: (fileId: string) => void;
+  onUploaded: (fileId: string) => void;
+  onUploadError: (fileId: string, filename: string) => void;
+}) {
+  const attachments = usePromptInputAttachments();
+  const startedRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    for (const file of attachments.files) {
+      if (startedRef.current.has(file.id)) continue;
+      if (!file.url?.startsWith('blob:')) continue;
+      startedRef.current.add(file.id);
+      onUploading(file.id);
+
+      (async () => {
+        try {
+          let convId = conversationIdRef.current;
+          if (!convId) convId = await ensureConversationFn();
+          if (!convId) { onUploadError(file.id, file.filename || 'file'); return; }
+
+          const blobResp = await fetch(file.url!);
+          const blob = await blobResp.blob();
+          const fileObj = new File([blob], file.filename || 'file', {
+            type: file.mediaType || 'application/octet-stream',
+          });
+          const fd = new FormData();
+          fd.append('file', fileObj);
+
+          const token = getAuthToken();
+          const uploadResp = await fetch(`/api/upload?conversationId=${convId}`, {
+            method: 'POST',
+            headers: { Authorization: token ? `Bearer ${token}` : '' },
+            body: fd,
+          });
+
+          if (uploadResp.ok) {
+            onUploaded(file.id);
+          } else {
+            onUploadError(file.id, file.filename || 'file');
+          }
+        } catch {
+          onUploadError(file.id, file.filename || 'file');
+        }
+      })();
+    }
+    // Clean up tracked IDs for files that were removed
+    const currentIds = new Set(attachments.files.map(f => f.id));
+    for (const id of startedRef.current) {
+      if (!currentIds.has(id)) startedRef.current.delete(id);
+    }
+  }, [attachments.files]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+}
+
 // ─── Card JSON Extraction Helpers ─────────────────────────────────────────
 
 interface CardSegment {
@@ -1547,7 +1634,8 @@ export function ChatPage() {
           }}>
             <MessageContent>
               {renderParts()}
-              {status === 'submitted' && isLast && parts.every((p: any) => !p.text) && <Shimmer duration={1.5}>Thinking…</Shimmer>}
+              {/* ThinkingAnimation: pulsing dots before first token arrives */}
+              {msgIsStreaming && !parts.some((p: any) => p.text || isToolPart(p.type)) && <ThinkingAnimation />}
             </MessageContent>
           </div>
 
@@ -2171,6 +2259,20 @@ export function ChatPage() {
                   onClearSkill={() => { setForcedSkillSlug(null); setForcedSkillName(null); }}
                   attachedKbDocs={attachedKbDocs}
                   onRemoveKbDoc={handleRemoveKbDoc}
+                />
+                {/* Immediate uploader — starts uploading files as soon as they're attached */}
+                <ImmediateUploader
+                  conversationIdRef={conversationIdRef}
+                  ensureConversationFn={ensureConversation}
+                  onUploading={(fileId) => {
+                    toast.loading('Uploading file…', { id: fileId, duration: Infinity });
+                  }}
+                  onUploaded={(fileId) => {
+                    toast.success('File ready', { id: fileId, duration: 1800 });
+                  }}
+                  onUploadError={(fileId, filename) => {
+                    toast.error(`Failed to upload ${filename}`, { id: fileId, duration: 4000 });
+                  }}
                 />
                 <PromptInputTextarea
                   value={input}

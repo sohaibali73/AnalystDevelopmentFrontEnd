@@ -84,6 +84,8 @@ interface ToolRegistryEntry {
   component: React.ComponentType<any>;
   mode?: ToolRenderMode;
   displayName?: string;
+  /** If true, shows SkillExecutionAnimation in input-streaming/input-available state */
+  skillAnimation?: boolean;
 }
 
 // ─── invoke_skill Slug Sets ───────────────────────────────────────────────────
@@ -313,47 +315,47 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   find_flights:             { component: FlightSearchCard, mode: 'flight-search' },
 
   // ── Direct Skill Tool Calls (not via invoke_skill) ───────────────────────
-  execute_skill:            { component: SkillResultCard,      displayName: 'Skill Execution' },
-  run_skill:                { component: SkillResultCard,      displayName: 'Skill Execution' },
+  execute_skill:            { component: SkillResultCard,        displayName: 'Skill Execution',          skillAnimation: true },
+  run_skill:                { component: SkillResultCard,        displayName: 'Skill Execution',          skillAnimation: true },
 
   // DCF / Valuation
-  dcf_model:                { component: DCFModelCard,         displayName: 'DCF Model' },
-  run_dcf_model:            { component: DCFModelCard,         displayName: 'DCF Model' },
-  create_dcf_model:         { component: DCFModelCard,         displayName: 'DCF Model' },
+  dcf_model:                { component: DCFModelCard,           displayName: 'DCF Model',                skillAnimation: true },
+  run_dcf_model:            { component: DCFModelCard,           displayName: 'DCF Model',                skillAnimation: true },
+  create_dcf_model:         { component: DCFModelCard,           displayName: 'DCF Model',                skillAnimation: true },
 
   // Market Bubble Detection
-  us_market_bubble_detector:{ component: BubbleDetectorCard,  displayName: 'Bubble Detector' },
-  detect_bubble:            { component: BubbleDetectorCard,  displayName: 'Bubble Detector' },
-  bubble_analysis:          { component: BubbleDetectorCard,  displayName: 'Bubble Detector' },
-  run_bubble_detection:     { component: BubbleDetectorCard,  displayName: 'Bubble Detector' },
+  us_market_bubble_detector:{ component: BubbleDetectorCard,    displayName: 'Bubble Detector',          skillAnimation: true },
+  detect_bubble:            { component: BubbleDetectorCard,    displayName: 'Bubble Detector',          skillAnimation: true },
+  bubble_analysis:          { component: BubbleDetectorCard,    displayName: 'Bubble Detector',          skillAnimation: true },
+  run_bubble_detection:     { component: BubbleDetectorCard,    displayName: 'Bubble Detector',          skillAnimation: true },
 
   // Financial Research
-  financial_deep_research:  { component: FinancialResearchCard, displayName: 'Financial Research' },
-  deep_research:            { component: FinancialResearchCard, displayName: 'Financial Research' },
-  initiating_coverage:      { component: FinancialResearchCard, displayName: 'Initiating Coverage' },
-  equity_research:          { component: FinancialResearchCard, displayName: 'Equity Research' },
-  run_financial_deep_research: { component: FinancialResearchCard, displayName: 'Financial Research' },
+  financial_deep_research:  { component: FinancialResearchCard,  displayName: 'Financial Research',      skillAnimation: true },
+  deep_research:            { component: FinancialResearchCard,  displayName: 'Financial Research',      skillAnimation: true },
+  initiating_coverage:      { component: FinancialResearchCard,  displayName: 'Initiating Coverage',     skillAnimation: true },
+  equity_research:          { component: FinancialResearchCard,  displayName: 'Equity Research',         skillAnimation: true },
+  run_financial_deep_research: { component: FinancialResearchCard, displayName: 'Financial Research',   skillAnimation: true },
 
   // Document Interpreter
-  doc_interpreter:          { component: DocInterpreterCard,  displayName: 'Document Interpreter' },
-  interpret_document:       { component: DocInterpreterCard,  displayName: 'Document Interpreter' },
-  extract_document:         { component: DocInterpreterCard,  displayName: 'Document Interpreter' },
-  read_document:            { component: DocInterpreterCard,  displayName: 'Document Interpreter' },
+  doc_interpreter:          { component: DocInterpreterCard,    displayName: 'Document Interpreter',    skillAnimation: true },
+  interpret_document:       { component: DocInterpreterCard,    displayName: 'Document Interpreter',    skillAnimation: true },
+  extract_document:         { component: DocInterpreterCard,    displayName: 'Document Interpreter',    skillAnimation: true },
+  read_document:            { component: DocInterpreterCard,    displayName: 'Document Interpreter',    skillAnimation: true },
 
   // Quant / Backtest
-  quant_analyst:            { component: SkillResultCard,      displayName: 'Quant Analyst' },
-  run_quant_analysis:       { component: SkillResultCard,      displayName: 'Quant Analyst' },
-  backtest_expert:          { component: SkillResultCard,      displayName: 'Backtest Expert' },
-  run_backtest_analysis:    { component: SkillResultCard,      displayName: 'Backtest Analysis' },
-  backtesting_frameworks:   { component: SkillResultCard,      displayName: 'Backtesting Frameworks' },
+  quant_analyst:            { component: SkillResultCard,        displayName: 'Quant Analyst',           skillAnimation: true },
+  run_quant_analysis:       { component: SkillResultCard,        displayName: 'Quant Analyst',           skillAnimation: true },
+  backtest_expert:          { component: SkillResultCard,        displayName: 'Backtest Expert',         skillAnimation: true },
+  run_backtest_analysis:    { component: SkillResultCard,        displayName: 'Backtest Analysis',       skillAnimation: true },
+  backtesting_frameworks:   { component: SkillResultCard,        displayName: 'Backtesting Frameworks',  skillAnimation: true },
 
   // AFL Developer
-  amibroker_afl_developer:  { component: AFLGenerateCard,     displayName: 'AFL Developer' },
-  afl_developer:            { component: AFLGenerateCard,     displayName: 'AFL Developer' },
+  amibroker_afl_developer:  { component: AFLGenerateCard,       displayName: 'AFL Developer',           skillAnimation: true },
+  afl_developer:            { component: AFLGenerateCard,       displayName: 'AFL Developer',           skillAnimation: true },
 
   // Generic skill cards
-  ai_elements:              { component: SkillResultCard,      displayName: 'AI Elements' },
-  artifacts_builder:        { component: ArtifactsBuilderCard, displayName: 'Artifacts Builder' },
+  ai_elements:              { component: SkillResultCard,        displayName: 'AI Elements',             skillAnimation: true },
+  artifacts_builder:        { component: ArtifactsBuilderCard,  displayName: 'Artifacts Builder',       skillAnimation: true },
   
   // ── React/Artifact tools (direct tool calls) ─────────────────────────────────
   react:                    { component: ArtifactsBuilderCard, displayName: 'React' },
@@ -890,6 +892,10 @@ export function renderToolPart(
     switch (part.state) {
       case 'input-streaming':
       case 'input-available':
+        // Skill-dispatch tools get the animated SkillExecutionAnimation card
+        if (entry.skillAnimation) {
+          return <SkillExecutionAnimation key={pIdx} skillSlug={toolName} />;
+        }
         return <ToolLoading key={pIdx} toolName={loadingName} input={part.input} />;
       case 'output-available': {
         const Component = entry.component;
