@@ -26,6 +26,7 @@ import {
   AFLSanityCheckCard,
   WebSearchResults,
   ToolLoading,
+  SkillExecutionAnimation,
   StockScreener,
   StockComparison,
   SectorPerformance,
@@ -766,7 +767,8 @@ function renderInvokeSkill(
   switch (part.state) {
     case 'input-streaming':
     case 'input-available':
-      return <ToolLoading key={pIdx} toolName={displaySlug} input={part.input} />;
+      // SkillExecutionAnimation: Claude-style animated card for skill loading
+      return <SkillExecutionAnimation key={pIdx} skillSlug={rawSlug} />;
     case 'output-available': {
       // For DocumentGenerationCard, pass the full props structure
       if (Component === DocumentGenerationCard) {

@@ -166,3 +166,6 @@ export { ArtifactsBuilderCard } from './ArtifactsBuilderCard';
 
 // NEW: File Analysis Card (inline card JSON extraction)
 export { FileAnalysisCard } from './FileAnalysisCard';
+
+// Claude-style animated skill execution card (invoke_skill loading state)
+export { SkillExecutionAnimation } from './SkillExecutionAnimation';

@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Fix cross origin request warning for development
+  allowedDevOrigins: [
+    '127.0.0.1',
+    'localhost'
+  ],
   
   // SWC Compiler is the default in Next.js 16
   // Babel is NOT used - Next.js uses the Rust-based SWC compiler for faster builds
@@ -36,9 +42,7 @@ const nextConfig = {
   
   async rewrites() {
     const backendUrl = (process.env.NEXT_PUBLIC_API_URL ||
-      (process.env.NODE_ENV === 'development'
-        ? 'http://localhost:8080'
-        : 'https://developer-potomaac.up.railway.app')).replace(/\/+$/, '');
+      'https://potomac-analyst-workbench-production.up.railway.app').replace(/\/+$/, '');
     return [
       {
         source: '/api/backend/:path*',

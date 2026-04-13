@@ -73,6 +73,7 @@ import {
   MarketOverview,
   BacktestResults,
   FileAnalysisCard,
+  SkillExecutionAnimation,
 } from '@/components/generative-ui';
 
 // ── AI Elements ───────────────────────────────────────────────────────────────
@@ -1988,6 +1989,23 @@ export function ChatPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Skill execution live status ────────────────────────────────────── */}
+        {/* Shown when the backend sends skill_status events during streaming    */}
+        {skillStatus && isStreaming && (
+          <div style={{
+            padding: '4px 28px 0',
+            display: 'flex',
+            justifyContent: 'flex-start',
+          }}>
+            <div style={{ maxWidth: '820px', width: '100%' }}>
+              <SkillExecutionAnimation
+                skillSlug={skillStatus.slug}
+                statusMessage={skillStatus.label}
+              />
+            </div>
+          </div>
+        )}
 
         {/* ── Error banner ───────────────────────────────────────────────────── */}
         {(pageError || chatError) && (

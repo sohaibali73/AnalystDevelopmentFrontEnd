@@ -40,3 +40,47 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export async function PUT(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ detail: 'Not authenticated' }, { status: 401 });
+    }
+
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ detail: 'Invalid request body' }, { status: 400 });
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(`${BACKEND_URL}/auth/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (fetchErr) {
+      return NextResponse.json(
+        { detail: 'Cannot connect to the backend server. Please try again later.' },
+        { status: 502 }
+      );
+    }
+
+    const data = await response.json().catch(() => ({
+      detail: `Backend error: ${response.status}`,
+    }));
+
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    return NextResponse.json(
+      { detail: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

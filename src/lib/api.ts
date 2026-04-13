@@ -491,12 +491,11 @@ class APIClient {
     });
   }
 
+  // sendMessageStream() removed — was calling non-existent /chat/v6 backend endpoint.
+  // Chat streaming is handled by useChat (AI SDK) + DefaultChatTransport → /api/chat → /chat/agent.
+
   /**
-   * Send a message with streaming response using Vercel AI SDK Data Stream Protocol.
-   * 
-   * FULLY CORRECTED VERSION with proper endpoint and protocol parsing
-   */
-  async sendMessageStream(
+   * Upload file to conversation
     content: string,
     conversationId?: string,
     options?: {
@@ -714,25 +713,11 @@ class APIClient {
     return response.json();
   }
 
-  /**
-   * Get the streaming endpoint URL for direct use
-   */
-  getStreamEndpoint(): string {
-    return `${API_BASE_URL}/chat/v6`;
-  }
+  // getStreamEndpoint, getStreamV6Endpoint, sendMessageStreamV6 removed —
+  // all called non-existent /chat/v6 backend endpoint.
+  // Streaming is handled via useChat (AI SDK) + DefaultChatTransport → /api/chat → /chat/agent.
 
-  /**
-   * Get the direct AI SDK v6 streaming endpoint URL
-   */
-  getStreamV6Endpoint(): string {
-    return `${API_BASE_URL}/chat/v6`;
-  }
-
-  /**
-   * Send a message using direct AI SDK Data Stream Protocol (v6 endpoint).
-   * Bypasses the protocol translation wrapper for cleaner integration.
-   */
-  async sendMessageStreamV6(
+  async _removedV6Placeholder(
     content: string,
     conversationId?: string,
     options?: {
@@ -1599,16 +1584,13 @@ export const api = {
     deleteHistory: (historyId: string) => apiClient.deleteAflHistory(historyId),
   },
   chat: {
+    // Streaming is handled by useChat (AI SDK) + DefaultChatTransport → /api/chat → /chat/agent
     getConversations: () => apiClient.getConversations(),
     createConversation: (title?: string) => apiClient.createConversation(title),
     getMessages: (conversationId: string) => apiClient.getMessages(conversationId),
     deleteConversation: (conversationId: string) => apiClient.deleteConversation(conversationId),
     sendMessage: (content: string, conversationId?: string) => apiClient.sendMessage(content, conversationId),
-    sendMessageStream: (content: string, conversationId?: string, options?: any) => apiClient.sendMessageStream(content, conversationId, options),
-    sendMessageStreamV6: (content: string, conversationId?: string, options?: any) => apiClient.sendMessageStreamV6(content, conversationId, options),
     uploadFile: (conversationId: string, formData: FormData) => apiClient.uploadFile(conversationId, formData),
-    getStreamEndpoint: () => apiClient.getStreamEndpoint(),
-    getStreamV6Endpoint: () => apiClient.getStreamV6Endpoint(),
     getTools: () => apiClient.getChatTools(),
   },
   brain: {
