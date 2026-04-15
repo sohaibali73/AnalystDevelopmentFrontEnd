@@ -92,10 +92,20 @@ export function PptxViewer({
   const mainAreaRef = useRef<HTMLDivElement>(null);
   const [fitScale, setFitScale] = useState(0.8);
   
-  // Detect dark mode
-  const isDark = darkMode ?? (typeof window !== 'undefined' && 
+  // Detect dark mode — reactive to OS theme changes
+  const [systemDark, setSystemDark] = useState<boolean>(() =>
+    typeof window !== 'undefined' &&
     (document.documentElement.getAttribute('data-theme') === 'dark' ||
-     window.matchMedia?.('(prefers-color-scheme: dark)').matches));
+     window.matchMedia?.('(prefers-color-scheme: dark)').matches)
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const isDark = darkMode ?? systemDark;
   
   // Parse file when provided
   useEffect(() => {
@@ -180,11 +190,31 @@ export function PptxViewer({
     return () => observer.disconnect();
   }, [presentation]);
   
+  // Sync initialSlide prop changes from parent after mount
+  useEffect(() => {
+    setCurrentSlide(initialSlide);
+  }, [initialSlide]);
+
+  // Slide navigation
+  const goToSlide = useCallback((index: number) => {
+    if (!presentation) return;
+    const newIndex = Math.max(0, Math.min(presentation.slides.length - 1, index));
+    setCurrentSlide(newIndex);
+    onSlideChange?.(newIndex);
+  }, [presentation, onSlideChange]);
+
   // Keyboard navigation
   useEffect(() => {
     if (state !== 'ready' || !presentation) return;
     
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept keystrokes when user is typing in a form element
+      const target = e.target as HTMLElement;
+      if (
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+        target.isContentEditable
+      ) return;
+
       switch (e.key) {
         case 'ArrowLeft':
         case 'ArrowUp':
@@ -216,15 +246,7 @@ export function PptxViewer({
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state, presentation, currentSlide, fullscreen, onClose]);
-  
-  // Slide navigation
-  const goToSlide = useCallback((index: number) => {
-    if (!presentation) return;
-    const newIndex = Math.max(0, Math.min(presentation.slides.length - 1, index));
-    setCurrentSlide(newIndex);
-    onSlideChange?.(newIndex);
-  }, [presentation, onSlideChange]);
+  }, [state, presentation, currentSlide, fullscreen, onClose, goToSlide]);
   
   // Calculate effective scale
   const effectiveScale = useMemo(() => {
@@ -677,14 +699,20 @@ export function PptxViewer({
         </div>
       </div>
       
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      <style>{VIEWER_KEYFRAMES}</style>
     </div>
   );
 }
+
+// ─── Static keyframes (defined once outside the component) ───────────────────
+const VIEWER_KEYFRAMES = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
 
 export default PptxViewer;

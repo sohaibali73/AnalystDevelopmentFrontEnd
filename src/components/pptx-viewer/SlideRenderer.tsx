@@ -152,9 +152,19 @@ function ShapeRenderer({ element }: { element: PptxShape }) {
 
   if (shapeType === 'line') {
     return (
-      <svg style={{ position: 'absolute', left: emuToPx(x), top: emuToPx(y), width: emuToPx(w) || 1, height: emuToPx(h) || 1, overflow: 'visible' }}>
-        <line x1={0} y1={0} x2={emuToPx(w)} y2={emuToPx(h)} stroke={stroke?.color || '#000'} strokeWidth={stroke?.width ? emuToPx(stroke.width) : 1} />
-      </svg>
+      <div style={{
+        position: 'absolute',
+        left: emuToPx(x),
+        top: emuToPx(y),
+        width: emuToPx(w) || 1,
+        height: emuToPx(h) || 1,
+        transform: buildTransform(rotation, flipH, flipV),
+        overflow: 'visible',
+      }}>
+        <svg style={{ position: 'absolute', width: '100%', height: '100%', overflow: 'visible' }}>
+          <line x1={0} y1={0} x2={emuToPx(w)} y2={emuToPx(h)} stroke={stroke?.color || '#000'} strokeWidth={stroke?.width ? emuToPx(stroke.width) : 1} />
+        </svg>
+      </div>
     );
   }
 
@@ -201,12 +211,36 @@ function ImageRenderer({ element }: { element: PptxImage }) {
     transform: buildTransform(rotation, flipH, flipV),
     overflow: 'hidden',
   };
-  if (cropRect) containerStyle.clipPath = `inset(${cropRect.top}% ${cropRect.right}% ${cropRect.bottom}% ${cropRect.left}%)`;
+
+  // Compute image scale + offset so the uncropped area fills the container
+  // (instead of squishing the whole image into the clipped area)
+  let imgStyle: React.CSSProperties = {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    display: 'block',
+  };
+
+  if (cropRect) {
+    const { top = 0, bottom = 0, left = 0, right = 0 } = cropRect;
+    const widthScale  = 100 / (100 - left - right);
+    const heightScale = 100 / (100 - top - bottom);
+    imgStyle = {
+      position: 'absolute',
+      width:  `${widthScale  * 100}%`,
+      height: `${heightScale * 100}%`,
+      left:   `-${left  * widthScale}%`,
+      top:    `-${top   * heightScale}%`,
+      objectFit: 'cover',
+      display: 'block',
+    };
+  }
 
   return (
     <div style={containerStyle}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block' }} crossOrigin="anonymous" />
+      <img src={src} alt="" style={imgStyle} crossOrigin="anonymous" />
     </div>
   );
 }
@@ -262,12 +296,16 @@ function GroupRenderer({ element }: { element: PptxGroup }) {
   if (chOff && chExt && chExt.cx > 0 && chExt.cy > 0) {
     const sx = emuToPx(w) / emuToPx(chExt.cx);
     const sy = emuToPx(h) / emuToPx(chExt.cy);
-    innerTransform = `translate(${-emuToPx(chOff.x)}px, ${-emuToPx(chOff.y)}px) scale(${sx}, ${sy})`;
+    // scale() must come before translate() so the offset is in child coordinate
+    // space, not in the already-scaled space (CSS applies left-to-right)
+    innerTransform = `scale(${sx}, ${sy}) translate(${-emuToPx(chOff.x)}px, ${-emuToPx(chOff.y)}px)`;
   }
 
   return (
     <div style={{ position: 'absolute', left: emuToPx(x), top: emuToPx(y), width: emuToPx(w), height: emuToPx(h), transform: buildTransform(rotation, flipH, flipV), overflow: 'hidden' }}>
-      <div style={{ transform: innerTransform, transformOrigin: 'top left' }}>
+      {/* position:relative is required so absolute child elements resolve
+          against this transformed div, not the outer group container */}
+      <div style={{ position: 'relative', transform: innerTransform, transformOrigin: 'top left' }}>
         {children.map((child, i) => <ElementRenderer key={i} element={child} />)}
       </div>
     </div>
@@ -285,12 +323,16 @@ function ParagraphRenderer({ paragraph }: { paragraph: PptxParagraph }) {
 
   return (
     <p style={{
-      textAlign: alignment || 'left',
+      // textAlign has no effect on flex containers — use justifyContent instead
+      justifyContent:
+        alignment === 'center'  ? 'center'   :
+        alignment === 'right'   ? 'flex-end' :
+        alignment === 'justify' ? undefined  : 'flex-start',
       margin: 0,
       marginTop:    spaceBefore ? `${spaceBefore}pt` : undefined,
       marginBottom: spaceAfter  ? `${spaceAfter}pt`  : undefined,
       paddingLeft:  level       ? `${level * 16}px`  : undefined,
-      lineHeight: lineSpacing || 1.4,
+      lineHeight: lineSpacing || 1.2,
       display: 'flex',
       flexWrap: 'wrap',
       alignItems: 'baseline',
@@ -309,7 +351,8 @@ function RunRenderer({ run }: { run: PptxRun }) {
   const style: React.CSSProperties = {
     fontWeight:     bold          ? 'bold'         : undefined,
     fontStyle:      italic        ? 'italic'        : undefined,
-    textDecoration: underline     ? 'underline'     : strikethrough ? 'line-through' : undefined,
+    textDecoration: [underline && 'underline', strikethrough && 'line-through']
+      .filter(Boolean).join(' ') || undefined,
     fontSize:       fontSize      ? `${fontSize}pt` : undefined,
     fontFamily:     fontFamily    || undefined,
     color:          color         || undefined,
@@ -334,9 +377,13 @@ function buildTransform(rotation?: number, flipH?: boolean, flipV?: boolean): st
 }
 
 function shadowToCss(shadow: { color?: string; blur?: number; distance?: number; direction?: number }): string {
-  const ox = Math.cos((shadow.direction || 0) * Math.PI / 180) * (shadow.distance || 0);
-  const oy = Math.sin((shadow.direction || 0) * Math.PI / 180) * (shadow.distance || 0);
-  return `${ox}px ${oy}px ${shadow.blur || 0}px ${shadow.color || 'rgba(0,0,0,0.3)'}`;
+  // distance and blur come from the parser in EMUs — convert to pixels
+  const distancePx = emuToPx(shadow.distance || 0);
+  const blurPx     = emuToPx(shadow.blur     || 0);
+  const angleRad   = (shadow.direction || 0) * Math.PI / 180;
+  const ox = Math.cos(angleRad) * distancePx;
+  const oy = Math.sin(angleRad) * distancePx;
+  return `${ox}px ${oy}px ${blurPx}px ${shadow.color || 'rgba(0,0,0,0.3)'}`;
 }
 
 function shapeClipStyle(shapeType: string): React.CSSProperties {
@@ -366,7 +413,9 @@ function gradientToCss(gradient: PptxGradient): string {
   if (!gradient.stops?.length) return 'transparent';
   const stops = [...gradient.stops].sort((a, b) => a.position - b.position).map(s => `${s.color} ${s.position}%`);
   if (gradient.type === 'radial') return `radial-gradient(circle, ${stops.join(', ')})`;
-  const cssAngle = (gradient.angle || 0) + 90;
+  // PPTX angle 0° = top-to-bottom = CSS 180°.
+  // Correct mapping: cssAngle = (180 - pptxAngle + 360) % 360
+  const cssAngle = (180 - (gradient.angle || 0) + 360) % 360;
   return `linear-gradient(${cssAngle}deg, ${stops.join(', ')})`;
 }
 
