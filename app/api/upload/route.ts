@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     try {
       // Add 60 second timeout for upload
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      const timeoutId = setTimeout(() => controller.abort(), 6000000);
       
       response = await fetch(
         `${BACKEND_URL}/upload/conversations/${conversationId}`,

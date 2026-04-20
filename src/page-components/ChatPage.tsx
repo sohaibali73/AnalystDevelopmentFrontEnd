@@ -519,6 +519,26 @@ function ThinkingAnimation() {
   );
 }
 
+// ─── File reference persistence (survives page refresh) ───────────────────────
+// Saves filename → { fileId, url } to localStorage so file-preview chips
+// remain clickable after a page reload (fileBlobCacheRef is in-memory only).
+
+function persistChatFileRef(convId: string, filename: string, file: ChatPreviewFile) {
+  try {
+    const key = `chat_file_refs_${convId}`;
+    const existing: Record<string, ChatPreviewFile> = JSON.parse(localStorage.getItem(key) || '{}');
+    existing[filename] = { fileId: file.fileId, url: file.url, filename, mediaType: file.mediaType, size: file.size };
+    localStorage.setItem(key, JSON.stringify(existing));
+  } catch {}
+}
+
+function loadChatFileRef(convId: string, filename: string): ChatPreviewFile | undefined {
+  try {
+    const refs: Record<string, ChatPreviewFile> = JSON.parse(localStorage.getItem(`chat_file_refs_${convId}`) || '{}');
+    return (refs[filename] as ChatPreviewFile) || undefined;
+  } catch { return undefined; }
+}
+
 // ─── ImmediateUploader: uploads files as soon as they are attached ─────────────
 // Must render inside PromptInput context (uses usePromptInputAttachments).
 function ImmediateUploader({
@@ -566,6 +586,17 @@ function ImmediateUploader({
           });
 
           if (uploadResp.ok) {
+            const respData = await uploadResp.json().catch(() => ({}));
+            const backendFileId: string = respData.file_id || respData.id || '';
+            if (backendFileId && convId) {
+              const fileRef: ChatPreviewFile = {
+                fileId: backendFileId,
+                filename: file.filename || 'file',
+                mediaType: file.mediaType,
+                size: file.size,
+              };
+              persistChatFileRef(convId, file.filename || 'file', fileRef);
+            }
             onUploaded(file.id);
           } else {
             onUploadError(file.id, file.filename || 'file');
@@ -1436,7 +1467,7 @@ export function ChatPage() {
                     const cc = getFileChipColor(ext);
                     const IC = ['doc','docx','pdf','rtf'].includes(ext) ? FileTextIcon : ['xls','xlsx','csv'].includes(ext) ? FileSpreadsheetIcon : ['json','xml','html','md'].includes(ext) ? FileCodeIcon : FileIconLucide;
                     return (
-                      <button key={fIdx} onClick={() => { const c = fileBlobCacheRef.current.get(filename); setPreviewChatFile(c || { filename }); }}
+                      <button key={fIdx} onClick={() => { const _cid = conversationIdRef.current; const c = fileBlobCacheRef.current.get(filename) || (_cid ? loadChatFileRef(_cid, filename) : undefined); setPreviewChatFile(c || { filename }); }}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '7px 12px', borderRadius: '9px', border: `1px solid ${cc}35`, background: `${cc}12`, cursor: 'pointer' }}>
                         <div style={{ width: 28, height: 28, borderRadius: 6, background: `${cc}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><IC size={14} color={cc} /></div>
                         <div style={{ textAlign: 'left' as const, minWidth: 0 }}>
@@ -2209,7 +2240,9 @@ export function ChatPage() {
                           if (!resp.ok) { const e = await resp.json().catch(() => ({ detail: `HTTP ${resp.status}` })); throw new Error(e.detail || e.error || `Upload failed: ${resp.status}`); }
                           const respData = await resp.json();
                           uploaded.push(fileName);
-                          fileBlobCacheRef.current.set(fileName, { url: file.url || undefined, fileId: respData.file_id || respData.id, filename: fileName, mediaType: file.mediaType, size: actualFile.size });
+                          const _fileRef: ChatPreviewFile = { url: file.url || undefined, fileId: respData.file_id || respData.id, filename: fileName, mediaType: file.mediaType, size: actualFile.size };
+                          fileBlobCacheRef.current.set(fileName, _fileRef);
+                          persistChatFileRef(convId, fileName, _fileRef);
 
                           if (respData.is_template && respData.template_id) {
                             toast.success(`${fileName} registered as template`, { duration: 4000 });
