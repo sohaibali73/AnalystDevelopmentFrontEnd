@@ -20,21 +20,27 @@ interface ModelInfo {
 
 const MODELS: ModelInfo[] = [
   {
+    id: 'claude-opus-4-7',
+    label: 'Opus 4.7',
+    fullName: 'Claude Opus 4.7',
+    description: 'Most capable — best for complex reasoning and agentic coding',
+  },
+  {
     id: 'claude-sonnet-4-6',
-    label: 'Sonnet 4',
-    fullName: 'Claude Sonnet 4',
+    label: 'Sonnet 4.6',
+    fullName: 'Claude Sonnet 4.6',
     description: 'Best balance of speed and capability',
   },
   {
     id: 'claude-opus-4-6',
-    label: 'Opus 4',
-    fullName: 'Claude Opus 4',
-    description: 'Most powerful, best for complex reasoning',
+    label: 'Opus 4.6',
+    fullName: 'Claude Opus 4.6',
+    description: 'Previous Opus generation',
   },
   {
     id: 'claude-haiku-4-5-20251001',
-    label: 'Haiku 4',
-    fullName: 'Claude Haiku 4',
+    label: 'Haiku 4.5',
+    fullName: 'Claude Haiku 4.5',
     description: 'Fastest, most efficient for simple tasks',
   },
 ];
