@@ -58,8 +58,15 @@ class APIClient {
   private token: string | null = null;
 
   constructor() {
-    // Initialize in-memory token from storage if available (SSR-safe)
-    this.token = storage.getItem('auth_token');
+    // Initialize in-memory token from storage if available (SSR-safe).
+    // Fall back to a direct window.localStorage read so the token survives a
+    // page reload even when the storage module's write-canary fails (e.g. when
+    // localStorage is full but still readable).
+    this.token = storage.getItem('auth_token') ?? (
+      typeof window !== 'undefined'
+        ? (() => { try { return window.localStorage.getItem('auth_token'); } catch { return null; } })()
+        : null
+    );
   }
 
   private setToken(token: string) {
@@ -73,10 +80,15 @@ class APIClient {
   }
 
   private getToken() {
-    // Prefer in-memory token for speed; fall back to storage if not set
+    // Prefer in-memory token for speed; fall back to storage module, then
+    // direct localStorage as a last resort so the token is never lost due to
+    // a transient storage-availability check failure.
     if (this.token) return this.token;
     try {
-      const t = storage.getItem('auth_token');
+      const t = storage.getItem('auth_token')
+        ?? (typeof window !== 'undefined'
+          ? (() => { try { return window.localStorage.getItem('auth_token'); } catch { return null; } })()
+          : null);
       this.token = t;
       return t;
     } catch (e) {

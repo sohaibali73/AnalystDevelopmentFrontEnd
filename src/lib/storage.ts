@@ -7,7 +7,13 @@ import { logger } from './logger';
 type StorageType = 'local' | 'session';
 
 /**
- * Check if storage is available
+ * Check if storage is available.
+ *
+ * Uses a READ-only test (accessing `.length`) instead of a write-canary so
+ * that a full quota (QuotaExceededError on writes) does not incorrectly mark
+ * the storage as unavailable — existing keys are still readable even when the
+ * storage is full.  Only a SecurityError (private/sandboxed browsing) will
+ * make this return false.
  */
 function isStorageAvailable(type: StorageType): boolean {
   if (typeof window === 'undefined') {
@@ -15,10 +21,10 @@ function isStorageAvailable(type: StorageType): boolean {
   }
 
   try {
-    const storage = type === 'local' ? window.localStorage : window.sessionStorage;
-    const testKey = '__storage_test__';
-    storage.setItem(testKey, 'test');
-    storage.removeItem(testKey);
+    const s = type === 'local' ? window.localStorage : window.sessionStorage;
+    // Accessing any property (length, getItem …) is enough to verify the
+    // storage object exists and is not blocked by the browser security policy.
+    void s.length;
     return true;
   } catch (error) {
     logger.warn(`${type}Storage is not available`, { error });
