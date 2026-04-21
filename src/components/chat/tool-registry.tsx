@@ -909,7 +909,56 @@ export function renderToolPart(
     return renderInvokeSkill(part, pIdx, messageId, conversationId, externalOutput);
   }
 
+  // ── YANG tools: need BOTH input and output passed explicitly ───────────────
+  // spawn_subagents / background_edit tools render with custom GenUI cards
+  // that inspect input.subtasks and output.subtask_results. The standard
+  // render path below only spreads part.output, which drops `input`.
+  if (
+    toolName === 'spawn_subagents' || toolName === 'dispatch_subagents' || toolName === 'run_subagents' ||
+    toolName === 'background_edit' || toolName === 'run_in_background'
+  ) {
+    const isSubagent = toolName === 'spawn_subagents' || toolName === 'dispatch_subagents' || toolName === 'run_subagents';
+    const Comp = isSubagent ? SubagentProgress : BackgroundTaskCard;
+    const isDark = _yangIsDark();
+    const output = (typeof part.output === 'object' && part.output) ? part.output : (externalOutput || {});
+
+    // Normalise backend output shape → component prop shape.
+    // Backend returns {subtask_results: [...], count: N}; component expects {results: [...]}.
+    const normalisedOutput = isSubagent
+      ? {
+          ...output,
+          results: (output as any).results || (output as any).subtask_results || [],
+        }
+      : output;
+
+    switch (part.state) {
+      case 'input-streaming':
+      case 'input-available':
+        return (
+          <Comp
+            key={pIdx}
+            isDark={isDark}
+            input={part.input || {}}
+            output={isSubagent ? { results: [] } : {}}
+          />
+        );
+      case 'output-available':
+      case 'output-error':
+        return (
+          <Comp
+            key={pIdx}
+            isDark={isDark}
+            input={part.input || {}}
+            output={normalisedOutput}
+          />
+        );
+      default:
+        return null;
+    }
+  }
+
   const entry = TOOL_REGISTRY[toolName];
+
 
   // ── Standard tool ──────────────────────────────────────────────────────────
   // Check if this is an artifact-type tool that needs special prop passing
