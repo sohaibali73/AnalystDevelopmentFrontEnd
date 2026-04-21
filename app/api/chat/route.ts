@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     // Forward to backend streaming endpoint with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 290000); // 290s timeout (under maxDuration=300)
+    const timeoutId = setTimeout(() => controller.abort(), 29000000); // 290s timeout (under maxDuration=300)
 
     let backendResponse: Response;
     try {
