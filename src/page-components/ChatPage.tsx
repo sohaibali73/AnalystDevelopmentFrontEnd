@@ -62,10 +62,25 @@ import {
   ChatModelSelector,
   ChatSkillSelector,
   HTMLArtifactPreview,
-  ChatAgentSettings,
+  YangSettingsPanel,
+  PlanModeBanner,
+  YoloBanner,
+  FocusChainDrawer,
+  CheckpointsPanel,
+  CompletionVerificationBadge,
+  ToolSearchChip,
   API_BASE_URL_CHAT,
   type ChatPreviewFile,
 } from '@/components/chat';
+import { History as HistoryIcon } from 'lucide-react';
+import { useYangSettings } from '@/hooks/useYangSettings';
+import { useYangStreamEvents } from '@/hooks/useYangStreamEvents';
+import { useCheckpoints } from '@/hooks/useCheckpoints';
+import {
+  YangBackgroundTasksProvider,
+  useYangBackgroundTasks,
+} from '@/contexts/YangBackgroundTasksContext';
+
 import {
   WeatherCard,
   StockCard,
@@ -223,7 +238,34 @@ const CHAT_STYLES = `
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-top: 1px solid var(--input-border);
   }
+
+  /* Rounded chat bar — no sharp rectangles. Targets the ai-elements PromptInput root
+     regardless of which slot class it exposes, so the entire composer reads as a pill. */
+  .chat-input-container form,
+  .chat-input-container [data-slot="prompt-input"],
+  .chat-input-container [class*="PromptInput"]:not(button):not([class*="Submit"]):not([class*="Button"]):not([class*="Tool"]):not([class*="Attachment"]) {
+    border-radius: 24px !important;
+    overflow: hidden;
+  }
+  .chat-input-container textarea {
+    border-radius: 24px 24px 0 0 !important;
+  }
+  /* Circular send button */
+  .chat-input-container button[type="submit"],
+  .chat-input-container [data-slot="prompt-input-submit"] {
+    border-radius: 999px !important;
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    flex-shrink: 0;
+  }
+  /* Pill attachment/action buttons inside the toolbar */
+  .chat-input-container [data-slot="prompt-input-tools"] > button,
+  .chat-input-container [data-slot="prompt-input-button"] {
+    border-radius: 999px !important;
+  }
 `;
+
 
 // ─── Utility: Fetch with timeout ─────────────────────────────────────────────
 async function fetchWithTimeout(
@@ -783,6 +825,17 @@ export function ChatPage() {
 
   const artifacts = selectedConversation ? (artifactsByConv[selectedConversation.id] || []) : [];
 
+  // ── YANG: feature flags + stream events + checkpoints ────────────────────
+  const yangSettingsHook = useYangSettings();
+  const yangOverridesRef = useRef<any>(null);
+  yangOverridesRef.current = yangSettingsHook.getOverrides();
+
+  const [checkpointsOpen, setCheckpointsOpen] = useState(false);
+  const yangCheckpoints = useCheckpoints(selectedConversation?.id ?? null);
+
+  const yangStream = useYangStreamEvents();
+
+
   // ── Health check with proper error handling and cleanup ────────────────────
   useEffect(() => {
     let retryCount = 0;
@@ -865,7 +918,10 @@ export function ChatPage() {
         use_prompt_caching: usePromptCachingRef.current,
         max_iterations: maxIterationsRef.current,
         pin_model_version: pinModelVersionRef.current,
+        // YANG per-request feature overrides
+        yang: yangOverridesRef.current,
       }),
+
     }),
     onData: (dataPart: any) => {
       // AI SDK now passes a single data part — the payload is in dataPart.data
@@ -878,10 +934,13 @@ export function ChatPage() {
 
       for (const item of items) {
         if (!item) continue;
+        // Route YANG advanced-agentic events to the dispatcher
+        yangStream.handleDataItem(item);
         // Skill status — show what skill is running during the wait
         if (item.skill_status) {
           setSkillStatus({ label: item.skill_status, slug: item.skill_slug ?? '' });
         }
+
         // File download — toast + store for card injection + persist to localStorage
         if (item.type === 'file_download' && item.filename) {
           const convId = conversationIdRef.current;
@@ -1878,12 +1937,35 @@ export function ChatPage() {
         onSelectedUpdate={setSelectedConversation}
       />
 
-      {/* ── Main area ─────────────────────────────────��───────────────────── */}
+      {/* ── Main area + Focus chain right-rail ────────────────────────────── */}
       <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
+        flex: 1, display: 'flex', flexDirection: 'row',
         minWidth: 0, overflow: 'hidden', height: '100%',
         marginTop: !backendAvailable ? '40px' : 0,
       }}>
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        minWidth: 0, overflow: 'hidden', height: '100%',
+      }}>
+      {/* YANG mode banners — sticky above message list */}
+      {yangSettingsHook.settings.yolo_mode && (
+        <YoloBanner
+          isDark={isDark}
+          onDisable={() => yangSettingsHook.updateSetting('yolo_mode', false)}
+        />
+      )}
+      {yangSettingsHook.settings.plan_mode && !yangSettingsHook.settings.yolo_mode && (
+        <PlanModeBanner
+          isDark={isDark}
+          onDisable={() => {
+            yangSettingsHook.updateSetting('plan_mode', false);
+            regenerate();
+          }}
+          toolsAllowed={yangStream.planModeToolsAllowed || undefined}
+        />
+      )}
+
+
 
         {/* Sidebar expand button when collapsed */}
         {sidebarCollapsed && (
@@ -2342,8 +2424,34 @@ export function ChatPage() {
                       isDark={isDark}
                       disabled={isStreaming}
                     />
-                    <ChatAgentSettings
+                    {yangSettingsHook.settings.checkpoints && (
+                      <PromptInputButton
+                        tooltip="Checkpoints"
+                        onClick={() => setCheckpointsOpen(true)}
+                        style={{ position: 'relative' }}
+                      >
+                        <HistoryIcon className="size-4" />
+                        {yangCheckpoints.checkpoints.length > 0 && (
+                          <span style={{
+                            position: 'absolute', top: -4, right: -4,
+                            minWidth: 16, height: 16, borderRadius: '50%',
+                            backgroundColor: '#6366F1', color: '#fff',
+                            fontSize: 9, fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '0 4px',
+                          }}>
+                            {yangCheckpoints.checkpoints.length}
+                          </span>
+                        )}
+                      </PromptInputButton>
+                    )}
+                    <YangSettingsPanel
                       isDark={isDark}
+                      settings={yangSettingsHook.settings}
+                      advanced={yangSettingsHook.advanced}
+                      saving={yangSettingsHook.saving}
+                      onFeatureChange={yangSettingsHook.updateSetting}
+                      onAdvancedChange={yangSettingsHook.updateAdvanced}
                       thinkingEffort={thinkingEffort}
                       onThinkingEffortChange={setThinkingEffort}
                       usePromptCaching={usePromptCaching}
@@ -2355,6 +2463,7 @@ export function ChatPage() {
                       disabled={isStreaming}
                     />
                   </PromptInputTools>
+
                   <PromptInputSubmit status={status} onStop={() => stop()} disabled={!input.trim() && !isStreaming} />
                 </PromptInputFooter>
               </PromptInput>
@@ -2362,8 +2471,28 @@ export function ChatPage() {
           </div>
         </div>
       </div>
+      {/* ── YANG Focus chain right-rail drawer ─────────────────────────────── */}
+      <FocusChainDrawer
+        isDark={isDark}
+        focus={yangStream.focusSnapshot}
+        enabled={yangSettingsHook.settings.focus_chain}
+      />
+      </div>
+
+      {/* ── YANG Checkpoints panel (portal-rendered drawer) ────────────────── */}
+      <CheckpointsPanel
+        isDark={isDark}
+        open={checkpointsOpen}
+        onClose={() => setCheckpointsOpen(false)}
+        checkpoints={yangCheckpoints.checkpoints}
+        loading={yangCheckpoints.loading}
+        onCreate={yangCheckpoints.create}
+        onRestore={yangCheckpoints.restore}
+        onDelete={yangCheckpoints.remove}
+      />
 
       {/* ── Knowledge Base Panel (extracted component via portal) ─────────── */}
+
       <KnowledgeBasePanel
         isOpen={kbPanelOpen}
         onClose={() => setKbPanelOpen(false)}

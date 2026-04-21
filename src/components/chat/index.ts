@@ -9,8 +9,22 @@ export { renderToolPart, isToolPart } from './tool-registry';
 export { ChatModelSelector } from './ChatModelSelector';
 export { ChatSkillSelector } from './ChatSkillSelector';
 export { HTMLArtifactPreview } from './HTMLArtifactPreview';
-export { ChatAgentSettings } from './ChatAgentSettings';
 export { InteractiveCodeSandbox } from './InteractiveCodeSandbox';
+
+// ── YANG: advanced agentic features ─────────────────────────────────────────
+export { YangSettingsPanel } from './YangSettingsPanel';
+export type { YangSettingsPanelProps } from './YangSettingsPanel';
+export { PlanModeBanner, YoloBanner } from './YangBanners';
+export { FocusChainDrawer } from './FocusChainDrawer';
+export { CheckpointsPanel } from './CheckpointsPanel';
+export {
+  CompletionVerificationBadge,
+  CompactionBanner,
+  ToolSearchChip,
+  SubagentProgress,
+  BackgroundTaskCard,
+} from './YangInlineComponents';
+
 export {
   // Utilities
   getAuthToken,

@@ -102,7 +102,10 @@ export async function POST(req: NextRequest) {
           use_prompt_caching: data.use_prompt_caching ?? body.use_prompt_caching ?? true,
           max_iterations: data.max_iterations ?? body.max_iterations ?? 5,
           pin_model_version: data.pin_model_version ?? body.pin_model_version ?? false,
+          // YANG per-request feature overrides (forwarded to backend untouched)
+          yang: data.yang ?? body.yang ?? null,
         }),
+
         signal: controller.signal,
       });
     } catch (fetchErr) {
@@ -241,9 +244,24 @@ export async function POST(req: NextRequest) {
                         await writeSSE({ type: 'data-skill_status', data: [item] });
                       } else if (item.skill_heartbeat) {
                         // Keep-alive heartbeat — no need to forward to client
+                      } else if (
+                        item.yang_verification ||
+                        item.yang_focus_chain ||
+                        item.yang_background_edit ||
+                        item.yang_plan_mode ||
+                        item.yang_yolo_mode ||
+                        item.yang_yolo_iteration_cap ||
+                        item.yang_tool_search ||
+                        item.yang_subagents_running
+                      ) {
+                        // YANG advanced-agentic events — forward as a single
+                        // unified data-yang part; the useYangStreamEvents hook
+                        // dispatches on the inner yang_* flag.
+                        await writeSSE({ type: 'data-yang', data: [item] });
                       } else if (item.conversation_id) {
                         await writeSSE({ type: 'data-conversation', data: item });
                       }
+
                     }
                   } else if (parsed && typeof parsed === 'object' && parsed.conversation_id) {
                     await writeSSE({ type: 'data-conversation', data: parsed });
