@@ -14,8 +14,8 @@ import type {
 const STORAGE_KEY = 'potomac_sandbox_sessions';
 const ACTIVE_SESSION_KEY = 'potomac_sandbox_active_session';
 const FILES_STORAGE_KEY = 'potomac_sandbox_files';
-const MAX_SESSIONS = 50;
-const MAX_HISTORY_PER_SESSION = 100;
+const MAX_SESSIONS = 500;
+const MAX_HISTORY_PER_SESSION = 1000;
 
 /**
  * Generate a unique ID
