@@ -129,7 +129,8 @@ export async function POST(req: NextRequest) {
       // Provide user-friendly error messages for common status codes
       let userMessage = error.detail || `HTTP ${backendResponse.status}`;
       if (backendResponse.status === 401) {
-        userMessage = 'Authentication failed. Please log in again or check your API key in Settings.';
+        // Use a distinctive phrase the frontend can reliably detect to trigger re-login
+        userMessage = 'SESSION_EXPIRED: Your session has expired. Please log in again.';
       } else if (backendResponse.status === 400 && userMessage.includes('API key')) {
         userMessage = 'Claude API key not configured. Please add your API key in Profile Settings.';
       }

@@ -1035,9 +1035,26 @@ export function ChatPage() {
     onError: (error) => {
       setSkillStatus(null); // Clear skill status on error
       const msg = error.message || 'An error occurred';
+
+      // ── Expired / invalid JWT ─────────────────────────────────────────────
+      // The /api/chat route prefixes 401 errors with SESSION_EXPIRED so we
+      // can reliably distinguish them from other auth messages (e.g. missing
+      // Claude API key).  Clear local storage and let AuthContext redirect.
+      if (msg.startsWith('SESSION_EXPIRED') || msg.includes('session has expired') || msg.includes('log in again')) {
+        try { localStorage.removeItem('auth_token'); } catch {}
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:token-expired'));
+        }
+        toast.error('Session Expired', {
+          description: 'Your session has expired. Redirecting to login…',
+          duration: 4000,
+        });
+        return; // Don't set pageError — user is being redirected
+      }
+
       setPageError(msg);
       
-      // Check if it's a connection error
+      // ── Connection errors ─────────────────────────────────────────────────
       if (msg.includes('fetch') || msg.includes('network') || msg.includes('ECONNREFUSED')) {
         setBackendAvailable(false);
         toast.error('Connection Error', {
