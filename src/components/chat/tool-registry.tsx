@@ -65,6 +65,28 @@ import AFLGenerationCard from '@/components/generative-ui/AFLGenerationCard';
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
 import { SandboxArtifactRenderer } from '@/components/sandbox';
+import { SubagentProgress, BackgroundTaskCard } from './YangInlineComponents';
+
+// Lightweight theme detector for YANG GenUI cards (they need an isDark prop).
+function _yangIsDark(): boolean {
+  if (typeof document === 'undefined') return true;
+  try {
+    return document.documentElement.classList.contains('dark')
+      || window.matchMedia?.('(prefers-color-scheme: dark)').matches === true;
+  } catch {
+    return true;
+  }
+}
+
+// YANG tool adapters — bridge tool-registry signature to YANG component props.
+function SubagentProgressAdapter(props: any) {
+  return <SubagentProgress isDark={_yangIsDark()} input={props.input} output={props.output ?? props} />;
+}
+function BackgroundTaskCardAdapter(props: any) {
+  return <BackgroundTaskCard isDark={_yangIsDark()} output={props.output ?? props} />;
+}
+
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -406,7 +428,15 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   generate_pdf:             { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'PDF Document' },
   datapack_builder:         { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Data Pack' },
   build_datapack:           { component: DocumentGenerationCard, mode: 'document-generation', displayName: 'Data Pack' },
+
+  // ── YANG Advanced Agentic Features ────────────────────────────────────────
+  spawn_subagents:          { component: SubagentProgressAdapter,  displayName: 'Parallel Agents' },
+  dispatch_subagents:        { component: SubagentProgressAdapter,  displayName: 'Parallel Agents' },
+  run_subagents:             { component: SubagentProgressAdapter,  displayName: 'Parallel Agents' },
+  background_edit:          { component: BackgroundTaskCardAdapter, displayName: 'Background Task' },
+  run_in_background:         { component: BackgroundTaskCardAdapter, displayName: 'Background Task' },
 };
+
 
 // ─── Error Component ──────────────────────────────────────────────────────────
 
