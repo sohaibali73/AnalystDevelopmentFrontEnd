@@ -371,11 +371,12 @@ function FeaturesTab({
           />
           <TunableNumber
             T={T}
-            label="Auto-compact token threshold"
-            hint="Trigger compaction when history exceeds this"
-            value={advanced.compact_token_threshold ?? 120000}
-            min={20000} max={500000} step={10000}
-            onChange={(v) => onAdvancedChange({ compact_token_threshold: v })}
+            label="Auto-compact context threshold"
+            hint="Trigger when context window is this % full (like Cline's utilisation trigger)"
+            value={Math.round((advanced.compact_utilization_threshold ?? 0.70) * 100)}
+            min={40} max={95} step={5}
+            suffix="%"
+            onChange={(pct) => onAdvancedChange({ compact_utilization_threshold: pct / 100 })}
           />
           <TunableNumber
             T={T}
@@ -505,10 +506,12 @@ function InlineBanner({
 }
 
 function TunableNumber({
-  T, label, hint, value, min, max, step, onChange,
+  T, label, hint, value, min, max, step, onChange, suffix,
 }: {
   T: any; label: string; hint: string;
   value: number; min: number; max: number; step: number;
+  /** Optional unit appended to the displayed value, e.g. "%" */
+  suffix?: string;
   onChange: (v: number) => void;
 }) {
   return (
@@ -532,7 +535,7 @@ function TunableNumber({
           color: T.text,
           fontWeight: 600,
         }}>
-          {value.toLocaleString()}
+          {value.toLocaleString()}{suffix ?? ''}
         </span>
       </div>
       <input

@@ -20,6 +20,8 @@ export interface YangConfig {
 export interface YangAdvanced {
   subagent_max?: number;
   compact_token_threshold?: number;
+  /** 0.0–1.0 — trigger compaction at this fraction of the context window. Default 0.70. */
+  compact_utilization_threshold?: number;
   focus_llm_every_n?: number;
   double_check_model?: string;
   compact_model?: string;
@@ -148,6 +150,17 @@ export interface YangSubagentsRunningEvent {
   message?: string;
 }
 
+export interface YangAutoCompactEvent {
+  yang_auto_compact: true;
+  /** Real API input_tokens from the last turn */
+  input_tokens: number;
+  /** Model context window size (e.g. 1_000_000) */
+  context_window: number;
+  /** Percentage of context window consumed, e.g. 71.4 */
+  utilization_pct: number;
+  message?: string;
+}
+
 export type YangStreamEvent =
   | YangVerificationEvent
   | YangFocusChainEvent
@@ -156,7 +169,8 @@ export type YangStreamEvent =
   | YangYoloActiveEvent
   | YangYoloCapEvent
   | YangToolSearchEvent
-  | YangSubagentsRunningEvent;
+  | YangSubagentsRunningEvent
+  | YangAutoCompactEvent;
 
 /** Type-guard helpers — prefer these over raw property access. */
 export function isYangEvent(item: any): item is YangStreamEvent {
@@ -169,6 +183,7 @@ export function isYangEvent(item: any): item is YangStreamEvent {
     'yang_yolo_mode' in item ||
     'yang_yolo_iteration_cap' in item ||
     'yang_tool_search' in item ||
-    'yang_subagents_running' in item
+    'yang_subagents_running' in item ||
+    'yang_auto_compact' in item
   );
 }

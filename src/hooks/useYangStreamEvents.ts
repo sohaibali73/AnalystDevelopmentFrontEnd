@@ -13,6 +13,7 @@ import type {
   YangFocusSnapshot,
   YangVerificationEvent,
   YangBackgroundEditEvent,
+  YangAutoCompactEvent,
 } from '@/types/yang';
 
 export interface YangStreamState {
@@ -23,6 +24,8 @@ export interface YangStreamState {
   focusSnapshot: YangFocusSnapshot | null;
   verification: YangVerificationEvent | null;
   subagentsRunning: number;
+  /** Set briefly when auto-compact fires; carries the last compaction event. */
+  autoCompact: YangAutoCompactEvent | null;
 }
 
 export interface UseYangStreamEventsResult extends YangStreamState {
@@ -45,6 +48,7 @@ const INITIAL: YangStreamState = {
   focusSnapshot: null,
   verification: null,
   subagentsRunning: 0,
+  autoCompact: null,
 };
 
 export function useYangStreamEvents(
@@ -133,6 +137,25 @@ export function useYangStreamEvents(
     // ── Subagents ────────────────────────────────────────────────────
     if (item.yang_subagents_running) {
       setState((s) => ({ ...s, subagentsRunning: item.count || 0 }));
+      return;
+    }
+
+    // ── Auto-compact ─────────────────────────────────────────────────
+    // Mirrors Cline's "Context compressed" notification.
+    if (item.yang_auto_compact) {
+      const ev = item as YangAutoCompactEvent;
+      setState((s) => ({ ...s, autoCompact: ev }));
+
+      toast.info('Context compressed', {
+        description: `${ev.utilization_pct}% of context used — old messages summarized in the background.`,
+        duration: 5000,
+        icon: '🗜',
+      });
+
+      // Auto-clear the state badge after 8 s so it doesn't linger forever.
+      setTimeout(() => {
+        setState((s) => ({ ...s, autoCompact: null }));
+      }, 8000);
       return;
     }
   }, []);
