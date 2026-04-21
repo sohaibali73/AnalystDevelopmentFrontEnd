@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import { storage } from '@/lib/storage';
@@ -41,9 +41,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Redirect to /login unless already on a public auth page
+  const redirectToLogin = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const pub = ['/login', '/register', '/forgot-password', '/privacy', '/terms'];
+    const isPublic = pub.some(p => window.location.pathname.startsWith(p));
+    if (!isPublic) router.push('/login');
+  }, [router]);
+
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Listen for token-expired events dispatched by the API client
+  useEffect(() => {
+    const handleTokenExpired = () => {
+      storage.removeItem('auth_token');
+      setUser(null);
+      redirectToLogin();
+    };
+    window.addEventListener('auth:token-expired', handleTokenExpired);
+    return () => window.removeEventListener('auth:token-expired', handleTokenExpired);
+  }, [redirectToLogin]);
 
   const checkAuth = async () => {
     try {
@@ -61,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       storage.removeItem('auth_token');
       logger.error('Auth check failed', error);
+      // Token is invalid/expired — send the user back to login
+      redirectToLogin();
     } finally {
       setLoading(false);
     }

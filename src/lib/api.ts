@@ -146,6 +146,16 @@ class APIClient {
           detail: `Request failed with status ${response.status}`
         }));
         logger.error(`API Error: ${method} ${endpoint}`, error);
+
+        // Auto-logout on expired / invalid token
+        if (response.status === 401) {
+          this.token = null;
+          try { storage.removeItem('auth_token'); } catch {}
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:token-expired'));
+          }
+        }
+
         throw new Error(error.detail || error.message || `HTTP ${response.status}`);
       }
 
