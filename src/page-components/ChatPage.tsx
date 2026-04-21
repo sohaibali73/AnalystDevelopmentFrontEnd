@@ -593,7 +593,7 @@ function ImmediateUploader({
                 fileId: backendFileId,
                 filename: file.filename || 'file',
                 mediaType: file.mediaType,
-                size: file.size,
+                size: fileObj.size,
               };
               persistChatFileRef(convId, file.filename || 'file', fileRef);
             }
