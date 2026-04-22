@@ -20,6 +20,14 @@ import { useYangBackgroundTasks } from '@/contexts/YangBackgroundTasksContext';
 import type { YangVerificationEvent } from '@/types/yang';
 import type { YangTokenUsage } from '@/hooks/useYangStreamEvents';
 
+// ─── Shared token helpers ────────────────────────────────────────────────────
+
+function fmtTokens(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
 // ─── CompletionVerificationBadge ────────────────────────────────────────────
 
 export function CompletionVerificationBadge({
@@ -31,10 +39,10 @@ export function CompletionVerificationBadge({
   if (!verification) return null;
 
   const verified = verification.verified;
-  const color = verified ? '#10B981' : '#F59E0B';
-  const Icon  = verified ? CheckCircle2 : AlertCircle;
-  const label = verified ? 'Verified' : 'Revised';
-  const title = verified
+  const color  = verified ? '#10B981' : '#F59E0B';
+  const Icon   = verified ? CheckCircle2 : AlertCircle;
+  const label  = verified ? 'Verified' : 'Revised';
+  const title  = verified
     ? 'Response verified against your request'
     : `Verifier triggered a revision — ${verification.critique}`;
 
@@ -42,19 +50,22 @@ export function CompletionVerificationBadge({
     <span
       title={title}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '3px 9px',
-        borderRadius: 999,
-        border: `1px solid ${color}55`,
-        background: color + '15',
+        display:       'inline-flex',
+        alignItems:    'center',
+        gap:            5,
+        padding:       '3px 10px 3px 7px',
+        borderRadius:   999,
+        border:        `1px solid ${color}40`,
+        background:     color + '12',
         color,
-        fontSize: 10.5,
-        fontWeight: 600,
-        fontFamily: "'DM Mono', monospace",
-        letterSpacing: '0.05em',
-        whiteSpace: 'nowrap' as const,
+        fontSize:       10,
+        fontWeight:     700,
+        fontFamily:    "'DM Mono', monospace",
+        letterSpacing: '0.07em',
+        textTransform: 'uppercase' as const,
+        whiteSpace:    'nowrap' as const,
+        boxShadow:     `0 0 0 3px ${color}0A`,
+        transition:    'box-shadow .2s',
       }}
     >
       <Icon size={10} strokeWidth={2.5} />
@@ -72,46 +83,45 @@ export function CompactionBanner({
   count: number;
 }) {
   if (count <= 0) return null;
-  const T = {
-    text:   isDark ? '#9A9AA3' : '#6B7280',
-    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
-    accent: '#F59E0B',
-  };
+
+  const lineColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+  const textColor = isDark ? '#606068' : '#9CA3AF';
+  const accentColor = '#F59E0B';
+
   return (
     <div
       style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        margin: '8px 0',
-        padding: '6px 12px',
-        borderRadius: 999,
-        border: `1px dashed ${T.border}`,
-        background: 'transparent',
-        color: T.text,
-        fontSize: 10.5,
-        fontFamily: "'DM Mono', monospace",
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase' as const,
-        alignSelf: 'center',
-        maxWidth: 'fit-content',
+        display:    'flex',
+        alignItems: 'center',
+        gap:         10,
+        margin:     '10px 0',
       }}
     >
-      <Archive size={11} style={{ color: T.accent }} />
-      {count} earlier message{count === 1 ? '' : 's'} summarized
+      <span style={{ flex: 1, height: 1, background: lineColor }} />
+      <span
+        style={{
+          display:       'inline-flex',
+          alignItems:    'center',
+          gap:            6,
+          color:          textColor,
+          fontSize:       9.5,
+          fontFamily:    "'DM Mono', monospace",
+          letterSpacing: '0.10em',
+          textTransform: 'uppercase' as const,
+          whiteSpace:    'nowrap' as const,
+          userSelect:    'none' as const,
+        }}
+      >
+        <Archive size={10} strokeWidth={2} style={{ color: accentColor, opacity: 0.8 }} />
+        {count} message{count === 1 ? '' : 's'} summarized
+      </span>
+      <span style={{ flex: 1, height: 1, background: lineColor }} />
     </div>
   );
 }
 
 // ─── TokenCounterBadge ───────────────────────────────────────────────────────
 
-/**
- * Compact badge shown above the input area that displays real-time token
- * usage received from the backend via the `yang_token_usage` stream event.
- *
- * Color legend:
- *   < 50%  → muted / neutral
- *   50–75% → amber warning
- *   > 75%  → red / danger
- */
 export function TokenCounterBadge({
   isDark,
   tokenUsage,
@@ -123,71 +133,63 @@ export function TokenCounterBadge({
 
   const pct = tokenUsage.utilization_pct;
 
-  // Pick a colour based on utilisation
   const accent =
-    pct >= 75 ? '#EF4444' :   // red — almost full
-    pct >= 50 ? '#F59E0B' :   // amber — moderate
-    isDark    ? '#6B7280' :   // muted-dark
-                '#9CA3AF';    // muted-light
+    pct >= 75 ? '#EF4444' :
+    pct >= 50 ? '#F59E0B' :
+    isDark    ? '#52525B' :
+                '#A1A1AA';
 
-  const barWidth = Math.min(100, pct);
-
-  // Format token count nicely: 12345 → "12.3k"
-  function fmt(n: number) {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
-    return String(n);
-  }
-
+  const barBg   = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+  const barFill = Math.min(100, pct);
   const hasCacheHit = tokenUsage.cache_read_tokens > 0;
 
   return (
     <div
-      title={`Context window: ${fmt(tokenUsage.input_tokens)} / ${fmt(tokenUsage.context_window)} tokens used`}
+      title={`Context: ${fmtTokens(tokenUsage.input_tokens)} / ${fmtTokens(tokenUsage.context_window)} tokens`}
       style={{
-        display:     'inline-flex',
-        alignItems:  'center',
-        gap:          6,
-        padding:     '4px 10px 4px 8px',
-        borderRadius: 999,
-        border:      `1px solid ${accent}44`,
-        background:  accent + '12',
-        color:        accent,
-        fontSize:     10.5,
-        fontWeight:   600,
-        fontFamily:  "'DM Mono', monospace",
+        display:       'inline-flex',
+        alignItems:    'center',
+        gap:            7,
+        padding:       '4px 10px 4px 9px',
+        borderRadius:   999,
+        border:        `1px solid ${accent}38`,
+        background:     accent + '0E',
+        color:          accent,
+        fontSize:       10,
+        fontWeight:     600,
+        fontFamily:    "'DM Mono', monospace",
         letterSpacing: '0.04em',
-        whiteSpace:  'nowrap' as const,
-        userSelect:  'none' as const,
-        cursor:       'default',
-        transition:  'border-color .2s, background .2s',
+        whiteSpace:    'nowrap' as const,
+        userSelect:    'none' as const,
+        cursor:        'default',
+        transition:    'border-color .3s, background .3s, color .3s',
       }}
     >
-      <Gauge size={11} strokeWidth={2.25} />
+      <Gauge size={11} strokeWidth={2} style={{ flexShrink: 0 }} />
 
-      {/* Token counts */}
-      <span>
-        {fmt(tokenUsage.input_tokens)}
-        <span style={{ opacity: 0.55 }}> / {fmt(tokenUsage.context_window)}</span>
+      {/* Used / total */}
+      <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 2 }}>
+        <span style={{ fontWeight: 700 }}>{fmtTokens(tokenUsage.input_tokens)}</span>
+        <span style={{ opacity: 0.4, fontSize: 9 }}> / {fmtTokens(tokenUsage.context_window)}</span>
       </span>
 
-      {/* Mini progress bar */}
+      {/* Progress bar */}
       <span
         style={{
-          display:      'inline-block',
-          width:         42,
-          height:         4,
-          borderRadius:   2,
-          background:   isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          display:     'inline-flex',
+          width:        48,
+          height:        3,
+          borderRadius:  2,
+          background:    barBg,
           overflow:     'hidden',
-          flexShrink:     0,
+          flexShrink:    0,
         }}
       >
         <span
           style={{
-            display:    'block',
-            width:      `${barWidth}%`,
-            height:     '100%',
+            display:     'block',
+            width:       `${barFill}%`,
+            height:      '100%',
             borderRadius: 2,
             background:   accent,
             transition:  'width .5s ease, background .3s',
@@ -196,59 +198,63 @@ export function TokenCounterBadge({
       </span>
 
       {/* Percentage */}
-      <span style={{ minWidth: 32, textAlign: 'right' as const }}>
+      <span style={{ minWidth: 34, textAlign: 'right' as const, fontVariantNumeric: 'tabular-nums' }}>
         {pct.toFixed(1)}%
       </span>
 
-      {/* Cache hit indicator */}
+      {/* Cache badge */}
       {hasCacheHit && (
         <span
-          title={`${fmt(tokenUsage.cache_read_tokens)} tokens served from prompt cache`}
+          title={`${fmtTokens(tokenUsage.cache_read_tokens)} tokens from prompt cache`}
           style={{
-            padding:     '1px 5px',
-            borderRadius: 999,
-            background:  '#10B98118',
-            border:      '1px solid #10B98144',
-            color:       '#10B981',
-            fontSize:     9,
-            fontWeight:   700,
-            letterSpacing: '0.06em',
+            padding:       '1px 6px',
+            borderRadius:   999,
+            background:    '#10B98114',
+            border:        '1px solid #10B98138',
+            color:         '#10B981',
+            fontSize:       8.5,
+            fontWeight:     800,
+            letterSpacing: '0.08em',
           }}
         >
-          CACHED
+          ⚡ CACHED
         </span>
       )}
     </div>
   );
 }
 
-// ─── ToolSearchChip (transient shimmer) ──────────────────────────────────────
+// ─── ToolSearchChip ──────────────────────────────────────────────────────────
 
 export function ToolSearchChip({ isDark, active }: { isDark: boolean; active: boolean }) {
   if (!active) return null;
-  const T = {
-    text:   isDark ? '#DCDCE0' : '#30303A',
-    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
-    accent: '#06B6D4',
-  };
+
+  const accent = '#06B6D4';
+
   return (
     <div
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '4px 10px',
-        borderRadius: 999,
-        background: `linear-gradient(90deg, ${T.accent}20, ${T.accent}40, ${T.accent}20)`,
+        display:        'inline-flex',
+        alignItems:     'center',
+        gap:             6,
+        padding:        '4px 11px 4px 9px',
+        borderRadius:    999,
+        background:     `linear-gradient(90deg, ${accent}1A 0%, ${accent}36 50%, ${accent}1A 100%)`,
         backgroundSize: '200% 100%',
-        border: `1px solid ${T.accent}55`,
-        color: T.accent,
-        fontSize: 10.5,
-        fontWeight: 600,
-        fontFamily: "'DM Mono', monospace",
-        animation: 'chat-shimmer 1.5s linear infinite',
+        border:         `1px solid ${accent}44`,
+        color:           accent,
+        fontSize:        10,
+        fontWeight:      700,
+        fontFamily:     "'DM Mono', monospace",
+        letterSpacing:  '0.07em',
+        textTransform:  'uppercase' as const,
+        animation:      'chat-shimmer 1.6s ease-in-out infinite',
+        userSelect:     'none' as const,
       }}
     >
-      <SearchIcon size={10} strokeWidth={2.25} />
-      Searching tools…
+      <SearchIcon size={10} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+      Searching tools
+      <span style={{ opacity: 0.5 }}>…</span>
     </div>
   );
 }
@@ -264,6 +270,12 @@ interface SubagentResult {
   elapsed_s?: number;
 }
 
+const ROLE_COLORS: Record<string, string> = {
+  researcher:  '#3B82F6',
+  analyst:     '#8B5CF6',
+  kb_searcher: '#10B981',
+};
+
 export function SubagentProgress({
   isDark, input, output,
 }: {
@@ -271,24 +283,15 @@ export function SubagentProgress({
   input: any;
   output: any;
 }) {
-  const T = {
-    text:   isDark ? '#EFEFEF' : '#0A0A0B',
-    muted:  isDark ? '#9A9AA3' : '#6B7280',
-    dim:    isDark ? '#606068' : '#808088',
-    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
-    cardBg: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-  };
-
-  const roleColor: Record<string, string> = {
-    researcher:  '#3B82F6',
-    analyst:     '#8B5CF6',
-    kb_searcher: '#10B981',
-  };
+  const textPrimary   = isDark ? '#E4E4E7' : '#18181B';
+  const textMuted     = isDark ? '#71717A' : '#6B7280';
+  const borderBase    = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+  const headerBg      = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)';
+  const rowBg         = isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.015)';
 
   const subtasks = Array.isArray(input?.subtasks) ? input.subtasks : [];
   const results: SubagentResult[] = Array.isArray(output?.results) ? output.results : [];
 
-  // Merge by index (subtasks define roles; results carry outputs)
   const rows = subtasks.map((st: any, i: number) => ({
     role:      st?.role || 'researcher',
     task:      st?.task || '',
@@ -298,103 +301,165 @@ export function SubagentProgress({
     status:    results[i]?.status ?? (results[i] ? 'complete' : 'running'),
   }));
 
+  const doneCount = rows.filter((r: any) => r.status === 'complete').length;
+  const failCount = rows.filter((r: any) => r.status === 'failed' || r.error).length;
+
   return (
     <div
       style={{
-        margin: '6px 0',
-        padding: 12,
-        borderRadius: 12,
-        border: `1px solid ${T.border}`,
-        background: T.cardBg,
-        display: 'flex', flexDirection: 'column', gap: 8,
+        margin:       '8px 0',
+        borderRadius:  12,
+        border:       `1px solid ${borderBase}`,
+        overflow:     'hidden',
+        fontFamily:   "'DM Mono', monospace",
       }}
     >
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        fontFamily: "'DM Mono', monospace",
-        fontSize: 10, letterSpacing: '0.14em',
-        color: T.muted, textTransform: 'uppercase' as const,
-      }}>
-        <GitBranch size={11} strokeWidth={2.25} />
-        Subagents · {rows.length}
+      {/* Header */}
+      <div
+        style={{
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'space-between',
+          padding:        '8px 12px',
+          background:      headerBg,
+          borderBottom:   `1px solid ${borderBase}`,
+        }}
+      >
+        <span style={{
+          display:       'flex',
+          alignItems:    'center',
+          gap:            6,
+          fontSize:       9.5,
+          fontWeight:     700,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase' as const,
+          color:          textMuted,
+        }}>
+          <GitBranch size={10} strokeWidth={2.5} />
+          Subagents
+        </span>
+        <span style={{
+          fontSize:       9,
+          letterSpacing: '0.06em',
+          color:          textMuted,
+        }}>
+          {doneCount}/{rows.length} done
+          {failCount > 0 && (
+            <span style={{ color: '#EF4444', marginLeft: 6 }}>· {failCount} failed</span>
+          )}
+        </span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Rows */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
         {rows.map((r: any, i: number) => {
-          const color = roleColor[r.role] || '#6B7280';
-          const isDone  = r.status === 'complete';
-          const isFail  = r.status === 'failed' || !!r.error;
+          const color  = ROLE_COLORS[r.role] || '#6B7280';
+          const isDone = r.status === 'complete';
+          const isFail = r.status === 'failed' || !!r.error;
+
           return (
             <div
               key={i}
               style={{
-                display: 'flex', alignItems: 'flex-start', gap: 8,
-                padding: 8,
-                borderRadius: 8,
-                border: `1px solid ${color}22`,
-                background: color + '08',
+                display:      'flex',
+                alignItems:   'flex-start',
+                gap:           10,
+                padding:      '9px 12px',
+                background:    rowBg,
+                borderBottom:  i < rows.length - 1 ? `1px solid ${borderBase}` : 'none',
+                borderLeft:   `2px solid ${color}`,
+                transition:   'background .15s',
               }}
             >
+              {/* Role pill */}
               <span style={{
-                padding: '2px 8px',
-                borderRadius: 999,
-                background: color + '20',
+                padding:       '2px 7px',
+                borderRadius:   999,
+                background:     color + '18',
                 color,
-                fontSize: 9.5,
-                fontWeight: 700,
-                fontFamily: "'DM Mono', monospace",
-                letterSpacing: '0.05em',
+                fontSize:       8.5,
+                fontWeight:     800,
+                letterSpacing: '0.08em',
                 textTransform: 'uppercase' as const,
-                flexShrink: 0,
-                alignSelf: 'flex-start',
+                flexShrink:     0,
+                marginTop:      1,
+                border:        `1px solid ${color}28`,
               }}>
                 {r.role}
               </span>
+
+              {/* Content */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: 11.5, color: T.text,
-                  lineHeight: 1.35,
-                  overflow: 'hidden',
-                  display: '-webkit-box',
+                  fontSize:    11.5,
+                  fontFamily: 'inherit',
+                  color:       textPrimary,
+                  lineHeight:  1.4,
+                  overflow:   'hidden',
+                  display:    '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical' as any,
                 }}>
                   {r.task}
                 </div>
-                {r.result && (
+
+                {r.result && !isFail && (
                   <div style={{
-                    marginTop: 4,
-                    fontSize: 10.5, color: T.muted,
-                    lineHeight: 1.4,
-                    overflow: 'hidden',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
+                    marginTop:  4,
+                    fontSize:   10,
+                    color:      textMuted,
+                    lineHeight: 1.45,
+                    overflow:  'hidden',
+                    display:   '-webkit-box',
+                    WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical' as any,
                   }}>
-                    {String(r.result).slice(0, 240)}
+                    {String(r.result).slice(0, 200)}
                   </div>
                 )}
+
                 {isFail && r.error && (
-                  <div style={{ marginTop: 4, fontSize: 10.5, color: '#EF4444' }}>
+                  <div style={{
+                    marginTop:  4,
+                    fontSize:   10,
+                    color:     '#EF4444',
+                    lineHeight: 1.4,
+                  }}>
                     {r.error}
                   </div>
                 )}
+
+                {r.elapsed_s != null && isDone && (
+                  <div style={{
+                    marginTop:     3,
+                    fontSize:      9,
+                    color:         textMuted,
+                    opacity:       0.6,
+                    letterSpacing: '0.04em',
+                  }}>
+                    {r.elapsed_s.toFixed(1)}s
+                  </div>
+                )}
               </div>
-              <span style={{ flexShrink: 0 }}>
+
+              {/* Status icon */}
+              <div style={{ flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center' }}>
                 {isFail ? (
                   <AlertCircle size={12} style={{ color: '#EF4444' }} />
                 ) : isDone ? (
                   <CheckCircle2 size={12} style={{ color: '#10B981' }} />
                 ) : (
                   <span style={{
-                    width: 10, height: 10, borderRadius: '50%',
-                    border: `2px solid ${color}`,
+                    width:           11,
+                    height:          11,
+                    borderRadius:   '50%',
+                    border:         `1.5px solid ${color}`,
                     borderTopColor: 'transparent',
-                    animation: 'chat-spin 0.8s linear infinite',
-                    display: 'inline-block',
+                    animation:      'chat-spin 0.8s linear infinite',
+                    display:        'inline-block',
                   }} />
                 )}
-              </span>
+              </div>
             </div>
           );
         })}
@@ -411,102 +476,149 @@ export function BackgroundTaskCard({
   isDark: boolean;
   output: any;
 }) {
-  const T = {
-    text:   isDark ? '#EFEFEF' : '#0A0A0B',
-    muted:  isDark ? '#9A9AA3' : '#6B7280',
-    dim:    isDark ? '#606068' : '#808088',
-    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
-    cardBg: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-    accent: '#F59E0B',
-  };
+  const textPrimary = isDark ? '#E4E4E7' : '#18181B';
+  const textMuted   = isDark ? '#71717A' : '#6B7280';
+  const borderBase  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
 
-  const taskId = output?.task_id;
+  const taskId  = output?.task_id;
   const { tasks } = useYangBackgroundTasks();
-  const live = taskId ? tasks[taskId] : undefined;
+  const live    = taskId ? tasks[taskId] : undefined;
 
-  const status = live?.status || output?.status || 'running';
-  const label  = live?.label || output?.label ||
+  const status  = live?.status || output?.status || 'running';
+  const label   = live?.label || output?.label ||
     (live?.tool_name ? `Running ${live.tool_name}` : 'Background task');
   const elapsed = live?.elapsed_s ?? 0;
 
   const isDone = status === 'complete';
   const isFail = status === 'failed';
 
-  const statusColor = isDone ? '#10B981' : isFail ? '#EF4444' : T.accent;
+  const statusColor   = isDone ? '#10B981' : isFail ? '#EF4444' : '#F59E0B';
+  const statusLabel   = isDone ? 'Complete' : isFail ? 'Failed' : 'Running';
 
-  // Download URL only appears once complete
   const downloadUrl = live?.result?.download_url || output?.download_url;
   const filename    = live?.result?.filename || output?.filename || 'file';
 
   return (
     <div
       style={{
-        margin: '6px 0',
-        padding: 12,
-        borderRadius: 12,
-        border: `1px solid ${statusColor}55`,
-        background: statusColor + '08',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
+        margin:       '8px 0',
+        padding:      '11px 14px',
+        borderRadius:  12,
+        border:       `1px solid ${borderBase}`,
+        borderLeft:   `2px solid ${statusColor}`,
+        background:    isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+        display:      'flex',
+        alignItems:   'center',
+        gap:           12,
+        transition:   'border-color .3s',
       }}
     >
+      {/* Status icon */}
       <span style={{
-        width: 32, height: 32, borderRadius: 999,
-        background: statusColor + '25',
-        color: statusColor,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
+        width:           32,
+        height:          32,
+        borderRadius:     999,
+        background:       statusColor + '18',
+        border:          `1px solid ${statusColor}30`,
+        color:            statusColor,
+        display:         'flex',
+        alignItems:      'center',
+        justifyContent:  'center',
+        flexShrink:       0,
       }}>
         {isFail ? (
-          <AlertTriangle size={14} />
+          <AlertTriangle size={13} strokeWidth={2} />
         ) : isDone ? (
-          <CheckCircle2 size={14} />
+          <CheckCircle2 size={13} strokeWidth={2} />
         ) : (
           <span style={{
-            width: 14, height: 14, borderRadius: '50%',
-            border: `2px solid ${statusColor}`,
+            width:           13,
+            height:          13,
+            borderRadius:   '50%',
+            border:         `1.5px solid ${statusColor}`,
             borderTopColor: 'transparent',
-            animation: 'chat-spin 0.8s linear infinite',
+            animation:      'chat-spin 0.8s linear infinite',
+            display:        'inline-block',
           }} />
         )}
       </span>
 
+      {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: T.text, lineHeight: 1.3 }}>
+        <div style={{
+          fontSize:    12.5,
+          fontWeight:  600,
+          color:       textPrimary,
+          lineHeight:  1.3,
+          whiteSpace: 'nowrap' as const,
+          overflow:   'hidden',
+          textOverflow: 'ellipsis',
+        }}>
           {label}
         </div>
         <div style={{
-          marginTop: 2, fontSize: 10.5, color: T.muted,
-          fontFamily: "'DM Mono', monospace", letterSpacing: '0.05em',
+          marginTop:     3,
+          display:      'flex',
+          alignItems:   'center',
+          gap:           6,
+          fontFamily:   "'DM Mono', monospace",
+          fontSize:      9.5,
+          color:         textMuted,
+          letterSpacing: '0.04em',
         }}>
-          {isFail
-            ? (live?.error || 'Failed')
-            : isDone
-              ? `Completed · ${elapsed.toFixed(1)}s`
-              : `Running · ${elapsed.toFixed(1)}s`}
+          <span style={{
+            color:         statusColor,
+            fontWeight:    700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase' as const,
+            fontSize:       8.5,
+          }}>
+            {statusLabel}
+          </span>
+          {!isFail && (
+            <>
+              <span style={{ opacity: 0.3 }}>·</span>
+              <span>{elapsed.toFixed(1)}s</span>
+            </>
+          )}
+          {isFail && live?.error && (
+            <>
+              <span style={{ opacity: 0.3 }}>·</span>
+              <span style={{ color: '#EF4444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                {live.error}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
+      {/* Download button */}
       {isDone && downloadUrl && (
         <a
           href={downloadUrl}
           target="_blank"
           rel="noopener noreferrer"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '6px 12px',
-            borderRadius: 999,
-            border: `1px solid ${statusColor}55`,
-            background: statusColor + '18',
-            color: statusColor,
-            fontSize: 11, fontWeight: 600,
-            textDecoration: 'none',
-            whiteSpace: 'nowrap' as const,
-          }}
           title={filename}
+          style={{
+            display:       'inline-flex',
+            alignItems:    'center',
+            gap:            5,
+            padding:       '6px 12px',
+            borderRadius:   999,
+            border:        `1px solid ${statusColor}40`,
+            background:     statusColor + '14',
+            color:          statusColor,
+            fontSize:       10.5,
+            fontWeight:     700,
+            fontFamily:    "'DM Mono', monospace",
+            letterSpacing: '0.04em',
+            textDecoration: 'none',
+            whiteSpace:    'nowrap' as const,
+            flexShrink:     0,
+            transition:    'background .15s, border-color .15s',
+          }}
         >
-          <Download size={11} />
+          <Download size={10} strokeWidth={2.5} />
           Download
         </a>
       )}
