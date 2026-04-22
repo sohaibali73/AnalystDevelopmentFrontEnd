@@ -26,7 +26,7 @@ import {
   CopyIcon, ThumbsUpIcon, ThumbsDownIcon, Eye,
   FileText as FileTextIcon, FileCode as FileCodeIcon,
   FileSpreadsheet as FileSpreadsheetIcon, File as FileIconLucide,
-  XIcon, ImageIcon, Music2Icon, VideoIcon,
+  XIcon, ImageIcon, Music2Icon, VideoIcon, Loader2,
 } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChat } from '@ai-sdk/react';
@@ -312,6 +312,8 @@ function getFileTypeIcon(filename: string | undefined) {
   onClearSkill,
   attachedKbDocs = [],
   onRemoveKbDoc,
+  uploadingIds,
+  erroredIds,
   }: {
   isDark: boolean;
   onRemoveFile: (id: string) => void;
@@ -320,6 +322,8 @@ function getFileTypeIcon(filename: string | undefined) {
   onClearSkill: () => void;
   attachedKbDocs?: Array<{ id: string; filename: string; title?: string; category: string }>;
   onRemoveKbDoc?: (id: string) => void;
+  uploadingIds?: Set<string>;
+  erroredIds?: Set<string>;
   }) {
   const attachments = usePromptInputAttachments();
   const hasFiles = attachments.files.length > 0;
@@ -392,6 +396,8 @@ function getFileTypeIcon(filename: string | undefined) {
         {attachments.files.map((file) => {
           const fname = file.filename || 'file';
           const Icon = getFileTypeIcon(fname);
+          const isUploading = uploadingIds?.has(file.id) ?? false;
+          const hasError = erroredIds?.has(file.id) ?? false;
 
           return (
             <div
@@ -403,22 +409,35 @@ function getFileTypeIcon(filename: string | undefined) {
                 gap: '6px',
                 padding: '6px 10px 6px 8px',
                 borderRadius: '8px',
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                border: hasError
+                  ? '1px solid rgba(239,68,68,0.4)'
+                  : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                background: hasError
+                  ? (isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)')
+                  : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
                 fontSize: '13px',
                 fontWeight: 500,
-                color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
+                color: hasError
+                  ? '#EF4444'
+                  : (isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)'),
                 maxWidth: '200px',
+                opacity: isUploading ? 0.75 : 1,
                 transition: 'all 0.15s ease',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+                if (!isUploading && !hasError)
+                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+                if (!isUploading && !hasError)
+                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
               }}
             >
-              <Icon size={14} style={{ opacity: 0.7, flexShrink: 0 }} />
+              {isUploading ? (
+                <Loader2 size={14} style={{ opacity: 0.7, flexShrink: 0, animation: 'spin 1s linear infinite' }} className="animate-spin" />
+              ) : (
+                <Icon size={14} style={{ opacity: hasError ? 1 : 0.7, flexShrink: 0 }} />
+              )}
               <span style={{
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -1423,6 +1442,8 @@ export function ChatPage() {
 
   // ── KB attached documents state ──────────────────────────────────────────────
   const [attachedKbDocs, setAttachedKbDocs] = useState<Array<{ id: string; filename: string; title?: string; category: string }>>([]);
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
+  const [erroredIds, setErroredIds] = useState<Set<string>>(new Set());
 
   // ── KB Add-to-message handler ──────────────────────────────────────────────
   const handleKbAddToMessage = useCallback(
@@ -2434,18 +2455,23 @@ export function ChatPage() {
                   onClearSkill={() => { setForcedSkillSlug(null); setForcedSkillName(null); }}
                   attachedKbDocs={attachedKbDocs}
                   onRemoveKbDoc={handleRemoveKbDoc}
+                  uploadingIds={uploadingIds}
+                  erroredIds={erroredIds}
                 />
                 {/* Immediate uploader — starts uploading files as soon as they're attached */}
                 <ImmediateUploader
                   conversationIdRef={conversationIdRef}
                   ensureConversationFn={ensureConversation}
                   onUploading={(fileId) => {
-                    toast.loading('Uploading file…', { id: fileId, duration: Infinity });
+                    setUploadingIds(prev => new Set([...prev, fileId]));
                   }}
                   onUploaded={(fileId) => {
-                    toast.success('File ready', { id: fileId, duration: 1800 });
+                    setUploadingIds(prev => { const s = new Set(prev); s.delete(fileId); return s; });
+                    setErroredIds(prev => { const s = new Set(prev); s.delete(fileId); return s; });
                   }}
                   onUploadError={(fileId, filename) => {
+                    setUploadingIds(prev => { const s = new Set(prev); s.delete(fileId); return s; });
+                    setErroredIds(prev => new Set([...prev, fileId]));
                     toast.error(`Failed to upload ${filename}`, { id: fileId, duration: 4000 });
                   }}
                 />
