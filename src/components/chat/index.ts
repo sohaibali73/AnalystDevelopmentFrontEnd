@@ -21,6 +21,7 @@ export {
   CompletionVerificationBadge,
   CompactionBanner,
   TokenCounterBadge,
+  TokenCounterBar,
   ToolSearchChip,
   SubagentProgress,
   BackgroundTaskCard,

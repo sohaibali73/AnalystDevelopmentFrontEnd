@@ -69,6 +69,7 @@ import {
   CheckpointsPanel,
   CompletionVerificationBadge,
   TokenCounterBadge,
+  TokenCounterBar,
   ToolSearchChip,
   API_BASE_URL_CHAT,
   type ChatPreviewFile,
@@ -2280,6 +2281,29 @@ export function ChatPage() {
               </button>
             </div>
           </div>
+        )}
+
+        {/* ── YANG: full-width token counter bar ────────────────────────────── */}
+        {/* Shown once token data is available — sits between messages and input */}
+        {yangStream.tokenUsage && yangSettingsHook.settings.auto_compact && (
+          <TokenCounterBar
+            isDark={isDark}
+            tokenUsage={yangStream.tokenUsage}
+            isCompacting={yangStream.autoCompact !== null}
+            onCompact={() => {
+              // Manual compact: inform the user and re-send empty turn to trigger
+              // the backend's auto-compact check (it will compact if threshold met).
+              if (yangStream.autoCompact !== null) {
+                toast.info('Compaction already in progress…');
+                return;
+              }
+              toast.info('Compact triggered', {
+                description: 'History will be compressed on your next message if context is over threshold.',
+                duration: 4000,
+                icon: '🗜',
+              });
+            }}
+          />
         )}
 
         {/* ── Prompt Input — Modern Frosted Glass ───────────────────────────── */}

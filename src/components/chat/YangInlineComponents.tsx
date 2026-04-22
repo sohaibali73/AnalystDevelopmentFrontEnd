@@ -224,6 +224,173 @@ export function TokenCounterBadge({
   );
 }
 
+// ─── TokenCounterBar (full-width Cline-style bar) ────────────────────────────
+
+/**
+ * Full-width bar that sits between the message list and the input box.
+ * Styled like Cursor / Cline's context window indicator:
+ *
+ *   424.2k  ══════════════════════░░░░  1.0M   ~$0.0013   [⇩ Compact]
+ *
+ * Props:
+ *   tokenUsage    — from yang_token_usage stream event
+ *   onCompact     — optional: callback to trigger manual compaction
+ *   isCompacting  — true while background compaction task is running
+ */
+export function TokenCounterBar({
+  isDark,
+  tokenUsage,
+  onCompact,
+  isCompacting = false,
+}: {
+  isDark: boolean;
+  tokenUsage: YangTokenUsage | null;
+  onCompact?: () => void;
+  isCompacting?: boolean;
+}) {
+  if (!tokenUsage) return null;
+
+  const pct    = tokenUsage.utilization_pct;
+  const barW   = Math.min(100, pct);
+
+  const barColor =
+    pct >= 75 ? '#EF4444' :
+    pct >= 50 ? '#F59E0B' :
+    '#6366F1';
+
+  const border = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const track  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textPrimary = isDark ? '#DCDCE0' : '#18181B';
+  const textMuted   = isDark ? '#606068' : '#9CA3AF';
+
+  // Rough cost: $3 / M input tokens (Claude Sonnet estimate)
+  const costEst = (tokenUsage.input_tokens / 1_000_000 * 3).toFixed(4);
+
+  return (
+    <div
+      style={{
+        width:          '100%',
+        borderTop:      `1px solid ${border}`,
+        padding:        '6px 20px 5px',
+        display:        'flex',
+        flexDirection:  'column',
+        gap:             5,
+        userSelect:     'none' as const,
+        background:      'transparent',
+      }}
+    >
+      {/* Row 1 — label  ·  cache badge  ·  spacer  ·  cost  ·  compact btn */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Gauge size={10} strokeWidth={2} style={{ color: barColor, flexShrink: 0 }} />
+        <span style={{
+          fontFamily:    "'DM Mono', monospace",
+          fontSize:       9.5, letterSpacing: '0.08em',
+          textTransform: 'uppercase' as const,
+          color:          textMuted, fontWeight: 600,
+        }}>
+          Context window
+        </span>
+
+        {tokenUsage.cache_read_tokens > 0 && (
+          <span
+            title={`${fmtTokens(tokenUsage.cache_read_tokens)} tokens from prompt cache`}
+            style={{
+              padding: '1px 6px', borderRadius: 999,
+              background: '#10B98112', border: '1px solid #10B98130',
+              color: '#10B981', fontSize: 8.5, fontWeight: 800,
+              fontFamily: "'DM Mono', monospace", letterSpacing: '0.08em',
+            }}
+          >
+            ⚡ CACHED
+          </span>
+        )}
+
+        <span style={{ flex: 1 }} />
+
+        <span style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 10,
+          color: textMuted, letterSpacing: '0.04em',
+          padding: '2px 8px', borderRadius: 999,
+          border: `1px solid ${border}`,
+          background: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)',
+        }}>
+          ~${costEst}
+        </span>
+
+        {onCompact && (
+          <button
+            onClick={onCompact}
+            disabled={isCompacting}
+            title="Compress conversation history now"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '3px 10px', borderRadius: 999,
+              border: `1px solid ${barColor}50`,
+              background: barColor + '14',
+              color: barColor,
+              fontSize: 9.5, fontWeight: 700,
+              fontFamily: "'DM Mono', monospace", letterSpacing: '0.06em',
+              textTransform: 'uppercase' as const,
+              cursor: isCompacting ? 'not-allowed' : 'pointer',
+              opacity: isCompacting ? 0.55 : 1,
+              transition: 'all .15s',
+            }}
+            onMouseEnter={e => { if (!isCompacting) e.currentTarget.style.background = barColor + '26'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = barColor + '14'; }}
+          >
+            <Archive size={9} strokeWidth={2.5} />
+            {isCompacting ? 'Compressing…' : 'Compact'}
+          </button>
+        )}
+      </div>
+
+      {/* Row 2 — [424.2k] [══════░░░░] [1.0M] [1.2%] */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 11, fontWeight: 700,
+          color: barColor, minWidth: 50, letterSpacing: '0.03em',
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {fmtTokens(tokenUsage.input_tokens)}
+        </span>
+
+        {/* Progress track */}
+        <div style={{
+          flex: 1, height: 5, borderRadius: 3,
+          background: track, overflow: 'hidden',
+          position: 'relative',
+        }}>
+          <div style={{
+            position: 'absolute', left: 0, top: 0,
+            width: `${barW}%`, height: '100%',
+            borderRadius: 3,
+            background: `linear-gradient(90deg, ${barColor}88, ${barColor})`,
+            transition: 'width .6s ease, background .3s',
+          }} />
+        </div>
+
+        <span style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 11, color: textMuted,
+          minWidth: 36, textAlign: 'right' as const, letterSpacing: '0.03em',
+        }}>
+          {fmtTokens(tokenUsage.context_window)}
+        </span>
+
+        <span style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 9.5, fontWeight: 700,
+          color: barColor, minWidth: 38, textAlign: 'right' as const,
+          letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums',
+        }}>
+          {pct.toFixed(1)}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── ToolSearchChip ──────────────────────────────────────────────────────────
 
 export function ToolSearchChip({ isDark, active }: { isDark: boolean; active: boolean }) {
