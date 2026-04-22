@@ -27,17 +27,50 @@ const UI_MESSAGE_STREAM_HEADERS = {
   'x-vercel-ai-ui-message-stream': 'v1',
 };
 
-// Edge runtime: CPU-time billing (not wall-clock), so I/O-heavy streaming
-// proxying doesn't count against the limit. On Vercel Hobby this gives
-// effectively unlimited streaming time for responses (30s CPU budget).
-export const runtime = 'edge';
-// maxDuration is ignored on Hobby but documents intent for Pro upgrade.
+// Node.js runtime — supports larger request bodies than Edge (4.5 MB → 50 MB
+// on Vercel Pro, configurable). Edge's 4 MB hard cap is easily exceeded by
+// long conversations that include tool results in the AI SDK messages array.
+// maxDuration covers streaming responses (Vercel Pro ignores Hobby caps).
 export const maxDuration = 300;
+
+// Maximum request body size we're willing to process (10 MB).
+// The AI SDK sends the full message history which can grow large with tool
+// results.  We only need the last user message so we truncate the messages
+// array early — but we still need to parse the full body first.
+const MAX_BODY_BYTES = 10 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const messages = body.messages || [];
+    // Read raw body so we control the size check (bypasses built-in parser limits)
+    let rawBody: string;
+    try {
+      rawBody = await req.text();
+    } catch (readErr) {
+      return new Response(
+        JSON.stringify({ error: 'Request body too large. Please start a new conversation to continue — your history has been compressed automatically.' }),
+        { status: 413, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return new Response(
+        JSON.stringify({ error: 'Conversation history is too large for this request. Start a new conversation or enable Auto Compact in YANG settings to compress history automatically.' }),
+        { status: 413, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    let body: any;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // We only need the last user message — strip the full history to save memory
+    const messages = Array.isArray(body.messages) ? body.messages : [];
     const data = body.data || {};
     
     // Get the latest user message
@@ -245,18 +278,11 @@ export async function POST(req: NextRequest) {
                         await writeSSE({ type: 'data-skill_status', data: [item] });
                       } else if (item.skill_heartbeat) {
                         // Keep-alive heartbeat — no need to forward to client
-                      } else if (
-                        item.yang_verification ||
-                        item.yang_focus_chain ||
-                        item.yang_background_edit ||
-                        item.yang_plan_mode ||
-                        item.yang_yolo_mode ||
-                        item.yang_yolo_iteration_cap ||
-                        item.yang_tool_search ||
-                        item.yang_subagents_running
-                      ) {
-                        // YANG advanced-agentic events — forward as a single
-                        // unified data-yang part; the useYangStreamEvents hook
+                      } else if (Object.keys(item).some(k => k.startsWith('yang_'))) {
+                        // All YANG advanced-agentic events — forward generically so
+                        // new yang_* events (yang_auto_compact, yang_compaction_complete,
+                        // yang_token_usage, etc.) are automatically forwarded without
+                        // requiring route updates.  The useYangStreamEvents hook
                         // dispatches on the inner yang_* flag.
                         await writeSSE({ type: 'data-yang', data: [item] });
                       } else if (item.conversation_id) {

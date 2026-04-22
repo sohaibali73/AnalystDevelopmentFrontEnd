@@ -14,8 +14,10 @@ const nextConfig = {
   
   // Enable Turbopack for faster builds (enabled by default in Next.js 16)
   experimental: {
-    // Turbopack is enabled by default in Next.js 16
-    // No additional experimental config needed for basic usage
+    // Increase body size limit for Server Actions and Route Handlers.
+    // The default 4 MB is exceeded by long conversations that include
+    // full tool-result outputs in the AI SDK messages array.
+    serverActionsBodySizeLimit: '10mb',
   },
   
   // Turbopack configuration
