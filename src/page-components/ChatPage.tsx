@@ -2284,25 +2284,24 @@ export function ChatPage() {
         )}
 
         {/* ── YANG: full-width token counter bar ────────────────────────────── */}
-        {/* Shown once token data is available — sits between messages and input */}
-        {yangStream.tokenUsage && yangSettingsHook.settings.auto_compact && (
+        {/* Shown whenever token data is available (after first AI response).    */}
+        {/* The Compact button only appears when auto_compact is enabled.         */}
+        {yangStream.tokenUsage && (
           <TokenCounterBar
             isDark={isDark}
             tokenUsage={yangStream.tokenUsage}
             isCompacting={yangStream.autoCompact !== null}
-            onCompact={() => {
-              // Manual compact: inform the user and re-send empty turn to trigger
-              // the backend's auto-compact check (it will compact if threshold met).
+            onCompact={yangSettingsHook.settings.auto_compact ? () => {
               if (yangStream.autoCompact !== null) {
                 toast.info('Compaction already in progress…');
                 return;
               }
               toast.info('Compact triggered', {
-                description: 'History will be compressed on your next message if context is over threshold.',
+                description: 'History will be compressed automatically when context hits the threshold.',
                 duration: 4000,
                 icon: '🗜',
               });
-            }}
+            } : undefined}
           />
         )}
 
