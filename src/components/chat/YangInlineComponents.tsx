@@ -4,6 +4,7 @@
  * Inline / inside-message YANG components:
  *   • CompletionVerificationBadge — badge under assistant message
  *   • CompactionBanner            — divider above compacted messages
+ *   • TokenCounterBadge           — live token / context window counter
  *   • SubagentProgress            — renders spawn_subagents tool output
  *   • BackgroundTaskCard          — renders tool output w/ task_id polling
  *   • ToolSearchChip              — transient shimmer while tools lazy-load
@@ -13,9 +14,11 @@ import React from 'react';
 import {
   CheckCircle2, AlertCircle, Info, Archive,
   Search as SearchIcon, GitBranch, Clock, Download, AlertTriangle,
+  Gauge,
 } from 'lucide-react';
 import { useYangBackgroundTasks } from '@/contexts/YangBackgroundTasksContext';
 import type { YangVerificationEvent } from '@/types/yang';
+import type { YangTokenUsage } from '@/hooks/useYangStreamEvents';
 
 // ─── CompletionVerificationBadge ────────────────────────────────────────────
 
@@ -94,6 +97,127 @@ export function CompactionBanner({
     >
       <Archive size={11} style={{ color: T.accent }} />
       {count} earlier message{count === 1 ? '' : 's'} summarized
+    </div>
+  );
+}
+
+// ─── TokenCounterBadge ───────────────────────────────────────────────────────
+
+/**
+ * Compact badge shown above the input area that displays real-time token
+ * usage received from the backend via the `yang_token_usage` stream event.
+ *
+ * Color legend:
+ *   < 50%  → muted / neutral
+ *   50–75% → amber warning
+ *   > 75%  → red / danger
+ */
+export function TokenCounterBadge({
+  isDark,
+  tokenUsage,
+}: {
+  isDark: boolean;
+  tokenUsage: YangTokenUsage | null;
+}) {
+  if (!tokenUsage) return null;
+
+  const pct = tokenUsage.utilization_pct;
+
+  // Pick a colour based on utilisation
+  const accent =
+    pct >= 75 ? '#EF4444' :   // red — almost full
+    pct >= 50 ? '#F59E0B' :   // amber — moderate
+    isDark    ? '#6B7280' :   // muted-dark
+                '#9CA3AF';    // muted-light
+
+  const barWidth = Math.min(100, pct);
+
+  // Format token count nicely: 12345 → "12.3k"
+  function fmt(n: number) {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
+    return String(n);
+  }
+
+  const hasCacheHit = tokenUsage.cache_read_tokens > 0;
+
+  return (
+    <div
+      title={`Context window: ${fmt(tokenUsage.input_tokens)} / ${fmt(tokenUsage.context_window)} tokens used`}
+      style={{
+        display:     'inline-flex',
+        alignItems:  'center',
+        gap:          6,
+        padding:     '4px 10px 4px 8px',
+        borderRadius: 999,
+        border:      `1px solid ${accent}44`,
+        background:  accent + '12',
+        color:        accent,
+        fontSize:     10.5,
+        fontWeight:   600,
+        fontFamily:  "'DM Mono', monospace",
+        letterSpacing: '0.04em',
+        whiteSpace:  'nowrap' as const,
+        userSelect:  'none' as const,
+        cursor:       'default',
+        transition:  'border-color .2s, background .2s',
+      }}
+    >
+      <Gauge size={11} strokeWidth={2.25} />
+
+      {/* Token counts */}
+      <span>
+        {fmt(tokenUsage.input_tokens)}
+        <span style={{ opacity: 0.55 }}> / {fmt(tokenUsage.context_window)}</span>
+      </span>
+
+      {/* Mini progress bar */}
+      <span
+        style={{
+          display:      'inline-block',
+          width:         42,
+          height:         4,
+          borderRadius:   2,
+          background:   isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          overflow:     'hidden',
+          flexShrink:     0,
+        }}
+      >
+        <span
+          style={{
+            display:    'block',
+            width:      `${barWidth}%`,
+            height:     '100%',
+            borderRadius: 2,
+            background:   accent,
+            transition:  'width .5s ease, background .3s',
+          }}
+        />
+      </span>
+
+      {/* Percentage */}
+      <span style={{ minWidth: 32, textAlign: 'right' as const }}>
+        {pct.toFixed(1)}%
+      </span>
+
+      {/* Cache hit indicator */}
+      {hasCacheHit && (
+        <span
+          title={`${fmt(tokenUsage.cache_read_tokens)} tokens served from prompt cache`}
+          style={{
+            padding:     '1px 5px',
+            borderRadius: 999,
+            background:  '#10B98118',
+            border:      '1px solid #10B98144',
+            color:       '#10B981',
+            fontSize:     9,
+            fontWeight:   700,
+            letterSpacing: '0.06em',
+          }}
+        >
+          CACHED
+        </span>
+      )}
     </div>
   );
 }

@@ -68,6 +68,7 @@ import {
   FocusChainDrawer,
   CheckpointsPanel,
   CompletionVerificationBadge,
+  TokenCounterBadge,
   ToolSearchChip,
   API_BASE_URL_CHAT,
   type ChatPreviewFile,
@@ -814,6 +815,9 @@ export function ChatPage() {
   const usePromptCachingRef = useRef(usePromptCaching);
   const maxIterationsRef    = useRef(maxIterations);
   const pinModelVersionRef  = useRef(pinModelVersion);
+  /** Stable ref to loadPreviousMessages — updated each render so the
+   *  onCompactionComplete callback always calls the latest version. */
+  const loadPreviousMessagesRef = useRef<((id: string) => Promise<void>) | null>(null);
 
   // ── Sync refs for stable closures in transport body ────────────────────────
   useEffect(() => { selectedModelRef.current = selectedModel; }, [selectedModel]);
@@ -833,7 +837,18 @@ export function ChatPage() {
   const [checkpointsOpen, setCheckpointsOpen] = useState(false);
   const yangCheckpoints = useCheckpoints(selectedConversation?.id ?? null);
 
-  const yangStream = useYangStreamEvents();
+  const yangStream = useYangStreamEvents({
+    onCompactionComplete: (ev) => {
+      // When compaction fully completes, reload the conversation messages so
+      // the soft-deleted (old) messages disappear and only the compact summary
+      // + recent messages remain — giving the "new conversation in same pane" feel.
+      const convId = conversationIdRef.current;
+      if (convId && ev.refresh_conversation && loadPreviousMessagesRef.current) {
+        // Short delay so the DB write settles before we re-fetch
+        setTimeout(() => loadPreviousMessagesRef.current?.(convId), 600);
+      }
+    },
+  });
 
 
   // ── Health check with proper error handling and cleanup ────────────────────
@@ -1334,6 +1349,11 @@ export function ChatPage() {
       }
     }
   };
+
+  // Keep loadPreviousMessagesRef pointing at the latest version of loadPreviousMessages.
+  // This runs on every render (after the function is defined) so the onCompactionComplete
+  // callback (fired in a setTimeout) always has the current closure.
+  loadPreviousMessagesRef.current = loadPreviousMessages;
 
   const handleNewConversation = async () => {
     try {
@@ -2480,6 +2500,14 @@ export function ChatPage() {
                       disabled={isStreaming}
                     />
                   </PromptInputTools>
+
+                  {/* ── YANG: live token counter ────────────────────────── */}
+                  {yangStream.tokenUsage && (
+                    <TokenCounterBadge
+                      isDark={isDark}
+                      tokenUsage={yangStream.tokenUsage}
+                    />
+                  )}
 
                   <PromptInputSubmit status={status} onStop={() => stop()} disabled={!input.trim() && !isStreaming} />
                 </PromptInputFooter>

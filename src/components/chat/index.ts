@@ -20,6 +20,7 @@ export { CheckpointsPanel } from './CheckpointsPanel';
 export {
   CompletionVerificationBadge,
   CompactionBanner,
+  TokenCounterBadge,
   ToolSearchChip,
   SubagentProgress,
   BackgroundTaskCard,

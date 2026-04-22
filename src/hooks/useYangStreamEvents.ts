@@ -14,7 +14,19 @@ import type {
   YangVerificationEvent,
   YangBackgroundEditEvent,
   YangAutoCompactEvent,
+  YangTokenUsageEvent,
+  YangCompactionCompleteEvent,
 } from '@/types/yang';
+
+export interface YangTokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  context_window: number;
+  utilization_pct: number;
+  iteration: number;
+}
 
 export interface YangStreamState {
   planModeActive: boolean;
@@ -26,6 +38,8 @@ export interface YangStreamState {
   subagentsRunning: number;
   /** Set briefly when auto-compact fires; carries the last compaction event. */
   autoCompact: YangAutoCompactEvent | null;
+  /** Live token counter — updated after every API iteration. */
+  tokenUsage: YangTokenUsage | null;
 }
 
 export interface UseYangStreamEventsResult extends YangStreamState {
@@ -38,6 +52,11 @@ export interface UseYangStreamEventsResult extends YangStreamState {
 export interface UseYangStreamEventsOptions {
   /** Called when a background edit task event is seen so a polling hook can start. */
   onBackgroundEdit?: (ev: YangBackgroundEditEvent) => void;
+  /**
+   * Called when compaction fully completes. If ev.refresh_conversation is true,
+   * the caller should reload messages to give the "new conversation" feel.
+   */
+  onCompactionComplete?: (ev: YangCompactionCompleteEvent) => void;
 }
 
 const INITIAL: YangStreamState = {
@@ -49,6 +68,7 @@ const INITIAL: YangStreamState = {
   verification: null,
   subagentsRunning: 0,
   autoCompact: null,
+  tokenUsage: null,
 };
 
 export function useYangStreamEvents(
@@ -57,6 +77,8 @@ export function useYangStreamEvents(
   const [state, setState] = useState<YangStreamState>(INITIAL);
   const onBgRef = useRef(options.onBackgroundEdit);
   onBgRef.current = options.onBackgroundEdit;
+  const onCompactionRef = useRef(options.onCompactionComplete);
+  onCompactionRef.current = options.onCompactionComplete;
 
   const reset = useCallback(() => setState(INITIAL), []);
 
@@ -140,15 +162,14 @@ export function useYangStreamEvents(
       return;
     }
 
-    // ── Auto-compact ─────────────────────────────────────────────────
-    // Mirrors Cline's "Context compressed" notification.
+    // ── Auto-compact (started) ────────────────────────────────────────
     if (item.yang_auto_compact) {
       const ev = item as YangAutoCompactEvent;
       setState((s) => ({ ...s, autoCompact: ev }));
 
-      toast.info('Context compressed', {
-        description: `${ev.utilization_pct}% of context used — old messages summarized in the background.`,
-        duration: 5000,
+      toast.info('Compressing history…', {
+        description: `${ev.utilization_pct.toFixed(1)}% context used — summarizing old messages.`,
+        duration: 4000,
         icon: '🗜',
       });
 
@@ -156,6 +177,43 @@ export function useYangStreamEvents(
       setTimeout(() => {
         setState((s) => ({ ...s, autoCompact: null }));
       }, 8000);
+      return;
+    }
+
+    // ── Compaction complete ───────────────────────────────────────────
+    // Triggers a message list refresh so old (soft-deleted) messages
+    // disappear and only the compact summary + recent messages remain.
+    if (item.yang_compaction_complete) {
+      const ev = item as YangCompactionCompleteEvent;
+
+      toast.success('Context compressed', {
+        description: `${ev.compacted_count} older messages summarized. History refreshed.`,
+        duration: 5000,
+        icon: '✨',
+      });
+
+      // Clear the "compressing" badge
+      setState((s) => ({ ...s, autoCompact: null }));
+
+      // Notify caller to reload messages (gives "new convo in same pane" feel)
+      onCompactionRef.current?.(ev);
+      return;
+    }
+
+    // ── Live token counter ────────────────────────────────────────────
+    if (item.yang_token_usage) {
+      setState((s) => ({
+        ...s,
+        tokenUsage: {
+          input_tokens:          item.input_tokens          ?? 0,
+          output_tokens:         item.output_tokens         ?? 0,
+          cache_read_tokens:     item.cache_read_tokens     ?? 0,
+          cache_creation_tokens: item.cache_creation_tokens ?? 0,
+          context_window:        item.context_window        ?? 0,
+          utilization_pct:       item.utilization_pct       ?? 0,
+          iteration:             item.iteration             ?? 1,
+        },
+      }));
       return;
     }
   }, []);

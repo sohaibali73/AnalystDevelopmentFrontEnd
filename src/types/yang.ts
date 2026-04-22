@@ -161,6 +161,32 @@ export interface YangAutoCompactEvent {
   message?: string;
 }
 
+/** Emitted after every API call iteration with live token counts. */
+export interface YangTokenUsageEvent {
+  yang_token_usage: true;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  /** Model's total context window (e.g. 1_000_000 for claude-sonnet-4-6) */
+  context_window: number;
+  /** Percentage of context window used (0–100) */
+  utilization_pct: number;
+  iteration: number;
+}
+
+/** Emitted after compaction fully completes — tells the frontend to reload messages. */
+export interface YangCompactionCompleteEvent {
+  yang_compaction_complete: true;
+  /** True when the frontend should re-fetch messages to get the "fresh start" view */
+  refresh_conversation: boolean;
+  conversation_id: string;
+  compacted_count: number;
+  kept_count: number;
+  utilization_pct: number;
+  message?: string;
+}
+
 export type YangStreamEvent =
   | YangVerificationEvent
   | YangFocusChainEvent
@@ -170,7 +196,9 @@ export type YangStreamEvent =
   | YangYoloCapEvent
   | YangToolSearchEvent
   | YangSubagentsRunningEvent
-  | YangAutoCompactEvent;
+  | YangAutoCompactEvent
+  | YangTokenUsageEvent
+  | YangCompactionCompleteEvent;
 
 /** Type-guard helpers — prefer these over raw property access. */
 export function isYangEvent(item: any): item is YangStreamEvent {
@@ -184,6 +212,8 @@ export function isYangEvent(item: any): item is YangStreamEvent {
     'yang_yolo_iteration_cap' in item ||
     'yang_tool_search' in item ||
     'yang_subagents_running' in item ||
-    'yang_auto_compact' in item
+    'yang_auto_compact' in item ||
+    'yang_token_usage' in item ||
+    'yang_compaction_complete' in item
   );
 }
