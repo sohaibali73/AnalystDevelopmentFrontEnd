@@ -928,6 +928,98 @@ class APIClient {
     return this.request<{ tools: any[]; count: number }>('/chat/tools');
   }
 
+  // ==================== DEBUG TRANSCRIPT ENDPOINTS ====================
+
+  async getDebugStatus() {
+    return this.request<{
+      enabled: boolean;
+      storage_root: string;
+      message: string;
+    }>('/debug/status');
+  }
+
+  async listDebugTranscripts(params?: {
+    user_id?: string;
+    conversation_id?: string;
+    limit?: number;
+  }) {
+    const qs = new URLSearchParams();
+    if (params?.user_id) qs.set('user_id', params.user_id);
+    if (params?.conversation_id) qs.set('conversation_id', params.conversation_id);
+    if (params?.limit !== undefined) qs.set('limit', String(params.limit));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return this.request<{
+      transcripts: Array<{
+        request_id: string;
+        user_id: string;
+        conversation_id: string;
+        started_at: string;
+        finished_at: string;
+        duration_ms: number;
+        model: string;
+        event_count: number;
+        has_error: boolean;
+        json_path: string;
+        txt_path: string;
+      }>;
+      count: number;
+    }>(`/debug/transcripts${query}`);
+  }
+
+  async getDebugTranscript(requestId: string) {
+    return this.request<any>(`/debug/transcripts/${requestId}`);
+  }
+
+  async getDebugTranscriptText(requestId: string): Promise<string> {
+    const token = this.getToken();
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/debug/transcripts/${requestId}/text`, { headers });
+    if (!response.ok) throw new Error(`Failed to fetch transcript text: ${response.status}`);
+    return response.text();
+  }
+
+  async deleteDebugTranscript(requestId: string) {
+    return this.request<{ success: boolean }>(`/debug/transcripts/${requestId}`, 'DELETE');
+  }
+
+  async deleteAllDebugTranscripts(params?: { user_id?: string; conversation_id?: string }) {
+    const qs = new URLSearchParams();
+    if (params?.user_id) qs.set('user_id', params.user_id);
+    if (params?.conversation_id) qs.set('conversation_id', params.conversation_id);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return this.request<{ success: boolean; deleted: number }>(`/debug/transcripts${query}`, 'DELETE');
+  }
+
+  async pruneDebugTranscripts(maxAgeDays: number = 7) {
+    return this.request<{ success: boolean; deleted: number }>(
+      '/debug/transcripts/prune',
+      'POST',
+      { max_age_days: maxAgeDays }
+    );
+  }
+
+  downloadDebugTranscript(requestId: string) {
+    const token = this.getToken();
+    const url = `${API_BASE_URL}/debug/transcripts/${requestId}/download`;
+    // Build a temporary anchor with the auth header isn't possible via href alone,
+    // so we fetch the blob and trigger a download
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(url, { headers })
+      .then(r => {
+        if (!r.ok) throw new Error(`Download failed: ${r.status}`);
+        return r.blob();
+      })
+      .then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${requestId}.txt`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+  }
+
 
 
 
@@ -1719,5 +1811,17 @@ export const api = {
     getJobs: () => apiClient.getSkillJobs(),
     execute: (slug: string, message: string, options?: any) => apiClient.executeSkill(slug, message, options),
     executeStream: (slug: string, message: string, options?: any) => apiClient.executeSkillStream(slug, message, options),
+  },
+  debug: {
+    getStatus: () => apiClient.getDebugStatus(),
+    listTranscripts: (params?: { user_id?: string; conversation_id?: string; limit?: number }) =>
+      apiClient.listDebugTranscripts(params),
+    getTranscript: (requestId: string) => apiClient.getDebugTranscript(requestId),
+    getTranscriptText: (requestId: string) => apiClient.getDebugTranscriptText(requestId),
+    deleteTranscript: (requestId: string) => apiClient.deleteDebugTranscript(requestId),
+    deleteAll: (params?: { user_id?: string; conversation_id?: string }) =>
+      apiClient.deleteAllDebugTranscripts(params),
+    prune: (maxAgeDays?: number) => apiClient.pruneDebugTranscripts(maxAgeDays),
+    download: (requestId: string) => apiClient.downloadDebugTranscript(requestId),
   },
 };

@@ -19,6 +19,7 @@ import {
   Rocket,
   Presentation,
   Star,
+  Bug,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { name: 'CHAT', href: '/chat', icon: MessageCircle },
   { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
   { name: 'SETTINGS', href: '/settings', icon: Settings },
+  { name: 'DEBUG', href: '/debug', icon: Bug },
 ];
 
 interface MainLayoutProps {

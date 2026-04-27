@@ -114,6 +114,8 @@ export function PptxGenerationCard({
   const [pptxBlob, setPptxBlob]             = useState<Blob | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [slidesExpanded, setSlidesExpanded] = useState(false);
+  const [scriptExpanded, setScriptExpanded] = useState(false);
+  const [scriptCopied, setScriptCopied]     = useState(false);
 
   const {
     progress, currentPhase, elapsedTime, isComplete, isError, safetyTimeout,
@@ -397,6 +399,75 @@ export function PptxGenerationCard({
                 </button>
               )}
             </div>
+
+            {/* ── Debug Script panel ────────────────────────────────────────── */}
+            {outputData?.script && (
+              <div style={{ marginTop: 10, borderRadius: 9, border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`, overflow: 'hidden' }}>
+                {/* header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', backgroundColor: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)', borderBottom: scriptExpanded ? `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` : 'none' }}>
+                  <button
+                    onClick={() => setScriptExpanded(!scriptExpanded)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: mutedCol, fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, padding: 0, fontFamily: "'DM Mono', monospace", letterSpacing: '0.03em' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    {scriptExpanded ? '▲ Hide' : '▼ Show'} pptxgenjs debug script
+                  </button>
+                  {scriptExpanded && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {/* Copy button */}
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(outputData.script).then(() => {
+                            setScriptCopied(true);
+                            setTimeout(() => setScriptCopied(false), 2000);
+                          });
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 5, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: scriptCopied ? 'rgba(16,185,129,0.1)' : 'transparent', color: scriptCopied ? '#10B981' : mutedCol, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Mono', monospace", transition: 'all 0.15s' }}
+                      >
+                        {scriptCopied
+                          ? <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!</>
+                          : <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</>
+                        }
+                      </button>
+                      {/* Download as .js */}
+                      <button
+                        onClick={() => {
+                          const blob = new Blob([outputData.script], { type: 'text/javascript' });
+                          const url  = URL.createObjectURL(blob);
+                          const a    = document.createElement('a');
+                          a.href     = url;
+                          a.download = 'debug_script.js';
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 5, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: mutedCol, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Mono', monospace", transition: 'all 0.15s' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = COLOR; e.currentTarget.style.color = COLOR; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'; e.currentTarget.style.color = mutedCol; }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        .js
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {/* code block */}
+                {scriptExpanded && (
+                  <pre style={{
+                    margin: 0, padding: '12px 14px',
+                    overflowX: 'auto', overflowY: 'auto',
+                    maxHeight: 360,
+                    fontSize: 10.5, lineHeight: 1.6,
+                    fontFamily: "'DM Mono', 'Fira Code', 'Cascadia Code', monospace",
+                    color: isDark ? '#C9D1D9' : '#24292F',
+                    backgroundColor: isDark ? '#0D1117' : '#F6F8FA',
+                    whiteSpace: 'pre',
+                    tabSize: 2,
+                  }}>
+                    {outputData.script}
+                  </pre>
+                )}
+              </div>
+            )}
           </div>
         )}
 
