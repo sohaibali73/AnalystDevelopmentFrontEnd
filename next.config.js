@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Transpile packages that ship ESM-only builds
+  transpilePackages: ['pptx-preview'],
+
   // Fix cross origin request warning for development
   allowedDevOrigins: [
     '127.0.0.1',

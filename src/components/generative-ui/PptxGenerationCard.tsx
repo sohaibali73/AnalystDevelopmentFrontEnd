@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { PptxViewer } from '@/components/pptx-viewer';
 import { useDocGen, type DocGenState } from './hooks/useDocGen';
 
@@ -116,6 +117,8 @@ export function PptxGenerationCard({
   const [slidesExpanded, setSlidesExpanded] = useState(false);
   const [scriptExpanded, setScriptExpanded] = useState(false);
   const [scriptCopied, setScriptCopied]     = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [portalMounted, setPortalMounted]   = useState(false);
 
   const {
     progress, currentPhase, elapsedTime, isComplete, isError, safetyTimeout,
@@ -163,6 +166,17 @@ export function PptxGenerationCard({
   useEffect(() => {
     if (isComplete) setTimeout(() => setPreviewOpen(true), 800);
   }, [isComplete]);
+
+  // Mount portal target once we're on the client
+  useEffect(() => { setPortalMounted(true); }, []);
+
+  // Handle fullscreen open — load blob first if needed
+  const openFullscreen = useCallback(async () => {
+    if (!pptxBlob && downloadUrl && isComplete) {
+      await loadPptxPreview();
+    }
+    setFullscreenOpen(true);
+  }, [pptxBlob, downloadUrl, isComplete, loadPptxPreview]);
 
   // ── Status pill ────────────────────────────────────────────────────────────
   const statusPill = isError
@@ -371,7 +385,6 @@ export function PptxGenerationCard({
                         file={pptxBlob}
                         filename={outputData?.filename || `${title}.pptx`}
                         showHeader={true}
-                        showThumbnails={true}
                         height="100%"
                         darkMode={isDark}
                         onDownload={handleDownload}
@@ -391,11 +404,15 @@ export function PptxGenerationCard({
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 10 }}>
               {downloadUrl && <DownloadBtn />}
               {downloadUrl && (
-                <button onClick={() => window.open(resolveUrl(downloadUrl), '_blank')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '9px 14px', borderRadius: 9, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`, background: 'transparent', color: mutedCol, fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
+                <button
+                  onClick={openFullscreen}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '9px 14px', borderRadius: 9, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`, background: 'transparent', color: mutedCol, fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = COLOR; e.currentTarget.style.color = COLOR; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = mutedCol; }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-                  Open in new tab
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'; e.currentTarget.style.color = mutedCol; }}
+                >
+                  {/* Maximize icon */}
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Open fullscreen
                 </button>
               )}
             </div>
@@ -490,6 +507,34 @@ export function PptxGenerationCard({
         @keyframes pptxShimmer { 0%{left:-60px} 100%{left:calc(100% + 60px)} }
         @keyframes pptxSlideIn { 0%{opacity:0;transform:translateY(8px)} 100%{opacity:1;transform:translateY(0)} }
       `}</style>
+
+      {/* ── Fullscreen overlay portal ────────────────────────────────────── */}
+      {portalMounted && fullscreenOpen && pptxBlob && ReactDOM.createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: '#000',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          onKeyDown={e => { if (e.key === 'Escape') setFullscreenOpen(false); }}
+        >
+          <PptxViewer
+            file={pptxBlob}
+            filename={outputData?.filename || `${title}.pptx`}
+            showHeader
+            height="100%"
+            darkMode={isDark}
+            onDownload={handleDownload}
+            onClose={() => setFullscreenOpen(false)}
+          />
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

@@ -1302,7 +1302,6 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
                     file={pptxBlob}
                     filename={outputData?.filename || `${title}.pptx`}
                     showHeader={true}
-                    showThumbnails={true}
                     height="100%"
                     darkMode={isDark}
                     onDownload={handleDownload}
