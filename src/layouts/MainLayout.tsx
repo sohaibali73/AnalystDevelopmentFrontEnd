@@ -8,6 +8,7 @@ import {
   Code2,
   MessageCircle,
   Database,
+  Layers,
   TrendingUp,
   Zap,
   LogOut,
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { name: 'DASHBOARD', href: '/dashboard', icon: LayoutDashboard },
   { name: 'CHAT', href: '/chat', icon: MessageCircle },
   { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
+  { name: 'STACKS', href: '/stacks', icon: Layers },
   { name: 'SETTINGS', href: '/settings', icon: Settings },
   { name: 'DEBUG', href: '/debug', icon: Bug },
 ];

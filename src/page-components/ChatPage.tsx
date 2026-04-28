@@ -74,6 +74,13 @@ import {
   API_BASE_URL_CHAT,
   type ChatPreviewFile,
 } from '@/components/chat';
+import {
+  ChatStackPickerButton,
+  AttachedStackChip,
+  buildStackContextPreamble,
+  type AttachedStack,
+  type StackMode,
+} from '@/components/chat/ChatStackPicker';
 import { History as HistoryIcon } from 'lucide-react';
 import { useYangSettings } from '@/hooks/useYangSettings';
 import { useYangStreamEvents } from '@/hooks/useYangStreamEvents';
@@ -798,6 +805,8 @@ export function ChatPage() {
 
   const [kbPanelOpen, setKbPanelOpen] = useState(false);
   const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
+  // ── Attached Knowledge Stack (Msty-style) ────────────────────────────────
+  const [attachedStack, setAttachedStack] = useState<AttachedStack | null>(null);
   const [backendAvailable, setBackendAvailable] = useState(true);
   const [skillStatus, setSkillStatus] = useState<{ label: string; slug: string } | null>(null);
   const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-6');
@@ -2444,7 +2453,33 @@ export function ChatPage() {
                     setSelectedKbDocIds(new Set());
                   }
 
-                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined, kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined, kb_docs: kbDocMetadata } });
+                  // ── Knowledge Stack context injection ──────────────────
+                  // If a stack is attached, fetch RAG / full-content context
+                  // and prepend it as a system-style preamble inside the user
+                  // message. Keeps the integration entirely on the frontend
+                  // (per Section 4.2 of KNOWLEDGE_STACKS_GUIDE.md).
+                  let stackSources: any[] | undefined = undefined;
+                  if (attachedStack) {
+                    try {
+                      const { preamble, sources } = await buildStackContextPreamble(
+                        attachedStack,
+                        text || messageText,
+                        attachedStack.mode === 'rag' ? 20 : undefined,
+                      );
+                      if (preamble) {
+                        stackSources = sources;
+                        const fence =
+                          '```stack-context\n' +
+                          preamble +
+                          '```\n\n';
+                        messageText = fence + messageText;
+                      }
+                    } catch (err) {
+                      console.warn('Stack context fetch failed:', err);
+                    }
+                  }
+
+                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined, kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined, kb_docs: kbDocMetadata, stack_id: attachedStack?.id, stack_mode: attachedStack?.mode, stack_sources: stackSources } });
                 }}
               >
                 <AttachmentsDisplay 
@@ -2475,6 +2510,18 @@ export function ChatPage() {
                     toast.error(`Failed to upload ${filename}`, { id: fileId, duration: 4000 });
                   }}
                 />
+                {attachedStack && (
+                  <div style={{ padding: '8px 4px 0', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <AttachedStackChip
+                      stack={attachedStack}
+                      onDetach={() => setAttachedStack(null)}
+                      onChangeMode={(mode) =>
+                        setAttachedStack((prev) => (prev ? { ...prev, mode } : prev))
+                      }
+                      isDark={isDark}
+                    />
+                  </div>
+                )}
                 <PromptInputTextarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -2496,6 +2543,14 @@ export function ChatPage() {
                         </span>
                       )}
                     </PromptInputButton>
+
+                    <ChatStackPickerButton
+                      attachedStack={attachedStack}
+                      onAttach={(s) => setAttachedStack(s)}
+                      onDetach={() => setAttachedStack(null)}
+                      onChangeMode={(mode) => setAttachedStack((prev) => (prev ? { ...prev, mode } : prev))}
+                      isDark={isDark}
+                    />
 
                     <ChatSkillSelector
                       forcedSkillSlug={forcedSkillSlug}
