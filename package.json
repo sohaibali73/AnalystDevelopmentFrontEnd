@@ -15,7 +15,6 @@
     "@babel/standalone": "^7.29.0",
     "@kandiforge/pptx-renderer": "^3.3.0",
     "@monaco-editor/react": "^4.6.0",
-    "@mui/icons-material": "^9.0.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.6",
     "@radix-ui/react-aspect-ratio": "^1.1.2",
