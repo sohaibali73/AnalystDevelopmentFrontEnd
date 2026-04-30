@@ -668,6 +668,35 @@ export async function buildStackContextPreamble(
       limit: defaultLimit,
     })) as StackContextRagResponse;
     if (!ctx.chunks || ctx.chunks.length === 0) {
+      // Vague queries ("study this", "summarize", "tell me about this") often
+      // produce 0 RAG matches. Fall back to full document content so the model
+      // can still answer from the stack instead of replying "share your content".
+      try {
+        const full = (await stacksApi.getContext(stack.id, {
+          full_content: true,
+        })) as StackContextFullResponse;
+        if (full.documents && full.documents.length > 0) {
+          const body = full.documents
+            .map(
+              (d, i) =>
+                `[${i + 1}] ${d.filename}${d.title && d.title !== d.filename ? ` — ${d.title}` : ''}:\n${d.content}`,
+            )
+            .join('\n\n');
+          const preamble =
+            `The user's "${full.stack_name}" knowledge stack is attached. The query was non-specific, so the full document contents are provided below:\n\n` +
+            body +
+            `\n\nUse this content to answer. Cite documents inline (e.g. [1], [2]) when you reference them.\n`;
+          return {
+            preamble,
+            sources: full.documents.map((d) => ({
+              document_title: d.title,
+              document_filename: d.filename,
+            })),
+          };
+        }
+      } catch {
+        /* fall through to empty */
+      }
       return { preamble: '', sources: [] };
     }
     const body = ctx.chunks
