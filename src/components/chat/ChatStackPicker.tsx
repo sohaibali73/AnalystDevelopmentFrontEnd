@@ -53,11 +53,13 @@ export function ChatStackPickerButton({
   const [filter, setFilter] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const [anchor, setAnchor] = useState<{ top: number; left: number; openUp: boolean }>({
-    top: 0,
-    left: 0,
-    openUp: true,
-  });
+  // We anchor the panel by either its `top` (when opening down) or its
+  // `bottom` (when opening up) so its actual height never leaves a gap
+  // between the panel and the button.
+  const [anchor, setAnchor] = useState<
+    | { mode: 'down'; top: number; left: number; maxHeight: number }
+    | { mode: 'up'; bottom: number; left: number; maxHeight: number }
+  >({ mode: 'down', top: 0, left: 0, maxHeight: 380 });
 
   // Compute anchor position whenever opened (and on resize/scroll)
   useEffect(() => {
@@ -69,18 +71,30 @@ export function ChatStackPickerButton({
       const PANEL_W = 320;
       const PANEL_H = 380;
       const margin = 8;
-      const spaceAbove = rect.top;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const openUp = spaceAbove >= PANEL_H + margin || spaceAbove > spaceBelow;
+      const spaceAbove = rect.top - margin;
+      const spaceBelow = window.innerHeight - rect.bottom - margin;
+      const openUp = spaceAbove >= Math.min(PANEL_H, spaceBelow + 1);
       let left = rect.left;
-      // Keep panel within viewport horizontally
       if (left + PANEL_W > window.innerWidth - margin) {
         left = Math.max(margin, window.innerWidth - PANEL_W - margin);
       }
-      const top = openUp
-        ? Math.max(margin, rect.top - PANEL_H - margin)
-        : Math.min(window.innerHeight - PANEL_H - margin, rect.bottom + margin);
-      setAnchor({ top, left, openUp });
+      if (openUp) {
+        // Pin the panel's BOTTOM `margin` px above the button so it grows
+        // upward and always touches the button regardless of content height.
+        setAnchor({
+          mode: 'up',
+          bottom: window.innerHeight - rect.top + margin,
+          left,
+          maxHeight: Math.min(PANEL_H, spaceAbove),
+        });
+      } else {
+        setAnchor({
+          mode: 'down',
+          top: rect.bottom + margin,
+          left,
+          maxHeight: Math.min(PANEL_H, spaceBelow),
+        });
+      }
     };
     compute();
     window.addEventListener('resize', compute);
@@ -172,10 +186,12 @@ export function ChatStackPickerButton({
           onMouseDown={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
-            top: anchor.top,
+            ...(anchor.mode === 'down'
+              ? { top: anchor.top }
+              : { bottom: anchor.bottom }),
             left: anchor.left,
             width: 320,
-            maxHeight: 380,
+            maxHeight: anchor.maxHeight,
             background: isDark ? '#1E1E1E' : '#FFFFFF',
             border: `1px solid ${isDark ? '#3A3A3A' : '#E0E0E0'}`,
             borderRadius: 12,
