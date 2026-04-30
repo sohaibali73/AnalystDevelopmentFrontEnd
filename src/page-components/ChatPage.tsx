@@ -77,9 +77,11 @@ import {
 import {
   ChatStackPickerButton,
   AttachedStackChip,
+  MessageStackBadge,
   buildStackContextPreamble,
   type AttachedStack,
   type StackMode,
+  type StackMessageMeta,
 } from '@/components/chat/ChatStackPicker';
 import { History as HistoryIcon } from 'lucide-react';
 import { useYangSettings } from '@/hooks/useYangSettings';
@@ -807,6 +809,15 @@ export function ChatPage() {
   const [selectedKbDocIds, setSelectedKbDocIds] = useState<Set<string>>(new Set());
   // ── Attached Knowledge Stack (Msty-style) ────────────────────────────────
   const [attachedStack, setAttachedStack] = useState<AttachedStack | null>(null);
+  // Per-message stack metadata (which stack ran + which sources it returned).
+  // Keyed by user-message id. Persisted per conversation in localStorage so
+  // the chain-of-sources badge survives reloads & conversation switches.
+  const [stackMessageMeta, setStackMessageMeta] = useState<Record<string, StackMessageMeta>>({});
+  // Live "retrieving from stack…" indicator while buildStackContextPreamble runs
+  const [stackRetrieving, setStackRetrieving] = useState<{ name: string; mode: StackMode } | null>(null);
+  // Maps a "pending" stack-meta record to the next outgoing user message
+  // (we don't know the message id until after sendMessage assigns one).
+  const pendingStackMetaRef = useRef<StackMessageMeta | null>(null);
   const [backendAvailable, setBackendAvailable] = useState(true);
   const [skillStatus, setSkillStatus] = useState<{ label: string; slug: string } | null>(null);
   const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-6');
@@ -1129,8 +1140,40 @@ export function ChatPage() {
         if (stored) setFileDownloadEvents(JSON.parse(stored));
         else setFileDownloadEvents({});
       } catch { setFileDownloadEvents({}); }
+      // Load persisted stack-message metadata for this conversation
+      try {
+        const raw = localStorage.getItem(`chat_stack_meta_${newConvId}`);
+        setStackMessageMeta(raw ? JSON.parse(raw) : {});
+      } catch { setStackMessageMeta({}); }
+    } else {
+      setStackMessageMeta({});
     }
   }, [selectedConversation]);
+
+  // ── Assign pending stack metadata to the freshly-added user message ───────
+  // We don't know the new user-message id until useChat appends it; this effect
+  // watches streamMessages and binds the pending meta to the most-recent user
+  // message that doesn't already have a meta entry.
+  useEffect(() => {
+    const pending = pendingStackMetaRef.current;
+    if (!pending) return;
+    // Find the latest user message
+    for (let i = streamMessages.length - 1; i >= 0; i--) {
+      const msg: any = streamMessages[i];
+      if (msg.role !== 'user') continue;
+      if (stackMessageMeta[msg.id]) return; // already bound — wait for next
+      const convId = conversationIdRef.current;
+      setStackMessageMeta((prev) => {
+        const next = { ...prev, [msg.id]: pending };
+        if (convId) {
+          try { localStorage.setItem(`chat_stack_meta_${convId}`, JSON.stringify(next)); } catch {}
+        }
+        return next;
+      });
+      pendingStackMetaRef.current = null;
+      return;
+    }
+  }, [streamMessages, stackMessageMeta]);
 
   // ── Sync fileDownloadEvents ref for stable onData closure ──────────────────
   useEffect(() => {
@@ -1712,6 +1755,7 @@ export function ChatPage() {
 
     // ── USER message ───────────────────────────────────────────────────────
     if (isUser) {
+      const stackMeta = stackMessageMeta[message.id];
       return (
         <div key={message.id} className="chat-msg-enter" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '4px 0' }}>
           <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
@@ -1720,6 +1764,8 @@ export function ChatPage() {
               {timeStr && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', color: T.dim, letterSpacing: '0.06em' }}>{timeStr}</span>}
               <span style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: T.muted, letterSpacing: '0.02em' }}>{userName}</span>
             </div>
+            {/* Knowledge stack badge — chain-of-sources dropdown */}
+            {stackMeta && <MessageStackBadge meta={stackMeta} isDark={isDark} />}
             {/* Bubble */}
             <div style={{
               background: T.userBg,
@@ -2460,6 +2506,7 @@ export function ChatPage() {
                   // (per Section 4.2 of KNOWLEDGE_STACKS_GUIDE.md).
                   let stackSources: any[] | undefined = undefined;
                   if (attachedStack) {
+                    setStackRetrieving({ name: attachedStack.name, mode: attachedStack.mode });
                     try {
                       const { preamble, sources } = await buildStackContextPreamble(
                         attachedStack,
@@ -2474,8 +2521,27 @@ export function ChatPage() {
                           '```\n\n';
                         messageText = fence + messageText;
                       }
+                      // Stash a pending meta record — assigned to the next
+                      // user message id by the streamMessages effect below.
+                      pendingStackMetaRef.current = {
+                        stack: {
+                          id: attachedStack.id,
+                          name: attachedStack.name,
+                          icon: attachedStack.icon,
+                          color: attachedStack.color,
+                          mode: attachedStack.mode,
+                        },
+                        sources: sources || [],
+                        chunkCount: (sources || []).length,
+                      };
                     } catch (err) {
                       console.warn('Stack context fetch failed:', err);
+                      toast.error('Knowledge stack retrieval failed', {
+                        description: 'Sending message without stack context.',
+                        duration: 4000,
+                      });
+                    } finally {
+                      setStackRetrieving(null);
                     }
                   }
 
@@ -2511,7 +2577,7 @@ export function ChatPage() {
                   }}
                 />
                 {attachedStack && (
-                  <div style={{ padding: '8px 4px 0', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ padding: '8px 4px 0', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                     <AttachedStackChip
                       stack={attachedStack}
                       onDetach={() => setAttachedStack(null)}
@@ -2520,6 +2586,22 @@ export function ChatPage() {
                       }
                       isDark={isDark}
                     />
+                    {stackRetrieving && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: 11,
+                          color: '#FEC00F',
+                          fontFamily: "'DM Mono', monospace",
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        <Loader2 size={12} className="animate-spin" />
+                        Retrieving from {stackRetrieving.name}…
+                      </span>
+                    )}
                   </div>
                 )}
                 <PromptInputTextarea

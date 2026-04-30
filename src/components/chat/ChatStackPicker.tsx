@@ -11,7 +11,8 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Layers, X, ChevronDown, Loader2, Search, FileText } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Layers, X, ChevronDown, ChevronRight, Loader2, Search, FileText, Database } from 'lucide-react';
 import stacksApi from '@/lib/stacksApi';
 import type {
   KnowledgeStack,
@@ -51,6 +52,44 @@ export function ChatStackPickerButton({
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('');
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number; openUp: boolean }>({
+    top: 0,
+    left: 0,
+    openUp: true,
+  });
+
+  // Compute anchor position whenever opened (and on resize/scroll)
+  useEffect(() => {
+    if (!open) return;
+    const compute = () => {
+      const btn = btnRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const PANEL_W = 320;
+      const PANEL_H = 380;
+      const margin = 8;
+      const spaceAbove = rect.top;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUp = spaceAbove >= PANEL_H + margin || spaceAbove > spaceBelow;
+      let left = rect.left;
+      // Keep panel within viewport horizontally
+      if (left + PANEL_W > window.innerWidth - margin) {
+        left = Math.max(margin, window.innerWidth - PANEL_W - margin);
+      }
+      const top = openUp
+        ? Math.max(margin, rect.top - PANEL_H - margin)
+        : Math.min(window.innerHeight - PANEL_H - margin, rect.bottom + margin);
+      setAnchor({ top, left, openUp });
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    window.addEventListener('scroll', compute, true);
+    return () => {
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('scroll', compute, true);
+    };
+  }, [open]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,11 +107,15 @@ export function ChatStackPickerButton({
     if (open) load();
   }, [open, load]);
 
-  // Close on outside click
+  // Close on outside click — also accounts for the portal panel which lives outside `ref`
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      const inWrapper = ref.current && ref.current.contains(target);
+      const panelEl = (ref as any).__panelEl as HTMLElement | undefined;
+      const inPanel = panelEl && panelEl.contains(target);
+      if (!inWrapper && !inPanel) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -89,6 +132,7 @@ export function ChatStackPickerButton({
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         title="Attach a Knowledge Stack"
@@ -115,12 +159,21 @@ export function ChatStackPickerButton({
         )}
       </button>
 
-      {open && (
+      {open && typeof document !== 'undefined' && createPortal(
         <div
+          ref={(el) => {
+            // Make outside-click handler aware of the portal panel
+            if (el && ref.current) {
+              // attach panel as a sibling node ref via dataset; outside-click checks ref.current.contains
+              // Since portal escapes the wrapper, augment the handler by also testing this element.
+              (ref as any).__panelEl = el;
+            }
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
           style={{
-            position: 'absolute',
-            bottom: 'calc(100% + 8px)',
-            left: 0,
+            position: 'fixed',
+            top: anchor.top,
+            left: anchor.left,
             width: 320,
             maxHeight: 380,
             background: isDark ? '#1E1E1E' : '#FFFFFF',
@@ -315,6 +368,141 @@ export function ChatStackPickerButton({
               })
             )}
           </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+// ─── In-message badge: shows attached stack + dropdown chain of sources used ──
+
+export interface StackMessageMeta {
+  stack: { id: string; name: string; icon?: string | null; color?: string | null; mode: StackMode };
+  sources: Array<{ document_title?: string; document_filename?: string; chunk_index?: number }>;
+  chunkCount: number;
+}
+
+export function MessageStackBadge({
+  meta,
+  isDark,
+}: {
+  meta: StackMessageMeta;
+  isDark: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const accent = meta.stack.color || '#FEC00F';
+  const count = meta.chunkCount || meta.sources.length;
+  const modeLabel = meta.stack.mode === 'full_content' ? 'Full content' : 'RAG';
+
+  // Group sources by document for a tidier chain
+  const grouped = React.useMemo(() => {
+    const m = new Map<string, Array<number | undefined>>();
+    for (const s of meta.sources) {
+      const key = s.document_filename || s.document_title || 'document';
+      if (!m.has(key)) m.set(key, []);
+      m.get(key)!.push(s.chunk_index);
+    }
+    return Array.from(m.entries());
+  }, [meta.sources]);
+
+  return (
+    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, marginBottom: 6 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '4px 8px 4px 6px',
+          borderRadius: 999,
+          background: `${accent}14`,
+          border: `1px solid ${accent}55`,
+          color: isDark ? '#E8E8E8' : '#1A1A1A',
+          fontSize: 11,
+          fontWeight: 600,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+        title={`Knowledge stack used: ${meta.stack.name} (${modeLabel})`}
+      >
+        <Layers size={11} color={accent} />
+        <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {meta.stack.name}
+        </span>
+        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9.5, color: isDark ? '#9aa0a6' : '#666', fontWeight: 500 }}>
+          · {count} {meta.stack.mode === 'full_content' ? 'docs' : 'chunks'}
+        </span>
+        <ChevronRight
+          size={11}
+          style={{
+            transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.15s',
+            opacity: 0.7,
+          }}
+        />
+      </button>
+      {open && (
+        <div
+          style={{
+            background: isDark ? '#161618' : '#FFFFFF',
+            border: `1px solid ${isDark ? '#2A2A2E' : '#E5E5E7'}`,
+            borderRadius: 10,
+            padding: '8px 10px',
+            maxWidth: 360,
+            boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'Rajdhani', sans-serif",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              color: isDark ? '#9aa0a6' : '#666',
+              textTransform: 'uppercase',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <Database size={11} color={accent} />
+            Retrieved via {modeLabel}
+          </div>
+          {grouped.length === 0 ? (
+            <div style={{ fontSize: 11, color: isDark ? '#888' : '#777' }}>No sources returned.</div>
+          ) : (
+            <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {grouped.map(([doc, chunks], i) => (
+                <li
+                  key={i}
+                  style={{
+                    fontSize: 11.5,
+                    color: isDark ? '#D8D8D8' : '#1A1A1A',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{doc}</span>
+                  {meta.stack.mode !== 'full_content' && chunks.some((c) => c !== undefined) && (
+                    <span
+                      style={{
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: 10,
+                        color: isDark ? '#888' : '#888',
+                        marginLeft: 6,
+                      }}
+                    >
+                      chunks: {chunks.filter((c) => c !== undefined).join(', ')}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       )}
     </div>
