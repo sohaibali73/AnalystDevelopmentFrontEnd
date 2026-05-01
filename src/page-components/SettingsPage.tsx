@@ -9,8 +9,6 @@ import {
   Bell,
   Shield,
   Save,
-  Eye,
-  EyeOff,
   Check,
   Sun,
   Moon,
@@ -41,10 +39,6 @@ interface SettingsData {
     email: string;
     nickname: string;
   };
-  apiKeys: {
-    claudeApiKey: string;
-    tavilyApiKey: string;
-  };
   appearance: {
     theme: string;
     accentColor: string;
@@ -60,7 +54,6 @@ interface SettingsData {
 
 const sectionsList = [
   { id: 'profile', label: 'PROFILE', icon: User, color: '#A78BFA' },
-  { id: 'api-keys', label: 'API KEYS', icon: Key, color: '#FEC00F' },
   { id: 'appearance', label: 'APPEARANCE', icon: Palette, color: '#60A5FA' },
   { id: 'notifications', label: 'NOTIFICATIONS', icon: Bell, color: '#34D399' },
   { id: 'security', label: 'SECURITY', icon: Shield, color: '#FB923C' },
@@ -163,15 +156,12 @@ export function SettingsPage() {
   const { isMobile, isTablet } = useResponsive();
   const [activeSection, setActiveSection] = useState('profile');
   const [saved, setSaved] = useState(false);
-  const [showClaudeKey, setShowClaudeKey] = useState(false);
-  const [showTavilyKey, setShowTavilyKey] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const isDark = resolvedTheme === 'dark';
 
   const [settings, setSettings] = useState<SettingsData>({
     profile: { name: '', email: '', nickname: '' },
-    apiKeys: { claudeApiKey: '', tavilyApiKey: '' },
     appearance: { theme: 'dark', accentColor: '#FEC00F', fontSize: 'medium' },
     notifications: { emailNotifications: true, codeGenComplete: true, backtestComplete: true, weeklyDigest: false },
   });
@@ -196,7 +186,6 @@ export function SettingsPage() {
           setSettings(prev => ({
             ...prev,
             profile: { ...prev.profile, name: u.name || prev.profile.name, email: u.email || prev.profile.email, nickname: u.nickname || prev.profile.nickname },
-            apiKeys: { claudeApiKey: u.claude_api_key || u.claudeApiKey || prev.apiKeys.claudeApiKey, tavilyApiKey: u.tavily_api_key || u.tavilyApiKey || prev.apiKeys.tavilyApiKey },
           }));
         }
       } catch {}
@@ -216,7 +205,6 @@ export function SettingsPage() {
     try {
       await apiClient.updateProfile({
         name: settings.profile.name, nickname: settings.profile.nickname,
-        claude_api_key: settings.apiKeys.claudeApiKey, tavily_api_key: settings.apiKeys.tavilyApiKey,
       });
       try {
         const existing = JSON.parse(localStorage.getItem('user_info') || '{}');
@@ -232,7 +220,6 @@ export function SettingsPage() {
   const handleDeleteAccount = () => { if (confirm('Are you sure? This cannot be undone.')) { localStorage.clear(); router.push('/login'); } };
 
   const updateProfile = (f: string, v: string) => setSettings(p => ({ ...p, profile: { ...p.profile, [f]: v } }));
-  const updateApiKeys = (f: string, v: string) => setSettings(p => ({ ...p, apiKeys: { ...p.apiKeys, [f]: v } }));
   const updateAppearance = (f: string, v: string) => {
     setSettings(p => ({ ...p, appearance: { ...p.appearance, [f]: v } }));
     // Immediately apply theme changes for instant feedback
@@ -421,85 +408,6 @@ export function SettingsPage() {
                       <input type="email" value={settings.profile.email} onChange={e => updateProfile('email', e.target.value)}
                         style={inputStyle} onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ═══ API KEYS ═══ */}
-          {activeSection === 'api-keys' && (
-            <div>
-              <SectionHead label="API Key Management" />
-
-              {/* Security notice */}
-              <div className="settings-card" style={{
-                background: 'var(--bg-card)', border: '1px solid rgba(254,192,15,0.2)', borderRadius: '16px',
-                padding: '20px 24px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '14px',
-                boxShadow: 'var(--shadow-card)',
-              }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(254,192,15,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Shield size={16} color="#FEC00F" />
-                </div>
-                <div>
-                  <p style={{ fontFamily: "'Syne', sans-serif", fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>Encrypted & Secure</p>
-                  <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
-                    Your API keys are encrypted and stored securely. They are never shared or exposed to third parties.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {/* Claude Key */}
-                <div className="settings-card" style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px',
-                  padding: '28px', boxShadow: 'var(--shadow-card)', position: 'relative', overflow: 'hidden',
-                }}>
-                  <div className="shimmer-layer" />
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #34D399, transparent)', opacity: 0.6 }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                    <FieldLabel>CLAUDE API KEY</FieldLabel>
-                    <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', color: '#34D399', background: 'rgba(52,211,153,0.12)' }}>REQUIRED</span>
-                  </div>
-                  <div style={{ position: 'relative' }}>
-                    <input type={showClaudeKey ? 'text' : 'password'} value={settings.apiKeys.claudeApiKey}
-                      onChange={e => updateApiKeys('claudeApiKey', e.target.value)} placeholder="sk-ant-..."
-                      style={{ ...inputStyle, paddingRight: '48px' }}
-                      onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
-                    <button type="button" onClick={() => setShowClaudeKey(!showClaudeKey)}
-                      style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px' }}>
-                      {showClaudeKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '10px', fontFamily: "'DM Mono', monospace", letterSpacing: '0.03em' }}>
-                    Get your key from{' '}
-                    <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer"
-                      style={{ color: '#FEC00F', textDecoration: 'none', fontWeight: 600 }}>
-                      console.anthropic.com <ExternalLink size={10} style={{ display: 'inline', verticalAlign: 'middle' }} />
-                    </a>
-                  </p>
-                </div>
-
-                {/* Tavily Key */}
-                <div className="settings-card" style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px',
-                  padding: '28px', boxShadow: 'var(--shadow-card)', position: 'relative', overflow: 'hidden',
-                }}>
-                  <div className="shimmer-layer" />
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #60A5FA, transparent)', opacity: 0.6 }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                    <FieldLabel>TAVILY API KEY</FieldLabel>
-                    <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em', color: 'var(--text-muted)', background: 'var(--bg-raised)' }}>OPTIONAL</span>
-                  </div>
-                  <div style={{ position: 'relative' }}>
-                    <input type={showTavilyKey ? 'text' : 'password'} value={settings.apiKeys.tavilyApiKey}
-                      onChange={e => updateApiKeys('tavilyApiKey', e.target.value)} placeholder="tvly-..."
-                      style={{ ...inputStyle, paddingRight: '48px' }}
-                      onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'} />
-                    <button type="button" onClick={() => setShowTavilyKey(!showTavilyKey)}
-                      style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px' }}>
-                      {showTavilyKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
                   </div>
                 </div>
               </div>
