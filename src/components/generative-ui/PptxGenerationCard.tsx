@@ -381,15 +381,16 @@ export function PptxGenerationCard({
                         Loading presentation...
                       </div>
                     ) : pptxBlob ? (
-                      <PptxViewer
-                        file={pptxBlob}
-                        filename={outputData?.filename || `${title}.pptx`}
-                        showHeader={true}
-                        height="100%"
-                        darkMode={isDark}
-                        onDownload={handleDownload}
-                        onClose={() => setPreviewOpen(false)}
-                      />
+                       <PptxViewer
+                         file={pptxBlob}
+                         filename={outputData?.filename || `${title}.pptx`}
+                         showHeader={true}
+                         height="100%"
+                         darkMode={isDark}
+                         onDownload={handleDownload}
+                         onClose={() => setPreviewOpen(false)}
+                         downloadUrl={downloadUrl || undefined}
+                       />
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: mutedCol, fontSize: 12 }}>
                         Click "Show Preview" to load
