@@ -56,6 +56,9 @@ function absDownloadUrl(url: string | undefined): string {
 
 class APIClient {
   private token: string | null = null;
+  private refreshToken: string | null = null;
+  /** Shared in-flight refresh promise to prevent concurrent refresh calls */
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor() {
     // Initialize in-memory token from storage if available (SSR-safe).
@@ -67,6 +70,11 @@ class APIClient {
         ? (() => { try { return window.localStorage.getItem('auth_token'); } catch { return null; } })()
         : null
     );
+    this.refreshToken = storage.getItem('refresh_token') ?? (
+      typeof window !== 'undefined'
+        ? (() => { try { return window.localStorage.getItem('refresh_token'); } catch { return null; } })()
+        : null
+    );
   }
 
   private setToken(token: string) {
@@ -76,6 +84,15 @@ class APIClient {
     } catch (e) {
       // storage may be unavailable in SSR or strict environments; keep in-memory token
       logger.warn('Failed to persist auth token to storage', { error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  private setRefreshToken(token: string) {
+    this.refreshToken = token;
+    try {
+      storage.setItem('refresh_token', token);
+    } catch (e) {
+      logger.warn('Failed to persist refresh token to storage', { error: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -97,11 +114,78 @@ class APIClient {
     }
   }
 
+  private getRefreshToken() {
+    if (this.refreshToken) return this.refreshToken;
+    try {
+      const t = storage.getItem('refresh_token')
+        ?? (typeof window !== 'undefined'
+          ? (() => { try { return window.localStorage.getItem('refresh_token'); } catch { return null; } })()
+          : null);
+      this.refreshToken = t;
+      return t;
+    } catch (e) {
+      logger.warn('Failed to read refresh token from storage', { error: e instanceof Error ? e.message : String(e) });
+      return this.refreshToken;
+    }
+  }
+
+  /**
+   * Exchange the saved refresh token for a new access token.
+   * Concurrent callers share the same in-flight promise so only one
+   * POST /auth/refresh-token is ever sent at a time.
+   */
+  private async refreshAccessToken(): Promise<string | null> {
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = (async () => {
+      const rt = this.getRefreshToken();
+      if (!rt) return null;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: rt }),
+        });
+
+        if (!response.ok) {
+          // Refresh failed — clear everything and force re-login
+          this.token = null;
+          this.refreshToken = null;
+          try { storage.removeItem('auth_token'); } catch {}
+          try { storage.removeItem('refresh_token'); } catch {}
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:token-expired'));
+          }
+          return null;
+        }
+
+        const data = await response.json();
+        const newAccess: string = data.access_token;
+        this.setToken(newAccess);
+        // Backend may rotate the refresh token; persist it if provided
+        if (data.refresh_token) {
+          this.setRefreshToken(data.refresh_token);
+        }
+        logger.debug('Access token refreshed successfully');
+        return newAccess;
+      } catch (e) {
+        logger.error('Token refresh request failed', e);
+        return null;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
   private async request<T>(
     endpoint: string,
     method: string = 'GET',
     body?: any,
-    isFormData: boolean = false
+    isFormData: boolean = false,
+    _isRetry: boolean = false
   ): Promise<T> {
     const headers: HeadersInit = {};
     const token = this.getToken();
@@ -159,10 +243,31 @@ class APIClient {
         }));
         logger.error(`API Error: ${method} ${endpoint}`, error);
 
-        // Auto-logout on expired / invalid token
+        // ── Token-refresh interceptor ──────────────────────────────────────
+        // On 401 with detail "token_expired", attempt a silent token refresh
+        // and retry the original request exactly once.
+        if (
+          response.status === 401 &&
+          error.detail === 'token_expired' &&
+          !_isRetry &&
+          this.getRefreshToken()
+        ) {
+          logger.debug('Access token expired — attempting silent refresh');
+          const newToken = await this.refreshAccessToken();
+          if (newToken) {
+            // Retry the original request with the new access token
+            return this.request<T>(endpoint, method, body, isFormData, true);
+          }
+          // refreshAccessToken() already cleared tokens and dispatched the event
+          throw new Error(error.detail || error.message || `HTTP ${response.status}`);
+        }
+
+        // Auto-logout on any other 401 (invalid token, retry already done, etc.)
         if (response.status === 401) {
           this.token = null;
+          this.refreshToken = null;
           try { storage.removeItem('auth_token'); } catch {}
+          try { storage.removeItem('refresh_token'); } catch {}
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('auth:token-expired'));
           }
@@ -192,6 +297,9 @@ class APIClient {
       tavily_api_key: tavilyApiKey,
     });
     this.setToken(response.access_token);
+    if (response.refresh_token) {
+      this.setRefreshToken(response.refresh_token);
+    }
     return response;
   }
 
@@ -201,6 +309,9 @@ class APIClient {
       password,
     });
     this.setToken(response.access_token);
+    if (response.refresh_token) {
+      this.setRefreshToken(response.refresh_token);
+    }
     return response;
   }
 
@@ -214,8 +325,14 @@ class APIClient {
 
   logout() {
     this.token = null;
+    this.refreshToken = null;
     try {
       storage.removeItem('auth_token');
+    } catch (e) {
+      // Silently fail if storage is not available
+    }
+    try {
+      storage.removeItem('refresh_token');
     } catch (e) {
       // Silently fail if storage is not available
     }

@@ -54,9 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for token-expired events dispatched by the API client
+  // (fired when refresh also fails, so the user must re-login)
   useEffect(() => {
     const handleTokenExpired = () => {
       storage.removeItem('auth_token');
+      storage.removeItem('refresh_token');
       setUser(null);
       redirectToLogin();
     };
