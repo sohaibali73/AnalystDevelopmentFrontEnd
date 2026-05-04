@@ -1281,10 +1281,6 @@ export function ChatPage() {
         if (target) { setSelectedConversation(target); initialLoadDoneRef.current = true; setLoadingConversations(false); return; }
       }
 
-      if (data.length > 0 && !conversationIdRef.current) {
-        if (initialLoadDoneRef.current) skipNextLoadRef.current = true;
-        setSelectedConversation(data[0]);
-      }
       initialLoadDoneRef.current = true;
     } catch (error: any) {
       console.error('Failed to load conversations:', error);

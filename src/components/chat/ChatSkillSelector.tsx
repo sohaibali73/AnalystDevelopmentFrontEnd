@@ -182,6 +182,7 @@ export function ChatSkillSelector({
       {/* Trigger button */}
       <button
         ref={buttonRef}
+        type="button"
         onClick={handleToggle}
         disabled={disabled}
         title="Select skill"
@@ -301,6 +302,7 @@ export function ChatSkillSelector({
               />
               {search && (
                 <button
+                  type="button"
                   onClick={() => setSearch('')}
                   style={{
                     background: 'none',
@@ -334,6 +336,7 @@ export function ChatSkillSelector({
               return (
                 <button
                   key={cat}
+                  type="button"
                   onClick={() => setActiveCategory(cat)}
                   style={{
                     display: 'inline-flex',
@@ -436,6 +439,7 @@ export function ChatSkillSelector({
                 return (
                   <button
                     key={skill.slug}
+                    type="button"
                     onClick={() => handleSelect(skill)}
                     style={{
                       display: 'flex',

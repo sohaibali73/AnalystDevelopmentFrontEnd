@@ -287,6 +287,7 @@ export function ChatStackPickerButton({
                 return (
                   <button
                     key={s.id}
+                    type="button"
                     onClick={() => {
                       if (isAttached) {
                         onDetach();

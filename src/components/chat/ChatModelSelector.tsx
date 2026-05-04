@@ -115,6 +115,7 @@ export function ChatModelSelector({
       {/* Trigger button */}
       <button
         ref={buttonRef}
+        type="button"
         onClick={() => !disabled && setOpen((prev) => !prev)}
         disabled={disabled}
         title="Select model"
@@ -199,9 +200,10 @@ export function ChatModelSelector({
             {MODELS.map((model) => {
               const isSelected = model.id === selectedModel;
               return (
-                <button
-                  key={model.id}
-                  onClick={() => handleSelect(model.id)}
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => handleSelect(model.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

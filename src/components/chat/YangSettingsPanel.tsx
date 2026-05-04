@@ -132,6 +132,7 @@ export function YangSettingsPanel({
     <div style={{ position: 'relative' }}>
       <button
         ref={buttonRef}
+        type="button"
         onClick={() => !disabled && setOpen((p) => !p)}
         disabled={disabled}
         title="Agent Features & Settings"
@@ -204,6 +205,7 @@ export function YangSettingsPanel({
                 {(['features', 'model'] as const).map((id) => (
                   <button
                     key={id}
+                    type="button"
                     onClick={() => setTab(id)}
                     style={{
                       padding: '6px 12px',
@@ -231,6 +233,7 @@ export function YangSettingsPanel({
                   </span>
                 )}
                 <button
+                  type="button"
                   onClick={() => setOpen(false)}
                   style={{
                     width: 22, height: 22, borderRadius: 6, border: 'none',
@@ -325,6 +328,7 @@ function FeaturesTab({
 
       {/* Advanced tunables */}
       <button
+        type="button"
         onClick={() => setShowAdv(!showAdv)}
         style={{
           marginTop: 4,
@@ -403,6 +407,7 @@ function FeatureCard({
   const { Icon, label, desc, accent, warning } = def;
   return (
     <button
+      type="button"
       onClick={() => onChange(!active)}
       style={{
         textAlign: 'left',
@@ -629,6 +634,7 @@ function SegmentGroup<T extends string | number>({
           return (
             <button
               key={String(opt)}
+              type="button"
               onClick={() => onChange(opt)}
               style={{
                 flex: 1,
@@ -663,6 +669,7 @@ function RowToggle({
 }) {
   return (
     <button
+      type="button"
       onClick={() => onChange(!value)}
       style={{
         display: 'flex',
