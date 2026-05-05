@@ -30,6 +30,10 @@ export interface FileArtifactMetadata {
   size_bytes: number;
   extension: string;
   downloadable: boolean;
+  // v3.1 — permanent persistence on Railway volume + Supabase
+  file_id?: string;          // Permanent ID (e.g. "9f3c2a1e-...")
+  download_url?: string;     // Relative path, e.g. "/files/<id>/download"
+  source?: string;           // e.g. "scan:/tmp"
 }
 
 // Sandbox artifact returned from execution

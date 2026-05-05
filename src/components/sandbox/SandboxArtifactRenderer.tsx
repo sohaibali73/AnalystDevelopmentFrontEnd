@@ -40,10 +40,8 @@ import {
   FileArchive,
   BarChart3,
 } from 'lucide-react';
-import type { ExecutionResult, SandboxArtifact, SandboxDisplayType } from '@/lib/sandbox/types';
-
-// Backend URL for file download links (v3)
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000';
+import type { ExecutionResult, SandboxArtifact, SandboxDisplayType, FileArtifactMetadata } from '@/lib/sandbox/types';
+import { downloadSandboxFile } from '@/lib/sandbox/downloadFile';
 
 interface SandboxArtifactRendererProps {
   result: ExecutionResult;
@@ -510,12 +508,19 @@ function ArtifactItem({
 }
 
 /**
- * File artifact display component (v3)
- * Renders downloadable files with proper icons and download buttons
+ * File artifact display component (v3.1)
+ *
+ * Renders a file artifact card with:
+ *   • mime/extension-aware coloured icon
+ *   • filename + size + persistence badge ("Saved" when file_id is present)
+ *   • optional Preview button for text-based files
+ *   • Download button that uses the auth'd `/files/{file_id}/download` endpoint
+ *     (with inline-base64 fallback) via `downloadSandboxFile`.
  */
 function FileArtifactDisplay({ artifact }: { artifact: SandboxArtifact }) {
-  const meta = (artifact.metadata ?? {}) as Record<string, unknown>;
-  const filename = (meta.filename as string) ?? `file${meta.extension ?? ''}`;
+  const meta = (artifact.metadata ?? {}) as Partial<FileArtifactMetadata> & Record<string, unknown>;
+  const filename = (meta.filename as string) ?? `file${(meta.extension as string) ?? ''}`;
+  const extension = (meta.extension as string | undefined)?.toLowerCase() ?? '';
   const sizeBytes = meta.size_bytes as number | undefined;
   const sizeLabel = sizeBytes
     ? sizeBytes > 1_000_000
@@ -525,17 +530,44 @@ function FileArtifactDisplay({ artifact }: { artifact: SandboxArtifact }) {
       : `${sizeBytes} B`
     : '';
 
-  // Use backend download endpoint for proper Content-Disposition headers
-  const downloadUrl = `${BACKEND_URL}/sandbox/download/${artifact.artifact_id}`;
+  const isPersisted = Boolean(meta.file_id || meta.download_url);
+  const isPreviewable =
+    artifact.encoding === 'utf-8' && artifact.type !== 'application/octet-stream';
 
-  // Determine icon based on MIME type
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [hovering, setHovering] = useState(false);
+
+  // Determine icon based on extension first (more specific), falling back to MIME
   const getFileIcon = () => {
     const mimeType = artifact.type;
-    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return <FileSpreadsheet size={24} style={{ color: '#22c55e' }} />;
-    if (mimeType.includes('csv')) return <FileSpreadsheet size={24} style={{ color: '#22c55e' }} />;
+
+    // Extension-based (most specific)
+    if (extension === '.docx' || extension === '.doc') {
+      return <FileText size={24} style={{ color: '#2b7cd3' }} />;
+    }
+    if (extension === '.pptx' || extension === '.ppt') {
+      return <FileText size={24} style={{ color: '#f97316' }} />;
+    }
+    if (extension === '.xlsx' || extension === '.xls' || extension === '.csv') {
+      return <FileSpreadsheet size={24} style={{ color: '#22c55e' }} />;
+    }
+    if (extension === '.pdf') {
+      return <FileText size={24} style={{ color: '#ef4444' }} />;
+    }
+
+    // MIME-based fallback
+    if (mimeType.includes('wordprocessingml') || mimeType.includes('msword')) {
+      return <FileText size={24} style={{ color: '#2b7cd3' }} />;
+    }
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType.includes('csv')) {
+      return <FileSpreadsheet size={24} style={{ color: '#22c55e' }} />;
+    }
     if (mimeType.includes('presentation')) return <FileText size={24} style={{ color: '#f97316' }} />;
     if (mimeType.includes('pdf')) return <FileText size={24} style={{ color: '#ef4444' }} />;
-    if (mimeType.includes('zip') || mimeType.includes('gzip') || mimeType.includes('tar')) return <FileArchive size={24} style={{ color: '#8b5cf6' }} />;
+    if (mimeType.includes('zip') || mimeType.includes('gzip') || mimeType.includes('tar')) {
+      return <FileArchive size={24} style={{ color: '#8b5cf6' }} />;
+    }
     if (mimeType.startsWith('image/')) return <ImageIcon size={24} style={{ color: '#06b6d4' }} />;
     if (mimeType.startsWith('audio/')) return <File size={24} style={{ color: '#ec4899' }} />;
     if (mimeType.startsWith('video/')) return <File size={24} style={{ color: '#f43f5e' }} />;
@@ -543,53 +575,92 @@ function FileArtifactDisplay({ artifact }: { artifact: SandboxArtifact }) {
   };
 
   const handlePreview = () => {
-    // For text-based files, open a preview window
-    if (artifact.encoding === 'utf-8' && artifact.type !== 'application/octet-stream') {
-      const win = window.open('', '_blank');
-      if (win) {
-        win.document.write(
-          `<html><head><title>${filename}</title><style>body{margin:0;padding:16px;font-family:monospace;background:#0d1117;color:#c9d1d9;}</style></head><body><pre style="white-space:pre-wrap;word-break:break-all">${artifact.data.replace(/</g, '&lt;')}</pre></body></html>`
-        );
-        win.document.close();
-      }
+    if (!isPreviewable) return;
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(
+        `<html><head><title>${filename}</title><style>body{margin:0;padding:16px;font-family:monospace;background:#0d1117;color:#c9d1d9;}</style></head><body><pre style="white-space:pre-wrap;word-break:break-all">${artifact.data.replace(/</g, '&lt;')}</pre></body></html>`
+      );
+      win.document.close();
+    }
+  };
+
+  const handleDownload = async () => {
+    if (downloading) return;
+    setDownloadError(null);
+    setDownloading(true);
+    try {
+      await downloadSandboxFile(artifact);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Download failed';
+      setDownloadError(msg);
+      console.error('[FileArtifactDisplay] download failed:', err);
+    } finally {
+      setDownloading(false);
     }
   };
 
   return (
     <div style={styles.fileContainer}>
       {/* File icon */}
-      <div style={styles.fileIcon}>
-        {getFileIcon()}
-      </div>
+      <div style={styles.fileIcon}>{getFileIcon()}</div>
 
-      {/* Filename + size */}
+      {/* Filename + size + persistence badge */}
       <div style={styles.fileInfo}>
-        <p style={styles.fileName}>{filename}</p>
+        <div style={styles.fileNameRow}>
+          <p style={styles.fileName} title={filename}>
+            {filename}
+          </p>
+          {isPersisted && (
+            <span style={styles.persistBadge} title="Saved permanently to your workspace">
+              <Check size={10} />
+              Saved
+            </span>
+          )}
+        </div>
         <p style={styles.fileMeta}>
           {artifact.type}
           {sizeLabel ? ` · ${sizeLabel}` : ''}
         </p>
+        {downloadError && (
+          <p style={styles.fileError}>
+            <AlertCircle size={11} style={{ verticalAlign: 'text-bottom' }} /> {downloadError}
+          </p>
+        )}
       </div>
 
       {/* Actions */}
       <div style={styles.fileActions}>
-        {/* Preview button for text files */}
-        {artifact.encoding === 'utf-8' && artifact.type !== 'application/octet-stream' && (
+        {isPreviewable && (
           <button onClick={handlePreview} style={styles.filePreviewButton}>
             <Eye size={14} />
             Preview
           </button>
         )}
 
-        {/* Download button */}
-        <a
-          href={downloadUrl}
-          download={filename}
-          style={styles.fileDownloadButton}
+        <button
+          onClick={handleDownload}
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          disabled={downloading}
+          style={{
+            ...styles.fileDownloadButton,
+            ...(hovering && !downloading ? styles.fileDownloadButtonHover : {}),
+            ...(downloading ? styles.fileDownloadButtonDisabled : {}),
+          }}
         >
-          <Download size={14} />
-          Download
-        </a>
+          {downloading ? (
+            <>
+              <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              Downloading…
+            </>
+          ) : (
+            <>
+              <Download size={14} />
+              Download
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
@@ -906,6 +977,12 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minWidth: 0,
   },
+  fileNameRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    minWidth: 0,
+  },
   fileName: {
     margin: 0,
     fontSize: '14px',
@@ -914,11 +991,34 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    minWidth: 0,
+  },
+  persistBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+    flexShrink: 0,
+    padding: '2px 6px',
+    fontSize: '10px',
+    fontWeight: 600,
+    color: '#3fb950',
+    backgroundColor: 'rgba(63, 185, 80, 0.12)',
+    border: '1px solid rgba(63, 185, 80, 0.3)',
+    borderRadius: '999px',
+    letterSpacing: '0.3px',
   },
   fileMeta: {
     margin: '4px 0 0 0',
     fontSize: '12px',
     color: '#8b949e',
+  },
+  fileError: {
+    margin: '6px 0 0 0',
+    fontSize: '11px',
+    color: '#f97583',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
   },
   fileActions: {
     display: 'flex',
@@ -954,6 +1054,15 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     textDecoration: 'none',
     transition: 'all 0.15s ease',
+  },
+  fileDownloadButtonHover: {
+    backgroundColor: '#2ea043',
+    boxShadow: '0 0 0 1px rgba(46, 160, 67, 0.4), 0 2px 8px rgba(46, 160, 67, 0.25)',
+  },
+  fileDownloadButtonDisabled: {
+    backgroundColor: '#1a5928',
+    cursor: 'not-allowed',
+    opacity: 0.85,
   },
   variablesSection: {
     borderTop: '1px solid #30363d',
