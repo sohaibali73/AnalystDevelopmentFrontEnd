@@ -19,6 +19,8 @@ import { studioApi, emitStudioRefresh, type StudioProject } from '@/lib/studioAp
 import { Spinner, StudioBadge } from './StudioPrimitives';
 import { MessageResponse } from '@/components/ai-elements/message';
 import { renderToolPart, isToolPart } from '@/components/chat/tool-registry';
+import { ChatFilePreviewModal } from '@/components/chat/ChatFilePreviewModal';
+import { API_BASE_URL_CHAT, type ChatPreviewFile } from '@/components/chat/chat-utils';
 
 interface Props {
   project: StudioProject;
@@ -48,9 +50,38 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [showJump, setShowJump] = useState(false);
+  const [filenameToId, setFilenameToId] = useState<Record<string, string>>({});
+  const [previewFile, setPreviewFile] = useState<ChatPreviewFile | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef<string>(project.conversation_id);
+
+  // ── Load conversation file map (filename → file_id) ──────────────────
+  const loadConversationFiles = useCallback(async () => {
+    try {
+      const t = getAuthToken();
+      const res = await fetch(
+        `${API_BASE_URL_CHAT}/upload/conversations/${project.conversation_id}/files`,
+        { headers: t ? { Authorization: `Bearer ${t}` } : {} },
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const arr: any[] = Array.isArray(data) ? data : data?.files ?? [];
+      const map: Record<string, string> = {};
+      for (const f of arr) {
+        const fn = f.filename || f.name;
+        const id = f.id || f.file_id;
+        if (fn && id) map[fn] = id;
+      }
+      setFilenameToId((prev) => ({ ...prev, ...map }));
+    } catch {
+      /* swallow */
+    }
+  }, [project.conversation_id]);
+
+  useEffect(() => {
+    loadConversationFiles();
+  }, [loadConversationFiles]);
 
   const { messages, sendMessage, status, setMessages, error, stop } = useChat({
     transport: new DefaultChatTransport({
@@ -66,6 +97,7 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
     onFinish: () => {
       emitStudioRefresh('project', project.id);
       onChatFinished();
+      loadConversationFiles();
     },
   });
 
@@ -157,15 +189,20 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
           throw new Error(err.error || `Upload failed: ${res.status}`);
         }
         const j = await res.json();
+        const fname = j.filename || file.name;
+        const fid = j.id || j.file_id || `f-${Date.now()}`;
         setAttachments((prev) => [
           ...prev,
           {
-            id: j.id || j.file_id || `f-${Date.now()}`,
-            filename: j.filename || file.name,
+            id: fid,
+            filename: fname,
             size: j.size || file.size,
             type: j.content_type || file.type || 'application/octet-stream',
           },
         ]);
+        if (j.id || j.file_id) {
+          setFilenameToId((prev) => ({ ...prev, [fname]: j.id || j.file_id }));
+        }
       }
       toast.success(`Uploaded ${files.length} file${files.length > 1 ? 's' : ''}`);
     } catch (err: any) {
@@ -251,6 +288,40 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
         overflow: 'hidden',
       }}
     >
+      {/* Ambient backdrop */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: -160,
+          left: -80,
+          width: 360,
+          height: 360,
+          borderRadius: '50%',
+          background:
+            'radial-gradient(circle, rgba(99,102,241,0.12), rgba(99,102,241,0) 70%)',
+          filter: 'blur(40px)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          bottom: -160,
+          right: -80,
+          width: 360,
+          height: 360,
+          borderRadius: '50%',
+          background:
+            'radial-gradient(circle, rgba(245,158,11,0.10), rgba(245,158,11,0) 70%)',
+          filter: 'blur(40px)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+
       {/* Banner */}
       {(project.style_profile_id || autoApply) && (
         <div
@@ -289,6 +360,8 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
           display: 'flex',
           flexDirection: 'column',
           gap: 22,
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         {messages.length === 0 && status !== 'streaming' && (
@@ -300,6 +373,8 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
             message={m}
             conversationId={conversationIdRef.current}
             isStreaming={status === 'streaming' && m === messages[messages.length - 1]}
+            filenameToId={filenameToId}
+            onPreview={(f) => setPreviewFile(f)}
           />
         ))}
         {status === 'streaming' &&
@@ -359,6 +434,8 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
           padding: '10px 18px',
           borderTop: `1px solid ${T.border}`,
           background: T.bg,
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <ToolBtn onClick={handleHumanizeLast} disabled={humanizing || status === 'streaming'}>
@@ -442,6 +519,8 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
           padding: 14,
           borderTop: `1px solid ${T.border}`,
           background: T.bg,
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <div
@@ -450,10 +529,16 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
             gap: 8,
             alignItems: 'flex-end',
             background: T.bgInput,
-            border: `1px solid ${T.inputBorder}`,
+            border: `1px solid ${input.trim() || attachments.length ? T.accentBorder : T.inputBorder}`,
             borderRadius: 16,
             padding: 10,
-            transition: 'border-color 0.15s ease',
+            transition: 'all 0.15s ease',
+            boxShadow:
+              input.trim() || attachments.length
+                ? `0 0 0 3px ${T.accentDim}, 0 8px 24px rgba(0,0,0,0.3)`
+                : '0 4px 16px rgba(0,0,0,0.25)',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
           <input
@@ -571,6 +656,14 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
           )}
         </div>
       </form>
+
+      {previewFile && (
+        <ChatFilePreviewModal
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+          isDark
+        />
+      )}
     </div>
   );
 }
@@ -581,10 +674,14 @@ function ChatMessage({
   message,
   conversationId,
   isStreaming,
+  filenameToId,
+  onPreview,
 }: {
   message: any;
   conversationId: string;
   isStreaming: boolean;
+  filenameToId: Record<string, string>;
+  onPreview: (f: ChatPreviewFile) => void;
 }) {
   const isUser = message.role === 'user';
   const parts: any[] = Array.isArray(message.parts) ? message.parts : [];
@@ -598,27 +695,78 @@ function ChatMessage({
   });
 
   if (isUser) {
-    const text = parts.filter((p) => p.type === 'text').map((p) => p.text).join('');
+    const rawText = parts.filter((p) => p.type === 'text').map((p) => p.text).join('');
+    // Extract attachments and strip system blocks for clean display
+    const attachments: string[] = [];
+    let cleaned = rawText.replace(/\[Attached:\s*([^\]]+)\]/g, (_m, fn) => {
+      attachments.push(String(fn).trim());
+      return '';
+    });
+    // Strip [FORMATTING: ...] blocks (single or multi-line, even unterminated)
+    cleaned = cleaned
+      .replace(/\[FORMATTING:[\s\S]*?\]/g, '')
+      .replace(/\[FORMATTING:[\s\S]*$/g, '')
+      // Strip other system-style bracket directives at the very start of a line
+      .replace(/^\s*\[(?:SYSTEM|INSTRUCTIONS?|CONTEXT):[\s\S]*?\]\s*/gim, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
     return (
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <div
           style={{
             maxWidth: '85%',
-            background: T.accentDim,
-            border: `1px solid ${T.accentBorder}`,
-            borderRadius: 14,
-            padding: '12px 16px',
-            fontSize: 14,
-            lineHeight: 1.55,
-            color: T.text,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            fontFamily: T.font,
-            letterSpacing: '-0.01em',
-            boxShadow: `0 1px 0 rgba(255,255,255,0.04)`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 8,
           }}
         >
-          {text}
+          {attachments.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                gap: 6,
+                flexWrap: 'wrap',
+                justifyContent: 'flex-end',
+              }}
+            >
+              {attachments.map((fn, i) => {
+                const fileId = filenameToId[fn];
+                return (
+                  <AttachmentChip
+                    key={i}
+                    filename={fn}
+                    onClick={
+                      fileId
+                        ? () => onPreview({ fileId, filename: fn })
+                        : undefined
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+          {cleaned && (
+            <div
+              style={{
+                background: T.accentDim,
+                border: `1px solid ${T.accentBorder}`,
+                borderRadius: 14,
+                padding: '12px 16px',
+                fontSize: 14,
+                lineHeight: 1.55,
+                color: T.text,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontFamily: T.font,
+                letterSpacing: '-0.01em',
+                boxShadow: `0 1px 0 rgba(255,255,255,0.04)`,
+              }}
+            >
+              {cleaned}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -668,6 +816,116 @@ function ChatMessage({
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Attachment chip (in-message) ─────────────────────────────────────
+
+function AttachmentChip({ filename, onClick }: { filename: string; onClick?: () => void }) {
+  const ext = (filename.split('.').pop() || '').toLowerCase();
+  const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext);
+  const isPdf = ext === 'pdf';
+  const isDoc = ['doc', 'docx', 'rtf', 'txt', 'md'].includes(ext);
+  const isSheet = ['csv', 'xls', 'xlsx'].includes(ext);
+  const isSlide = ['ppt', 'pptx', 'key'].includes(ext);
+
+  const meta = isImage
+    ? { color: '#34D399', label: 'Image' }
+    : isPdf
+    ? { color: '#F87171', label: 'PDF' }
+    : isSheet
+    ? { color: '#60A5FA', label: 'Sheet' }
+    : isSlide
+    ? { color: '#FB923C', label: 'Slides' }
+    : isDoc
+    ? { color: '#A78BFA', label: 'Doc' }
+    : { color: T.accent, label: 'File' };
+
+  const Icon = isImage ? ImageIcon : FileText;
+
+  const clickable = !!onClick;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!clickable}
+      title={clickable ? `Preview ${filename}` : filename}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '8px 12px 8px 8px',
+        background: T.bgCard,
+        border: `1px solid ${T.border}`,
+        borderRadius: 12,
+        boxShadow: T.shadowCard,
+        maxWidth: 260,
+        cursor: clickable ? 'pointer' : 'default',
+        textAlign: 'left',
+        fontFamily: T.font,
+        color: T.text,
+        transition: 'all 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        if (!clickable) return;
+        e.currentTarget.style.borderColor = `${meta.color}55`;
+        e.currentTarget.style.transform = 'translateY(-1px)';
+        e.currentTarget.style.boxShadow = `0 8px 24px ${meta.color}22, 0 0 0 1px ${meta.color}30`;
+      }}
+      onMouseLeave={(e) => {
+        if (!clickable) return;
+        e.currentTarget.style.borderColor = T.border;
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = T.shadowCard;
+      }}
+    >
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: `${meta.color}18`,
+          border: `1px solid ${meta.color}40`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          boxShadow: `0 0 12px ${meta.color}25, inset 0 1px 0 rgba(255,255,255,0.06)`,
+        }}
+      >
+        <Icon size={15} color={meta.color} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.2 }}>
+        <span
+          style={{
+            fontFamily: T.font,
+            fontSize: 12.5,
+            fontWeight: 600,
+            color: T.text,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: 200,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {filename}
+        </span>
+        <span
+          style={{
+            fontFamily: T.fontMono,
+            fontSize: 9,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: meta.color,
+            marginTop: 2,
+            fontWeight: 600,
+          }}
+        >
+          {clickable ? `${meta.label} · Click to preview` : meta.label}
+        </span>
+      </div>
+    </button>
   );
 }
 

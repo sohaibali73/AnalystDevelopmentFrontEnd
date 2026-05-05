@@ -30,32 +30,64 @@ export function PreviewPane({ projectId, artifact, onDownload }: Props) {
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'column',
-          gap: 16,
+          gap: 18,
           color: T.textDim,
           padding: 32,
           textAlign: 'center',
+          background:
+            'radial-gradient(ellipse at 50% 30%, rgba(245,158,11,0.05) 0%, transparent 70%), #0A0A0B',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
         <div
+          aria-hidden
           style={{
-            width: 88,
-            height: 88,
+            position: 'absolute',
+            inset: 0,
+            backgroundImage:
+              'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+            maskImage:
+              'radial-gradient(ellipse at 50% 50%, #000 30%, transparent 75%)',
+            WebkitMaskImage:
+              'radial-gradient(ellipse at 50% 50%, #000 30%, transparent 75%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div
+          style={{
+            position: 'relative',
+            width: 104,
+            height: 104,
             borderRadius: '50%',
-            background: 'rgba(245,158,11,0.05)',
-            border: '1px dashed rgba(245,158,11,0.25)',
+            background:
+              'radial-gradient(circle, rgba(245,158,11,0.18), rgba(245,158,11,0.04) 70%)',
+            border: '1px dashed rgba(245,158,11,0.35)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            boxShadow: '0 0 60px rgba(245,158,11,0.20)',
           }}
         >
-          <PresentationIcon size={36} color={T.accent} style={{ opacity: 0.5 }} />
+          <PresentationIcon size={42} color={T.accent} style={{ opacity: 0.85 }} />
         </div>
-        <div style={{ maxWidth: 340 }}>
-          <h3 style={{ fontFamily: T.fontDisplay, fontSize: 18, color: T.text, marginBottom: 6 }}>
-            No artifacts yet
+        <div style={{ maxWidth: 380, position: 'relative' }}>
+          <h3
+            style={{
+              fontFamily: T.fontDisplay,
+              fontSize: 22,
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
+              color: T.text,
+              marginBottom: 8,
+            }}
+          >
+            Your canvas is ready
           </h3>
-          <p style={{ fontSize: 13, lineHeight: 1.5 }}>
-            Ask the assistant to build a deck or document for you. New versions will appear here automatically.
+          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: T.textSoft }}>
+            Ask YANG to build a deck or document. New versions appear here
+            automatically with smooth previews and full edit history.
           </p>
         </div>
       </div>
@@ -165,9 +197,43 @@ function DocxPreview({ projectId, artifact, onDownload }: Props & { artifact: St
   }, [projectId, artifact.id]);
 
   return (
-    <div style={{ height: '100%', overflowY: 'auto', background: '#1a1a1c', position: 'relative' }}>
+    <div
+      className="studio-scroll"
+      style={{
+        height: '100%',
+        overflowY: 'auto',
+        background:
+          'radial-gradient(ellipse at 50% 0%, rgba(96,165,250,0.08) 0%, rgba(99,102,241,0.05) 30%, transparent 70%), #0A0A0B',
+        position: 'relative',
+      }}
+    >
+      {/* Dot grid */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage:
+            'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+          maskImage:
+            'radial-gradient(ellipse at 50% 30%, #000 30%, transparent 80%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse at 50% 30%, #000 30%, transparent 80%)',
+          pointerEvents: 'none',
+        }}
+      />
       {loading && (
-        <div style={{ ...centerStyle, position: 'absolute', inset: 0, zIndex: 2, background: 'rgba(0,0,0,0.5)' }}>
+        <div
+          style={{
+            ...centerStyle,
+            position: 'absolute',
+            inset: 0,
+            zIndex: 2,
+            background: 'rgba(10,10,11,0.7)',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
           <Spinner size={28} />
           <span style={{ color: T.textDim, fontSize: 13 }}>Rendering document…</span>
         </div>
@@ -176,9 +242,11 @@ function DocxPreview({ projectId, artifact, onDownload }: Props & { artifact: St
       <div
         ref={containerRef}
         style={{
-          padding: '24px',
+          padding: '36px 24px 60px',
           minHeight: '100%',
           color: '#000',
+          position: 'relative',
+          zIndex: 1,
         }}
       />
       <style jsx global>{`
@@ -188,12 +256,21 @@ function DocxPreview({ projectId, artifact, onDownload }: Props & { artifact: St
         .studio-docx .docx-wrapper {
           background: transparent !important;
           padding: 0 !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 24px !important;
         }
         .studio-docx section.docx {
-          margin: 0 auto 24px !important;
-          background: #fff !important;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+          margin: 0 !important;
+          background: #ffffff !important;
+          box-shadow:
+            0 24px 60px rgba(0, 0, 0, 0.5),
+            0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 0 50px rgba(96, 165, 250, 0.08) !important;
           color: #1a1a1c !important;
+          border-radius: 6px !important;
+          overflow: hidden !important;
         }
       `}</style>
     </div>

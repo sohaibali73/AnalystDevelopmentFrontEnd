@@ -167,8 +167,27 @@ export default function ProjectWorkspace() {
         color: T.text,
         fontFamily: T.font,
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
+      {/* Ambient glow backdrop */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: -200,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 900,
+          height: 500,
+          borderRadius: '50%',
+          background:
+            'radial-gradient(circle, rgba(245,158,11,0.10), rgba(99,102,241,0.06) 40%, transparent 70%)',
+          filter: 'blur(60px)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
       <ProjectHeader
         project={project}
         artifacts={artifacts}
@@ -221,12 +240,38 @@ export default function ProjectWorkspace() {
               document.addEventListener('mouseup', onUp);
             }}
             style={{
-              width: 4,
+              width: 6,
               cursor: 'col-resize',
-              background: 'rgba(245,158,11,0.05)',
               flexShrink: 0,
+              position: 'relative',
+              background:
+                'linear-gradient(180deg, rgba(245,158,11,0.04) 0%, rgba(99,102,241,0.06) 50%, rgba(245,158,11,0.04) 100%)',
+              transition: 'background 0.15s ease',
             }}
-          />
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background =
+                'linear-gradient(180deg, rgba(245,158,11,0.20) 0%, rgba(99,102,241,0.25) 50%, rgba(245,158,11,0.20) 100%)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background =
+                'linear-gradient(180deg, rgba(245,158,11,0.04) 0%, rgba(99,102,241,0.06) 50%, rgba(245,158,11,0.04) 100%)';
+            }}
+          >
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 2,
+                height: 36,
+                borderRadius: 2,
+                background: 'rgba(255,255,255,0.18)',
+                pointerEvents: 'none',
+              }}
+            />
+          </div>
         )}
 
         {/* Preview pane */}

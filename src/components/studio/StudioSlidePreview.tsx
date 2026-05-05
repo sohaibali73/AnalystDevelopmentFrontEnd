@@ -160,10 +160,29 @@ export function StudioSlidePreview({ blob, filename, onDownload }: Props) {
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: T.bg,
+        background:
+          'radial-gradient(ellipse at 50% 30%, rgba(245,158,11,0.06) 0%, rgba(99,102,241,0.04) 35%, transparent 70%), #0A0A0B',
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
+      {/* Dot grid backdrop */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage:
+            'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+          maskImage:
+            'radial-gradient(ellipse at 50% 40%, #000 30%, transparent 80%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse at 50% 40%, #000 30%, transparent 80%)',
+          pointerEvents: 'none',
+        }}
+      />
+
       {/* Stage */}
       <div
         ref={stageRef}
@@ -180,12 +199,32 @@ export function StudioSlidePreview({ blob, filename, onDownload }: Props) {
         {scale > 0 && slide && (
           <div
             style={{
-              boxShadow: '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
-              borderRadius: 8,
+              position: 'relative',
+              borderRadius: 12,
               overflow: 'hidden',
               animation: 'studio-fadein 0.2s ease-out',
+              boxShadow:
+                '0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06), 0 0 50px rgba(245,158,11,0.10)',
             }}
           >
+            {/* Subtle gradient frame */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: -1,
+                borderRadius: 12,
+                padding: 1,
+                background:
+                  'linear-gradient(135deg, rgba(245,158,11,0.45), rgba(99,102,241,0.30) 50%, rgba(245,158,11,0.15))',
+                WebkitMask:
+                  'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+                WebkitMaskComposite: 'xor',
+                maskComposite: 'exclude',
+                pointerEvents: 'none',
+                opacity: 0.55,
+              }}
+            />
             <SlideRenderer
               slide={slide}
               slideWidth={pres.slideWidth}

@@ -21,6 +21,7 @@ import {
   Presentation,
   Star,
   Bug,
+  Wand2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { name: 'DASHBOARD', href: '/dashboard', icon: LayoutDashboard },
   { name: 'CHAT', href: '/chat', icon: MessageCircle },
   { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
+  { name: 'STUDIO', href: '/studio', icon: Wand2, badge: 'NEW' },
   { name: 'STACKS', href: '/stacks', icon: Layers },
   { name: 'SETTINGS', href: '/settings', icon: Settings },
   { name: 'DEBUG', href: '/debug', icon: Bug },
