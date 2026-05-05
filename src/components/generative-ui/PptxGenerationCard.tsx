@@ -16,6 +16,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { PptxViewer } from '@/components/pptx-viewer';
 import { useDocGen, type DocGenState } from './hooks/useDocGen';
+import { useInStudio } from '@/components/studio/StudioContext';
 
 const COLOR    = '#D24726';
 const GRADIENT = 'linear-gradient(135deg, #D24726 0%, #FF6B47 100%)';
@@ -111,6 +112,7 @@ export function PptxGenerationCard({
   toolCallId, toolName, input, output, externalOutput, state, errorText,
 }: PptxGenerationCardProps) {
 
+  const inStudio = useInStudio();
   const [previewOpen, setPreviewOpen]       = useState(false);
   const [pptxBlob, setPptxBlob]             = useState<Blob | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -359,8 +361,8 @@ export function PptxGenerationCard({
               </div>
             )}
 
-            {/* Inline PptxViewer */}
-            {downloadUrl && (
+            {/* Inline PptxViewer (suppressed inside the Content Studio workspace, which has its own preview pane) */}
+            {downloadUrl && !inStudio && (
               <div style={{ marginTop: 12, borderRadius: 10, overflow: 'hidden', border: `1px solid ${metaBdr}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: metaBg, borderBottom: previewOpen ? `1px solid ${metaBdr}` : 'none' }}>
                   <span style={{ fontSize: 11, fontWeight: 600, color: textColor, display: 'flex', alignItems: 'center', gap: 6 }}>

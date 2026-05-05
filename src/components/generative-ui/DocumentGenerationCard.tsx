@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { parseFileForPreview, ParsedDocument } from '@/lib/filePreview';
 import { PptxViewer } from '@/components/pptx-viewer';
+import { useInStudio } from '@/components/studio/StudioContext';
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
 
@@ -298,6 +299,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
   const [fileId, setFileId] = useState<string | null>(null);
   const [outputData, setOutputData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const inStudio = useInStudio();
   const [previewOpen, setPreviewOpen] = useState(true);
   const [safetyTimeout, setSafetyTimeout] = useState(false);
   const [parsedDoc, setParsedDoc] = useState<ParsedDocument | null>(null);
@@ -1220,7 +1222,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         )}
 
         {/* ── Inline live preview panel (JS library-based) ────────────────────── */}
-        {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+        {isComplete && downloadUrl && previewOpen && !inStudio && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
           <div style={{
             marginTop: '12px',
             borderRadius: '10px',
@@ -1532,7 +1534,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         )}
 
         {/* ── Collapsed preview toggle ──────────────────────────────────────── */}
-        {isComplete && downloadUrl && !previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+        {isComplete && downloadUrl && !previewOpen && !inStudio && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
           <div style={{ marginTop: '10px' }}>
             <button
               onClick={() => setPreviewOpen(true)}
@@ -1553,7 +1555,7 @@ const DocumentGenerationCard: React.FC<DocumentGenerationCardProps> = ({
         )}
 
         {/* ── Open in new tab button (when preview is shown) ────────────────── */}
-        {isComplete && downloadUrl && previewOpen && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
+        {isComplete && downloadUrl && previewOpen && !inStudio && (fileType === 'pptx' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pdf') && (
           <div style={{ marginTop: '8px', display: 'flex', gap: '7px' }}>
             <button
               onClick={() => window.open(resolveUrl(downloadUrl), '_blank')}
