@@ -1871,7 +1871,7 @@ export function ChatPage() {
   // ── Render ───────────────────────────────────────────��─────────────────────
 
   const cssVars = {
-    '--chat-bg':  isDark ? '#0C0C0E' : '#FAFAFA',
+    '--chat-bg':  'var(--bg)',
     '--chat-glow': isDark ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.05)',
     '--chat-glow-secondary': isDark ? 'rgba(139, 92, 246, 0.05)' : 'rgba(139, 92, 246, 0.03)',
     '--scroll-thumb': isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.12)',

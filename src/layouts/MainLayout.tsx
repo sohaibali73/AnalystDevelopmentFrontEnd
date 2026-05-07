@@ -124,7 +124,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           left: 0,
           right: 0,
           height: '64px',
-           background: 'rgba(13, 13, 16, 0.6)',
+           background: 'var(--bg-card)',
            backdropFilter: 'blur(20px)',
            WebkitBackdropFilter: 'blur(20px)',
            borderBottom: '1px solid var(--border)',
@@ -216,28 +216,28 @@ export function MainLayout({ children }: MainLayoutProps) {
         top: 0,
         bottom: 0,
         width: isMobile ? '280px' : sidebarWidth,
-        background: 'rgba(26, 26, 26, 0.6)',
+        background: 'var(--bg-card)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderRight: '1px solid rgba(212, 169, 68, 0.1)',
+        borderRight: '1px solid var(--border)',
         display: 'flex',
         flexDirection: 'column',
         transition: isMobile 
           ? 'left 0.4s cubic-bezier(0.16, 1, 0.3, 1)' 
           : 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: isMobile ? 999 : 50,
-        boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5)',
+        boxShadow: 'var(--shadow-card)',
       }}>
         {/* Logo Section */}
         <div style={{
           padding: collapsed && !isMobile ? '24px 16px' : '32px 24px',
-          borderBottom: '1px solid rgba(212, 169, 68, 0.1)',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed && !isMobile ? 'center' : 'space-between',
           gap: '16px',
           flexShrink: 0,
-          background: 'rgba(212, 169, 68, 0.03)',
+          background: 'var(--accent-dim)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{
@@ -248,9 +248,9 @@ export function MainLayout({ children }: MainLayoutProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'rgba(212, 169, 68, 0.15)',
-              border: '1px solid rgba(212, 169, 68, 0.3)',
-              boxShadow: '0 0 24px rgba(212, 169, 68, 0.2)',
+              background: 'var(--accent-dim)',
+              border: '1px solid var(--accent-glow)',
+              boxShadow: '0 0 24px var(--accent-glow)',
               flexShrink: 0,
             }}>
               <img 
@@ -260,7 +260,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   width: '100%', 
                   height: '100%', 
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 0 10px rgba(212, 169, 68, 0.5))',
+                  filter: 'drop-shadow(0 0 10px var(--accent-glow))',
                 }} 
               />
             </div>
@@ -271,8 +271,8 @@ export function MainLayout({ children }: MainLayoutProps) {
             <button
               onClick={() => setCollapsed(!collapsed)}
               style={{
-                background: 'rgba(212, 169, 68, 0.1)',
-                border: '1px solid rgba(212, 169, 68, 0.2)',
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent-glow)',
                 borderRadius: '10px',
                 width: '36px',
                 height: '36px',
@@ -280,16 +280,14 @@ export function MainLayout({ children }: MainLayoutProps) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: '#D4A944',
+                color: 'var(--accent)',
                 transition: 'all 0.3s ease',
                 flexShrink: 0,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(212, 169, 68, 0.2)';
-                e.currentTarget.style.boxShadow = '0 0 16px rgba(212, 169, 68, 0.3)';
+                e.currentTarget.style.boxShadow = '0 0 16px var(--accent-glow)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(212, 169, 68, 0.1)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
@@ -324,11 +322,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                   gap: '14px',
                   padding: collapsed && !isMobile ? '16px' : '14px 16px',
                   background: active 
-                    ? 'rgba(212, 169, 68, 0.15)' 
+                    ? 'var(--accent-dim)' 
                     : 'transparent',
-                  color: active ? '#ffffff' : '#9ca3af',
+                  color: active ? 'var(--text)' : 'var(--text-muted)',
                   border: active 
-                    ? '1px solid rgba(212, 169, 68, 0.3)'
+                    ? '1px solid var(--accent-glow)'
                     : '1px solid transparent',
                   borderRadius: '12px',
                   cursor: 'pointer',
@@ -341,22 +339,22 @@ export function MainLayout({ children }: MainLayoutProps) {
                   position: 'relative',
                   overflow: 'hidden',
                   boxShadow: active 
-                    ? '0 0 20px rgba(212, 169, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                    ? '0 0 20px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
                     : 'none',
                   justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
-                    e.currentTarget.style.background = 'rgba(212, 169, 68, 0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(212, 169, 68, 0.15)';
-                    e.currentTarget.style.color = '#D4A944';
+                    e.currentTarget.style.background = 'var(--accent-dim)';
+                    e.currentTarget.style.borderColor = 'var(--accent-glow)';
+                    e.currentTarget.style.color = 'var(--accent)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!active) {
                     e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.borderColor = 'transparent';
-                    e.currentTarget.style.color = '#9ca3af';
+                    e.currentTarget.style.color = 'var(--text-muted)';
                   }
                 }}
               >
@@ -365,7 +363,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <div style={{
                     position: 'absolute',
                     inset: 0,
-                    background: 'radial-gradient(circle at 50% 50%, rgba(212, 169, 68, 0.1), transparent 70%)',
+                    background: 'radial-gradient(circle at 50% 50%, var(--accent-glow), transparent 70%)',
+                    opacity: 0.3,
                     pointerEvents: 'none',
                   }} />
                 )}
@@ -378,20 +377,20 @@ export function MainLayout({ children }: MainLayoutProps) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: active 
-                    ? 'rgba(212, 169, 68, 0.2)'
-                    : 'rgba(255, 255, 255, 0.05)',
+                    ? 'var(--accent-dim)'
+                    : 'var(--bg-raised)',
                   border: active 
-                    ? '1px solid rgba(212, 169, 68, 0.4)'
-                    : '1px solid rgba(255, 255, 255, 0.1)',
+                    ? '1px solid var(--accent-glow)'
+                    : '1px solid var(--border)',
                   boxShadow: active 
-                    ? '0 0 16px rgba(212, 169, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                    ? '0 0 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
                     : 'none',
                   transition: 'all 0.3s ease',
                   flexShrink: 0,
                 }}>
                   <Icon size={isMobile ? 20 : 18} style={{ 
-                    color: active ? '#D4A944' : 'currentColor',
-                    filter: active ? 'drop-shadow(0 0 6px rgba(212, 169, 68, 0.6))' : 'none',
+                    color: active ? 'var(--accent)' : 'currentColor',
+                    filter: active ? 'drop-shadow(0 0 6px var(--accent-glow))' : 'none',
                   }} />
                 </div>
                 
@@ -400,7 +399,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <span style={{
                       position: 'relative',
                       zIndex: 1,
-                      textShadow: active ? '0 0 12px rgba(212, 169, 68, 0.4)' : 'none',
+                      textShadow: active ? '0 0 12px var(--accent-glow)' : 'none',
                     }}>
                       {item.name}
                     </span>
@@ -411,12 +410,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                         fontWeight: 700,
                         padding: '3px 8px',
                         borderRadius: '6px',
-                        background: 'rgba(212, 169, 68, 0.2)',
-                        color: '#D4A944',
+                        background: 'var(--accent-dim)',
+                        color: 'var(--accent)',
                         letterSpacing: '0.5px',
                         lineHeight: 1.4,
-                        border: '1px solid rgba(212, 169, 68, 0.3)',
-                        boxShadow: '0 0 12px rgba(212, 169, 68, 0.2)',
+                        border: '1px solid var(--accent-glow)',
+                        boxShadow: '0 0 12px var(--accent-glow)',
                         flexShrink: 0,
                       }}>
                         {item.badge}
@@ -432,9 +431,9 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* User Section */}
         <div style={{
           padding: isMobile ? '24px 16px' : '24px',
-          borderTop: '1px solid rgba(212, 169, 68, 0.1)',
+          borderTop: '1px solid var(--border)',
           flexShrink: 0,
-          background: 'rgba(212, 169, 68, 0.03)',
+          background: 'var(--accent-dim)',
         }}>
           <div style={{ 
             display: 'flex', 
@@ -446,7 +445,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               width: '48px',
               height: '48px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #D4A944 0%, #C9A03D 100%)',
+              background: 'var(--accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -454,7 +453,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               color: '#0a0a0a',
               fontSize: '18px',
               flexShrink: 0,
-              boxShadow: '0 0 24px rgba(212, 169, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 0 24px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
             }}>
               {user?.name?.charAt(0).toUpperCase() || user?.nickname?.charAt(0).toUpperCase() || 'U'}
@@ -462,7 +461,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             {(!collapsed || isMobile) && (
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ 
-                  color: '#ffffff', 
+                  color: 'var(--text)', 
                   fontSize: '15px', 
                   fontWeight: 700, 
                   whiteSpace: 'nowrap', 
@@ -471,12 +470,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                   lineHeight: 1.4,
                   fontFamily: "'Rajdhani', sans-serif",
                   letterSpacing: '0.5px',
-                  textShadow: '0 0 12px rgba(212, 169, 68, 0.3)',
                 }}>
                   {user?.name || user?.nickname || 'User'}
                 </div>
                 <div style={{ 
-                  color: '#6b7280', 
+                  color: 'var(--text-muted)', 
                   fontSize: '12px', 
                   whiteSpace: 'nowrap', 
                   overflow: 'hidden', 
