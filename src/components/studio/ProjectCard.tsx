@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Presentation, FileText, MessageCircle, Archive, Trash2, Edit2 } from 'lucide-react';
+import { Presentation, FileText, MessageCircle, Globe, Archive, Trash2, Edit2 } from 'lucide-react';
 import { studioTheme as T, relativeTime } from './theme';
 import type { StudioProject } from '@/lib/studioApi';
 import { StudioBadge } from './StudioPrimitives';
@@ -18,12 +18,14 @@ const KIND_ICONS = {
   pptx: Presentation,
   docx: FileText,
   chat: MessageCircle,
+  site: Globe,
 } as const;
 
 const KIND_COLORS = {
   pptx: '#FB923C',
   docx: '#60A5FA',
   chat: '#A78BFA',
+  site: '#34D399',
 } as const;
 
 export function ProjectCard({ project, onClick, onRename, onArchive, onDelete }: ProjectCardProps) {

@@ -18,6 +18,7 @@ import {
 import { studioTheme as T } from '@/components/studio/theme';
 import { ProjectHeader } from '@/components/studio/ProjectHeader';
 import { PreviewPane } from '@/components/studio/PreviewPane';
+import { SitePreviewPane } from '@/components/studio/SitePreviewPane';
 import { StudioChatPane } from '@/components/studio/StudioChatPane';
 import { EditOpsBuffer, FindReplaceBar } from '@/components/studio/EditOpsBuffer';
 import { Spinner, StudioButton } from '@/components/studio/StudioPrimitives';
@@ -149,6 +150,7 @@ export default function ProjectWorkspace() {
   }
 
   const chatOnly = project.kind === 'chat';
+  const isSite = project.kind === 'site';
 
   // Present mode
   if (mode === 'present' && currentArtifact?.kind === 'pptx') {
@@ -277,23 +279,31 @@ export default function ProjectWorkspace() {
         {/* Preview pane */}
         {!chatOnly && (
           <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-            {mode === 'edit' && currentArtifact && (
-              <EditToolbar
-                artifact={currentArtifact}
-                onAddOp={pushOp}
-                pendingOps={pendingOps}
-                onRemoveOp={(idx) => setPendingOps((prev) => prev.filter((_, i) => i !== idx))}
-              />
+            {isSite ? (
+              <SitePreviewPane project={project} artifacts={artifacts} onArtifactsChanged={load} />
+            ) : (
+              <>
+                {mode === 'edit' && currentArtifact && (
+                  <EditToolbar
+                    artifact={currentArtifact}
+                    onAddOp={pushOp}
+                    pendingOps={pendingOps}
+                    onRemoveOp={(idx) =>
+                      setPendingOps((prev) => prev.filter((_, i) => i !== idx))
+                    }
+                  />
+                )}
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <PreviewPane projectId={projectId} artifact={currentArtifact} />
+                </div>
+                <EditOpsBuffer
+                  ops={pendingOps}
+                  saving={saving}
+                  onSave={handleSave}
+                  onDiscard={() => setPendingOps([])}
+                />
+              </>
             )}
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <PreviewPane projectId={projectId} artifact={currentArtifact} />
-            </div>
-            <EditOpsBuffer
-              ops={pendingOps}
-              saving={saving}
-              onSave={handleSave}
-              onDiscard={() => setPendingOps([])}
-            />
           </div>
         )}
       </div>
@@ -347,7 +357,9 @@ function EditToolbar({
         gap: 10,
       }}
     >
-      <FindReplaceBar onAddOp={onAddOp} kind={artifact.kind} />
+      {artifact.kind !== 'site' && (
+        <FindReplaceBar onAddOp={onAddOp} kind={artifact.kind} />
+      )}
 
       {artifact.kind === 'pptx' && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

@@ -13,7 +13,7 @@ interface Props {
   onCreate: () => void;
 }
 
-type KindFilter = '' | 'pptx' | 'docx' | 'chat';
+type KindFilter = '' | 'pptx' | 'docx' | 'chat' | 'site';
 type SortOrder = 'recent' | 'name';
 
 export function ProjectsTab({ onCreate }: Props) {
@@ -129,6 +129,7 @@ export function ProjectsTab({ onCreate }: Props) {
             { value: '', label: 'All kinds' },
             { value: 'pptx', label: 'PowerPoint' },
             { value: 'docx', label: 'Word' },
+            { value: 'site', label: 'Websites' },
             { value: 'chat', label: 'Chat only' },
           ]}
         />
@@ -174,7 +175,11 @@ export function ProjectsTab({ onCreate }: Props) {
           </StudioButton>
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState onCreate={onCreate} hasSearch={!!search} />
+        kind === 'site' && !search ? (
+          <SitesEmptyState onCreate={onCreate} />
+        ) : (
+          <EmptyState onCreate={onCreate} hasSearch={!!search} />
+        )
       ) : (
         <div
           style={{
@@ -250,6 +255,85 @@ export function ProjectsTab({ onCreate }: Props) {
           <StudioButton onClick={handleRenameSave}>Save</StudioButton>
         </div>
       </StudioModal>
+    </div>
+  );
+}
+
+function SitesEmptyState({ onCreate }: { onCreate: () => void }) {
+  const examples = [
+    'Landing page for a coffee shop',
+    'Photographer portfolio',
+    'Personal résumé site',
+    'Pricing page for a SaaS product',
+  ];
+  return (
+    <div
+      style={{
+        padding: '52px 24px',
+        background:
+          'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.10), rgba(245,158,11,0.05) 40%, transparent 70%), rgba(245,158,11,0.03)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: 16,
+        textAlign: 'center',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 42,
+          marginBottom: 8,
+        }}
+      >
+        🌐
+      </div>
+      <h3 style={{ fontFamily: T.fontDisplay, fontSize: 24, marginBottom: 8 }}>
+        Build websites with AI
+      </h3>
+      <p style={{ color: T.textDim, marginBottom: 22, maxWidth: 440, margin: '0 auto 22px' }}>
+        Describe what you want, see it live, then publish to a public URL.
+      </p>
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 22 }}>
+        <StudioButton iconLeft={<Plus size={16} />} onClick={onCreate}>
+          New Website
+        </StudioButton>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          maxWidth: 600,
+          margin: '0 auto',
+        }}
+      >
+        {examples.map((ex) => (
+          <button
+            key={ex}
+            onClick={onCreate}
+            style={{
+              padding: '8px 14px',
+              background: 'rgba(99,102,241,0.08)',
+              color: T.textSoft,
+              border: '1px solid rgba(99,102,241,0.20)',
+              borderRadius: 999,
+              fontFamily: T.font,
+              fontSize: 12.5,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(99,102,241,0.18)';
+              e.currentTarget.style.color = T.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(99,102,241,0.08)';
+              e.currentTarget.style.color = T.textSoft;
+            }}
+          >
+            "{ex}"
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

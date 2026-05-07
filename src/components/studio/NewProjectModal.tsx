@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Presentation, FileText, MessageCircle } from 'lucide-react';
+import { Presentation, FileText, MessageCircle, Globe } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { studioApi, emitStudioRefresh, type ProjectKind, type StudioStyle } from '@/lib/studioApi';
 import { StudioModal, StudioInput, StudioButton, StudioSelect, Spinner } from './StudioPrimitives';
@@ -14,10 +14,23 @@ interface Props {
   defaultStyleId?: string;
 }
 
-const KIND_OPTIONS = [
-  { value: 'pptx' as ProjectKind, label: 'PowerPoint (.pptx)', icon: Presentation, color: '#FB923C' },
-  { value: 'docx' as ProjectKind, label: 'Word document (.docx)', icon: FileText, color: '#60A5FA' },
-  { value: 'chat' as ProjectKind, label: 'Just chat (no document)', icon: MessageCircle, color: '#A78BFA' },
+const KIND_OPTIONS: Array<{
+  value: ProjectKind;
+  label: string;
+  icon: React.ElementType;
+  color: string;
+  hint?: string;
+}> = [
+  { value: 'pptx', label: 'PowerPoint (.pptx)', icon: Presentation, color: '#FB923C' },
+  { value: 'docx', label: 'Word document (.docx)', icon: FileText, color: '#60A5FA' },
+  {
+    value: 'site',
+    label: 'Website',
+    icon: Globe,
+    color: '#34D399',
+    hint: 'AI builds it as you chat. Publish to a public URL.',
+  },
+  { value: 'chat', label: 'Just chat (no document)', icon: MessageCircle, color: '#A78BFA' },
 ];
 
 export function NewProjectModal({ open, onClose, defaultStyleId }: Props) {
@@ -47,6 +60,15 @@ export function NewProjectModal({ open, onClose, defaultStyleId }: Props) {
       setHumanizeOn(false);
     }
   }, [open, defaultStyleId]);
+
+  // For sites, default the title to "New Website" if user hasn't typed anything
+  useEffect(() => {
+    if (kind === 'site' && !title.trim()) {
+      // no-op — placeholder will show; title left empty so backend defaults apply
+    }
+  }, [kind, title]);
+
+  const isSite = kind === 'site';
 
   async function handleCreate() {
     setLoading(true);
@@ -106,7 +128,14 @@ export function NewProjectModal({ open, onClose, defaultStyleId }: Props) {
                   }}
                 >
                   <Icon size={22} color={o.color} />
-                  <span style={{ flex: 1, fontWeight: 600 }}>{o.label}</span>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontWeight: 600 }}>{o.label}</span>
+                    {o.hint && (
+                      <span style={{ fontSize: 11.5, color: T.textMuted, fontWeight: 400 }}>
+                        {o.hint}
+                      </span>
+                    )}
+                  </div>
                   <div
                     style={{
                       width: 18,
@@ -124,34 +153,41 @@ export function NewProjectModal({ open, onClose, defaultStyleId }: Props) {
 
         <div>
           <Label>Title</Label>
-          <StudioInput value={title} onChange={setTitle} placeholder="Untitled project" autoFocus />
+          <StudioInput
+            value={title}
+            onChange={setTitle}
+            placeholder={isSite ? 'New Website' : 'Untitled project'}
+            autoFocus
+          />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <div>
-            <Label>Voice clone</Label>
-            <StudioSelect<string>
-              value={styleId}
-              onChange={setStyleId}
-              options={[
-                { value: '', label: 'None' },
-                ...styles.map((s) => ({ value: s.id, label: s.name })),
-              ]}
-              style={{ width: '100%' }}
-            />
-          </div>
-          <div>
-            <Label>Humanize</Label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 38 }}>
-              <Toggle on={humanizeOn} onChange={setHumanizeOn} />
-              <span style={{ fontSize: 13, color: humanizeOn ? T.text : T.textDim }}>
-                {humanizeOn ? 'On' : 'Off'}
-              </span>
+        {!isSite && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <Label>Voice clone</Label>
+              <StudioSelect<string>
+                value={styleId}
+                onChange={setStyleId}
+                options={[
+                  { value: '', label: 'None' },
+                  ...styles.map((s) => ({ value: s.id, label: s.name })),
+                ]}
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div>
+              <Label>Humanize</Label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 38 }}>
+                <Toggle on={humanizeOn} onChange={setHumanizeOn} />
+                <span style={{ fontSize: 13, color: humanizeOn ? T.text : T.textDim }}>
+                  {humanizeOn ? 'On' : 'Off'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {humanizeOn && (
+        {!isSite && humanizeOn && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
               <Label>Intensity</Label>

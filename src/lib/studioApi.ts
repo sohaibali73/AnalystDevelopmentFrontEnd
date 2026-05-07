@@ -12,8 +12,8 @@ const API_BASE = getApiUrl();
 
 // ───── Types ──────────────────────────────────────────────────────────────
 
-export type ProjectKind = 'pptx' | 'docx' | 'chat';
-export type ArtifactKind = 'pptx' | 'docx';
+export type ProjectKind = 'pptx' | 'docx' | 'chat' | 'site';
+export type ArtifactKind = 'pptx' | 'docx' | 'site';
 export type Intensity = 'light' | 'standard' | 'max';
 export type SeoTarget = 'linkedin' | null;
 export type StyleStatus = 'draft' | 'analyzing' | 'ready' | 'failed';
@@ -56,9 +56,40 @@ export interface StudioArtifact {
   size_bytes: number;
   slide_count: number | null;
   page_count: number | null;
+  file_count?: number | null;
   edit_state: Record<string, any> | null;
   meta: Record<string, any>;
   created_at: string;
+}
+
+// ── Sites ──────────────────────────────────────────────────────────────
+
+export interface SitePublication {
+  id: string;
+  project_id: string;
+  artifact_id: string;
+  subdomain: string;
+  custom_domain: string | null;
+  is_active: boolean;
+  published_at: string;
+  request_count: number;
+}
+
+export interface SubdomainCheck {
+  available: boolean;
+  reason?: string;
+  subdomain: string;
+}
+
+export interface SitePublishResponse {
+  publication: SitePublication;
+  urls: { path_url: string; subdomain_url: string };
+}
+
+export interface SiteFilesResponse {
+  artifact_id: string;
+  files: Record<string, string>;
+  file_count: number;
 }
 
 export interface StudioStyle {
@@ -312,6 +343,53 @@ export const studioApi = {
     studioFetch<{ runs: any[] }>(`/studio/humanize/runs${qs({ project_id, limit })}`),
   getHumanizeRun: (run_id: string) =>
     studioFetch<{ run: any; trace: any }>(`/studio/humanize/runs/${run_id}`),
+
+  // ── Sites ─────────────────────────────────────────────────────────────
+  // Same-origin proxy URL — works inside iframes (no CORS, forwards auth)
+  sitePreviewUrl: (projectId: string, version: number, path = '') =>
+    `/api/studio/sites/preview/${projectId}/${version}${path ? '/' + path.replace(/^\/+/, '') : '/'}`,
+  // Direct upstream URL — used when opening preview in a new tab (will require auth)
+  sitePreviewUrlDirect: (projectId: string, version: number, path = '') =>
+    `${API_BASE}/studio/sites/${projectId}/preview/${version}${path ? '/' + path.replace(/^\/+/, '') : ''}`,
+
+  getSiteFiles: (pid: string, aid: string) =>
+    studioFetch<SiteFilesResponse>(`/studio/sites/${pid}/files/${aid}`),
+
+  checkSubdomain: (sub: string) =>
+    studioFetch<SubdomainCheck>(`/studio/sites/check/${encodeURIComponent(sub)}`),
+
+  publishSite: (pid: string, body: { artifact_id: string; subdomain: string }) =>
+    studioFetch<SitePublishResponse>(`/studio/sites/${pid}/publish`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  unpublishSite: (pid: string, publication_id: string) =>
+    studioFetch<{ unpublished: true }>(`/studio/sites/${pid}/unpublish`, {
+      method: 'POST',
+      body: JSON.stringify({ publication_id }),
+    }),
+
+  listSitePublications: (pid: string) =>
+    studioFetch<{ publications: SitePublication[]; count: number }>(
+      `/studio/sites/${pid}/publications`,
+    ),
+
+  listAllPublications: () =>
+    studioFetch<{ publications: SitePublication[]; count: number }>(
+      `/studio/sites/publications`,
+    ),
+
+  fetchPreviewHtml: async (pid: string, version: number): Promise<string> => {
+    const token = getToken();
+    // Hit the same-origin Next.js proxy → no CORS, auth attached server-side
+    const res = await fetch(`/api/studio/sites/preview/${pid}/${version}/`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error(`preview failed: ${res.status}`);
+    return res.text();
+  },
 };
 
 // ───── Cache invalidation event bus ────────────────────────────────────

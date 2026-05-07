@@ -1141,7 +1141,7 @@ function ToolBtn({
   );
 }
 
-function EmptyState({ kind }: { kind: 'pptx' | 'docx' | 'chat' }) {
+function EmptyState({ kind }: { kind: 'pptx' | 'docx' | 'chat' | 'site' }) {
   const examples =
     kind === 'pptx'
       ? [
@@ -1154,6 +1154,12 @@ function EmptyState({ kind }: { kind: 'pptx' | 'docx' | 'chat' }) {
           'Draft a 2-page investment memo for Acme Corp',
           'Write a quarterly newsletter for our limited partners',
           'Generate a research report on the AI infrastructure market',
+        ]
+      : kind === 'site'
+      ? [
+          'Build me a portfolio site for my photography',
+          'Landing page for a coffee shop',
+          'Personal résumé site with a clean dark theme',
         ]
       : [
           'Help me brainstorm ideas',

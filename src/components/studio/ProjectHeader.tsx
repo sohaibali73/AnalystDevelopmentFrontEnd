@@ -15,6 +15,7 @@ import {
   Presentation as PresentationIcon,
   FileText,
   MessageCircle,
+  Globe,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { studioApi, emitStudioRefresh, type StudioProject, type StudioArtifact } from '@/lib/studioApi';
@@ -36,6 +37,7 @@ const KIND_META = {
   pptx: { icon: PresentationIcon, color: '#FB923C' },
   docx: { icon: FileText, color: '#60A5FA' },
   chat: { icon: MessageCircle, color: '#A78BFA' },
+  site: { icon: Globe, color: '#34D399' },
 } as const;
 
 export function ProjectHeader({
@@ -273,7 +275,7 @@ function ModeToggle({
 }: {
   mode: 'preview' | 'edit' | 'present';
   onChange: (m: 'preview' | 'edit' | 'present') => void;
-  kind: 'pptx' | 'docx' | 'chat';
+  kind: 'pptx' | 'docx' | 'chat' | 'site';
 }) {
   const items: Array<{ id: 'preview' | 'edit' | 'present'; label: string; icon: React.ElementType }> = [
     { id: 'preview', label: 'Preview', icon: Eye },
