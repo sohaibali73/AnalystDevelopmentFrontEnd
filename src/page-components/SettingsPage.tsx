@@ -25,6 +25,7 @@ import {
   Sunset,
   Flower2,
   Zap,
+  Bug,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -801,6 +802,62 @@ export function SettingsPage() {
                     >
                       <ExternalLink size={10} />
                       Privacy Policy
+                    </a>
+                  </div>
+                </div>
+
+                {/* Developer tools (tucked-away links to Skills + Debug) */}
+                <div className="settings-card" style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px',
+                  padding: '24px', boxShadow: 'var(--shadow-card)', position: 'relative', overflow: 'hidden',
+                  gridColumn: isMobile ? '1' : '1 / -1',
+                }}>
+                  <div className="shimmer-layer" />
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(90deg, #60A5FA, transparent)', opacity: 0.6 }} />
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px' }}>Developer tools</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '16px' }}>
+                    Internal utilities for advanced users.
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <a
+                      href="/skills"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '7px 14px',
+                        background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)',
+                        border: '1px solid rgba(96,165,250,0.25)',
+                        borderRadius: '8px',
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
+                        color: '#60A5FA', textDecoration: 'none',
+                        textTransform: 'uppercase' as const,
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.15)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.5)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.06)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.25)'; }}
+                    >
+                      <Zap size={10} />
+                      Skills Library
+                    </a>
+                    <a
+                      href="/debug"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '7px 14px',
+                        background: isDark ? 'rgba(167,139,250,0.08)' : 'rgba(167,139,250,0.06)',
+                        border: '1px solid rgba(167,139,250,0.25)',
+                        borderRadius: '8px',
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
+                        color: '#A78BFA', textDecoration: 'none',
+                        textTransform: 'uppercase' as const,
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(167,139,250,0.15)'; e.currentTarget.style.borderColor = 'rgba(167,139,250,0.5)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(167,139,250,0.08)' : 'rgba(167,139,250,0.06)'; e.currentTarget.style.borderColor = 'rgba(167,139,250,0.25)'; }}
+                    >
+                      <Bug size={10} />
+                      Debug Console
                     </a>
                   </div>
                 </div>

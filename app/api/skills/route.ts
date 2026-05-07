@@ -17,9 +17,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
     const include_builtins = searchParams.get('include_builtins') ?? 'true';
+    const owned = searchParams.get('owned');
 
     const params = new URLSearchParams();
     if (category) params.append('category', category);
+    if (owned) params.append('owned', owned);
     params.append('include_builtins', include_builtins);
 
     const response = await fetch(`${API_BASE_URL}/skills?${params.toString()}`, {

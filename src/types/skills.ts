@@ -16,19 +16,90 @@ export type SkillCategory =
   | 'financial_modeling'
   | 'data';
 
+// ── Source / storage discriminators (added for user-uploaded skills) ──────
+export type SkillSource = 'system' | 'portal' | 'upload' | 'inline';
+export type SkillStorageKind = 'portal' | 'lightweight' | 'bundle';
+
 // ── Skill Definition (matches backend SkillDefinition.to_dict()) ──────────
 export interface SkillDefinition {
-  skill_id: string;
+  skill_id?: string;
   name: string;
   slug: string;
   description: string;
-  category: SkillCategory;
+  category: SkillCategory | string;
   max_tokens: number;
   tags: string[];
   enabled: boolean;
   supports_streaming: boolean;
   is_builtin: boolean;
+  // Extended fields for user-uploaded skills
+  source?: SkillSource;
+  storage_kind?: SkillStorageKind;
+  created_by?: string | null;
+  created_at?: string | null;
+  system_prompt?: string;
+  tools?: string[];
 }
+
+// ── Upload / error envelope ───────────────────────────────────────────────
+export interface SkillUploadResponse {
+  skill: SkillDefinition;
+  warnings: string[];
+  archived: boolean;
+  storage_kind: SkillStorageKind;
+  storage_path: string;
+}
+
+export interface SkillErrorPayload {
+  detail: { code: string; error: string };
+}
+
+export const SKILL_ERROR_MESSAGES: Record<string, string> = {
+  INVALID_ZIP: "That file isn't a valid .zip.",
+  EMPTY_UPLOAD: 'The bundle is empty.',
+  BUNDLE_TOO_LARGE: 'Bundle exceeds 25 MB compressed / 50 MB extracted.',
+  TOO_MANY_FILES: 'Bundle contains too many files (max 500).',
+  UNSAFE_PATH: 'Bundle contains an unsafe path.',
+  MISSING_SKILL_MD: 'Bundle must contain SKILL.md (or skill.json + prompt.md).',
+  MISSING_NAME: 'Skill is missing a name.',
+  MISSING_DESCRIPTION: 'Skill is missing a description.',
+  MISSING_PROMPT: 'System prompt is required.',
+  BAD_SLUG:
+    'Slug must be kebab-case (3-64 chars, lowercase, start with a letter).',
+  SLUG_TAKEN: 'That slug is already taken — pick another.',
+  INVALID_SKILL_JSON: 'skill.json is not valid JSON.',
+  FORBIDDEN: "You don't have permission to modify this skill.",
+  NOT_FOUND: 'Skill not found.',
+  MATERIALIZE_FAILED: 'Server error — please try again.',
+  DB_INSERT_FAILED: 'Server error — please try again.',
+  DB_UPDATE_FAILED: 'Server error — please try again.',
+  DB_DELETE_FAILED: 'Server error — please try again.',
+};
+
+export function explainSkillError(payload: unknown): string {
+  const code = (payload as SkillErrorPayload | undefined)?.detail?.code;
+  const fallback =
+    (payload as SkillErrorPayload | undefined)?.detail?.error ||
+    (payload as { error?: string } | undefined)?.error;
+  return (code && SKILL_ERROR_MESSAGES[code]) || fallback || 'Unknown error';
+}
+
+export const KEBAB_SLUG_RE = /^[a-z][a-z0-9-]{2,63}$/;
+
+export const SKILL_CATEGORIES = [
+  { value: 'general', label: 'General' },
+  { value: 'research', label: 'Research' },
+  { value: 'document', label: 'Document' },
+  { value: 'presentation', label: 'Presentation' },
+  { value: 'data', label: 'Data' },
+  { value: 'ui', label: 'UI' },
+  { value: 'backtest', label: 'Backtest' },
+  { value: 'market_analysis', label: 'Market Analysis' },
+  { value: 'quant', label: 'Quant' },
+  { value: 'financial_modeling', label: 'Financial Modeling' },
+  { value: 'afl', label: 'AFL' },
+  { value: 'code', label: 'Code' },
+] as const;
 
 // ── API Response Types ────────────────────────────────────────────────────
 export interface SkillListResponse {

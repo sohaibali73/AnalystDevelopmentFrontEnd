@@ -481,11 +481,19 @@ export interface Skill {
   name: string;
   slug: string;
   description: string;
-  category: SkillCategory;
+  category: SkillCategory | string;
   max_tokens: number;
   tags: string[];
   enabled: boolean;
   supports_streaming: boolean;
+  // Extended fields for user-uploaded skills
+  is_builtin?: boolean;
+  source?: 'system' | 'portal' | 'upload' | 'inline';
+  storage_kind?: 'portal' | 'lightweight' | 'bundle';
+  created_by?: string | null;
+  created_at?: string | null;
+  system_prompt?: string;
+  tools?: string[];
 }
 
 export interface SkillListResponse {

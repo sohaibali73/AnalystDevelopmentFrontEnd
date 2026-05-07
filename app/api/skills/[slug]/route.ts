@@ -104,3 +104,66 @@ export async function POST(
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const authToken = req.headers.get('authorization') || '';
+    const body = await req.text();
+
+    const response = await fetch(`${API_BASE_URL}/skills/${slug}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': authToken,
+        'Content-Type': 'application/json',
+      },
+      body,
+    });
+
+    const text = await response.text();
+    return new NextResponse(text || null, {
+      status: response.status,
+      headers: {
+        'Content-Type':
+          response.headers.get('content-type') || 'application/json',
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to update skill' },
+      { status: 502 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const authToken = req.headers.get('authorization') || '';
+
+    const response = await fetch(`${API_BASE_URL}/skills/${slug}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': authToken },
+    });
+
+    const text = await response.text();
+    return new NextResponse(text || null, {
+      status: response.status,
+      headers: {
+        'Content-Type':
+          response.headers.get('content-type') || 'application/json',
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to delete skill' },
+      { status: 502 }
+    );
+  }
+}

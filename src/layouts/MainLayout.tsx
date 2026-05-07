@@ -43,7 +43,6 @@ const navItems: NavItem[] = [
   { name: 'STUDIO', href: '/studio', icon: Wand2, badge: 'NEW' },
   { name: 'STACKS', href: '/stacks', icon: Layers },
   { name: 'SETTINGS', href: '/settings', icon: Settings },
-  { name: 'DEBUG', href: '/debug', icon: Bug },
 ];
 
 interface MainLayoutProps {

@@ -10,6 +10,8 @@ import { createPortal } from 'react-dom';
 import { Zap, X, Search, Check } from 'lucide-react';
 import type { SkillDefinition, SkillCategory } from '@/types/skills';
 import { SKILL_CATEGORY_META } from '@/types/skills';
+import { useSkillsVersion } from '@/stores/skills';
+
 
 // ─── Category badge colors ──────────────────────────────────────────────────
 
@@ -63,12 +65,13 @@ export function ChatSkillSelector({
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const skillsVersion = useSkillsVersion();
 
   const hasActiveSkill = forcedSkillSlug !== null;
 
-  // Fetch skills on first open
+  // Fetch skills (re-runs whenever the global skills version is bumped, so a
+  // freshly uploaded skill shows up here without a page refresh).
   const fetchSkills = useCallback(async () => {
-    if (fetched) return;
     setLoading(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : '';
@@ -85,7 +88,14 @@ export function ChatSkillSelector({
       setLoading(false);
       setFetched(true);
     }
-  }, [fetched]);
+  }, []);
+
+  // Refetch when version changes after the first successful fetch
+  useEffect(() => {
+    if (!fetched) return;
+    fetchSkills();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skillsVersion]);
 
   const handleToggle = useCallback(() => {
     if (disabled) return;
@@ -96,6 +106,7 @@ export function ChatSkillSelector({
       return !prev;
     });
   }, [disabled, fetched, fetchSkills]);
+
 
   // Close on outside click
   useEffect(() => {
