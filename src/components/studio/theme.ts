@@ -13,30 +13,32 @@ export const studioTheme = {
   font: "'Inter', system-ui, sans-serif",
   fontMono: "'DM Mono', ui-monospace, monospace",
 
-  // Backgrounds (layered, never pure black)
-  bg: '#0A0A0B',
-  bgChat: '#0C0C0E',
-  bgCard: '#0D0D10',
-  bgRaised: '#111114',
-  bgInput: 'rgba(12,12,14,0.9)',
-  bgCardHover: 'rgba(255,255,255,0.04)',
+  // Backgrounds — driven by ThemeContext CSS variables so studio respects
+  // light/dark + theme-style switches (default, midnight, ocean, forest, …)
+  bg: 'var(--bg, #0A0A0B)',
+  bgChat: 'var(--bg, #0C0C0E)',
+  bgCard: 'var(--bg-card, #0D0D10)',
+  bgRaised: 'var(--bg-raised, #111114)',
+  bgInput: 'var(--bg-card, rgba(12,12,14,0.9))',
+  bgCardHover: 'var(--bg-card-hover, rgba(255,255,255,0.04))',
 
-  // Text — bright, never tinted
-  text: '#F5F5F7',          // primary body text
-  textSoft: '#C4C4CC',      // secondary text (visible against dark layered bg)
-  textMuted: '#8B8B95',     // tertiary / metadata captions
-  textDim: '#8B8B95',
+  // Text — driven by CSS variables
+  text: 'var(--text, #F5F5F7)',
+  textSoft: 'var(--text, #C4C4CC)',
+  textMuted: 'var(--text-muted, #8B8B95)',
+  textDim: 'var(--text-dim, #8B8B95)',
 
-  // Borders (almost invisible)
-  border: 'rgba(255,255,255,0.06)',
-  borderHover: 'rgba(255,255,255,0.10)',
-  inputBorder: 'rgba(255,255,255,0.06)',
+  // Borders
+  border: 'var(--border, rgba(255,255,255,0.06))',
+  borderHover: 'var(--border-hover, rgba(255,255,255,0.10))',
+  inputBorder: 'var(--border, rgba(255,255,255,0.06))',
 
-  // Primary accent — gold/amber
-  accent: '#F59E0B',
-  accentDim: 'rgba(245,158,11,0.10)',
-  accentGlow: 'rgba(245,158,11,0.25)',
-  accentBorder: 'rgba(245,158,11,0.30)',
+  // Primary accent — driven by ThemeContext accent (so accent-color picker works)
+  accent: 'var(--accent, #F59E0B)',
+  accentDim: 'var(--accent-dim, rgba(245,158,11,0.10))',
+  accentGlow: 'var(--accent-glow, rgba(245,158,11,0.25))',
+  accentBorder: 'var(--border-hover, rgba(245,158,11,0.30))',
+
 
   // Secondary accent — indigo (Yang ring, scrollbars, file drop)
   accent2: '#6366F1',

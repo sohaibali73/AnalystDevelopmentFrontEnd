@@ -184,7 +184,7 @@ export function HumanizePlayground() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
         <div
           style={{
-            background: '#0D0D10',
+            background: T.bgCard,
             border: '1px solid rgba(255,255,255,0.06)',
             borderRadius: 14,
             padding: 16,
@@ -231,7 +231,7 @@ export function HumanizePlayground() {
 
         <div
           style={{
-            background: '#0D0D10',
+            background: T.bgCard,
             border: '1px solid rgba(255,255,255,0.06)',
             borderRadius: 14,
             padding: 16,
@@ -375,7 +375,7 @@ function ScorePanel({ scores, run }: { scores: any; run?: HumanizeRun | null }) 
   return (
     <div
       style={{
-        background: '#0D0D10',
+        background: T.bgCard,
         border: '1px solid rgba(255,255,255,0.06)',
         borderRadius: 14,
         padding: 18,

@@ -42,7 +42,7 @@ export function ProjectCard({ project, onClick, onRename, onArchive, onDelete }:
       }}
       style={{
         position: 'relative',
-        background: '#0D0D10',
+        background: T.bgCard,
         border: '1px solid rgba(255,255,255,0.06)',
         borderRadius: 14,
         overflow: 'hidden',
@@ -137,7 +137,7 @@ export function ProjectCard({ project, onClick, onRename, onArchive, onDelete }:
               position: 'absolute',
               right: 12,
               top: 12,
-              background: '#111114',
+              background: T.bgRaised,
               border: '1px solid rgba(245,158,11,0.25)',
               borderRadius: 10,
               padding: 4,

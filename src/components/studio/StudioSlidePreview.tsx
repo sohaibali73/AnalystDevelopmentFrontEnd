@@ -161,7 +161,7 @@ export function StudioSlidePreview({ blob, filename, onDownload }: Props) {
         display: 'flex',
         flexDirection: 'column',
         background:
-          'radial-gradient(ellipse at 50% 30%, rgba(245,158,11,0.06) 0%, rgba(99,102,241,0.04) 35%, transparent 70%), #0A0A0B',
+          `radial-gradient(ellipse at 50% 30%, var(--accent-dim, rgba(245,158,11,0.06)) 0%, rgba(99,102,241,0.04) 35%, transparent 70%), ${T.bg}`,
         overflow: 'hidden',
         position: 'relative',
       }}

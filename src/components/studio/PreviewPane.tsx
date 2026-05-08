@@ -35,7 +35,7 @@ export function PreviewPane({ projectId, artifact, onDownload }: Props) {
           padding: 32,
           textAlign: 'center',
           background:
-            'radial-gradient(ellipse at 50% 30%, rgba(245,158,11,0.05) 0%, transparent 70%), #0A0A0B',
+            `radial-gradient(ellipse at 50% 30%, var(--accent-dim, rgba(245,158,11,0.05)) 0%, transparent 70%), ${T.bg}`,
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -203,7 +203,7 @@ function DocxPreview({ projectId, artifact, onDownload }: Props & { artifact: St
         height: '100%',
         overflowY: 'auto',
         background:
-          'radial-gradient(ellipse at 50% 0%, rgba(96,165,250,0.08) 0%, rgba(99,102,241,0.05) 30%, transparent 70%), #0A0A0B',
+          `radial-gradient(ellipse at 50% 0%, rgba(96,165,250,0.08) 0%, rgba(99,102,241,0.05) 30%, transparent 70%), ${T.bg}`,
         position: 'relative',
       }}
     >
@@ -230,7 +230,8 @@ function DocxPreview({ projectId, artifact, onDownload }: Props & { artifact: St
             position: 'absolute',
             inset: 0,
             zIndex: 2,
-            background: 'rgba(10,10,11,0.7)',
+            background: T.bg,
+            opacity: 0.85,
             backdropFilter: 'blur(6px)',
           }}
         >

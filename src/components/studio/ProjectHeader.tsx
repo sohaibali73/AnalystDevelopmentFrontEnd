@@ -120,7 +120,7 @@ export function ProjectHeader({
         alignItems: 'center',
         gap: 14,
         padding: '14px 20px',
-        background: '#0D0D10',
+        background: T.bgCard,
         backdropFilter: 'blur(14px)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
         flexShrink: 0,

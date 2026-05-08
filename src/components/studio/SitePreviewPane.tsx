@@ -389,7 +389,7 @@ function PreviewBody({
         alignItems: 'center',
         padding: 24,
         background:
-          'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.06), rgba(245,158,11,0.04) 40%, transparent 70%), #0A0A0B',
+          `radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.06), rgba(245,158,11,0.04) 40%, transparent 70%), ${T.bg}`,
         overflow: 'auto',
       }}
       className="studio-scroll"
@@ -566,7 +566,7 @@ function SiteEmptyState() {
         padding: 32,
         textAlign: 'center',
         background:
-          'radial-gradient(ellipse at 50% 30%, rgba(99,102,241,0.08) 0%, transparent 70%), #0A0A0B',
+          `radial-gradient(ellipse at 50% 30%, rgba(99,102,241,0.08) 0%, transparent 70%), ${T.bg}`,
         position: 'relative',
         overflow: 'hidden',
       }}

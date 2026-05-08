@@ -21,6 +21,7 @@ import { MessageResponse } from '@/components/ai-elements/message';
 import { renderToolPart, isToolPart } from '@/components/chat/tool-registry';
 import { ChatFilePreviewModal } from '@/components/chat/ChatFilePreviewModal';
 import { API_BASE_URL_CHAT, type ChatPreviewFile } from '@/components/chat/chat-utils';
+import { ChatModelSelector } from '@/components/chat/ChatModelSelector';
 
 interface Props {
   project: StudioProject;
@@ -43,10 +44,21 @@ function getAuthToken(): string | null {
   }
 }
 
+const STUDIO_MODEL_STORAGE_KEY = 'studio_selected_model';
+
 export function StudioChatPane({ project, onChatFinished }: Props) {
   const [input, setInput] = useState('');
   const [autoApply, setAutoApply] = useState<boolean>(!!project.humanize_settings?.auto_apply);
   const [humanizing, setHumanizing] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'claude-sonnet-4-6';
+    return window.localStorage.getItem(STUDIO_MODEL_STORAGE_KEY) || 'claude-sonnet-4-6';
+  });
+  const selectedModelRef = useRef(selectedModel);
+  useEffect(() => {
+    selectedModelRef.current = selectedModel;
+    try { window.localStorage.setItem(STUDIO_MODEL_STORAGE_KEY, selectedModel); } catch {}
+  }, [selectedModel]);
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [showJump, setShowJump] = useState(false);
@@ -92,6 +104,7 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
       },
       body: () => ({
         conversationId: conversationIdRef.current,
+        model: selectedModelRef.current,
       }),
     }),
     onFinish: () => {
@@ -442,6 +455,14 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
           {humanizing ? <Spinner size={11} /> : <Wand2 size={11} />}
           <span>Humanize last reply</span>
         </ToolBtn>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ChatModelSelector
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+            isDark
+            disabled={status === 'streaming'}
+          />
+        </div>
         <label
           style={{
             display: 'flex',
@@ -1193,29 +1214,9 @@ function EmptyState({ kind }: { kind: 'pptx' | 'docx' | 'chat' | 'site' }) {
       >
         How can YANG help?
       </h3>
-      <p style={{ fontSize: 13, color: T.textSoft, maxWidth: 400, margin: '0 auto 24px', lineHeight: 1.55 }}>
+      <p style={{ fontSize: 13, color: T.textSoft, maxWidth: 400, margin: '0 auto', lineHeight: 1.55 }}>
         Tell YANG what you want to build. New versions appear in the preview pane automatically.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 460, margin: '0 auto' }}>
-        {examples.map((ex) => (
-          <div
-            key={ex}
-            style={{
-              padding: '10px 14px',
-              background: T.bgCard,
-              border: `1px solid ${T.border}`,
-              borderRadius: 10,
-              fontSize: 13,
-              color: T.text,
-              fontFamily: T.font,
-              textAlign: 'left',
-              cursor: 'default',
-            }}
-          >
-            "{ex}"
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export function StylesTab() {
             key={i}
             style={{
               height: 180,
-              background: '#0D0D10',
+              background: T.bgCard,
               border: '1px solid rgba(245,158,11,0.08)',
               borderRadius: 14,
             }}
@@ -115,7 +115,7 @@ function StyleCard({ style, onClick }: { style: StudioStyle; onClick: () => void
       onClick={onClick}
       style={{
         position: 'relative',
-        background: '#0D0D10',
+        background: T.bgCard,
         border: '1px solid rgba(255,255,255,0.06)',
         borderRadius: 14,
         padding: 20,

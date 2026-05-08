@@ -43,26 +43,42 @@ export default function ProjectWorkspace() {
   const [saving, setSaving] = useState(false);
   const [splitX, setSplitX] = useState(0.42); // chat pane width fraction
 
+  // First-load flag — only honor URL ?ver= param on the very first load.
+  // After that, every refresh should snap to the latest version automatically
+  // so the preview pane updates as soon as YANG generates a new artifact.
+  const firstLoadRef = React.useRef(true);
+
   const load = useCallback(async () => {
     try {
       const r = await studioApi.getProject(projectId);
       setProject(r.project);
       setArtifacts(r.artifacts);
+
+      const sortedByVersion = [...r.artifacts].sort((a, b) => b.version - a.version);
+      const latest = sortedByVersion[0] ?? null;
+
       setCurrentArtifactId((prev) => {
-        if (prev && r.artifacts.some((a) => a.id === prev)) return prev;
-        // Prefer URL param, then current_artifact_id, then latest
-        const verParam = searchParams?.get('ver');
-        if (verParam) {
-          const v = parseInt(verParam);
-          const match = r.artifacts.find((a) => a.version === v);
-          if (match) return match.id;
+        // ── First load: respect URL ?ver=, then current_artifact_id, then latest
+        if (firstLoadRef.current) {
+          firstLoadRef.current = false;
+          const verParam = searchParams?.get('ver');
+          if (verParam) {
+            const v = parseInt(verParam);
+            const match = r.artifacts.find((a) => a.version === v);
+            if (match) return match.id;
+          }
+          if (r.project.current_artifact_id) return r.project.current_artifact_id;
+          return latest?.id ?? null;
         }
-        if (r.project.current_artifact_id) return r.project.current_artifact_id;
-        if (r.artifacts.length > 0) {
-          const latest = [...r.artifacts].sort((a, b) => b.version - a.version)[0];
-          return latest.id;
-        }
-        return null;
+
+        // ── Subsequent loads: auto-snap to latest version when a newer one
+        // appears (e.g. YANG just generated a new deck). Otherwise keep
+        // whatever the user has selected from the version dropdown.
+        if (!prev) return latest?.id ?? null;
+        const prevArtifact = r.artifacts.find((a) => a.id === prev);
+        if (!prevArtifact) return latest?.id ?? null;
+        if (latest && latest.version > prevArtifact.version) return latest.id;
+        return prev;
       });
       setError(null);
     } catch (e: any) {
@@ -71,6 +87,7 @@ export default function ProjectWorkspace() {
       setLoading(false);
     }
   }, [projectId, searchParams]);
+
 
   useEffect(() => {
     load();

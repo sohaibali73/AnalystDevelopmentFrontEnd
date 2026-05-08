@@ -22,7 +22,7 @@ export function EditOpsBuffer({ ops, onSave, onDiscard, saving }: Props) {
         right: 18,
         bottom: 18,
         zIndex: 30,
-        background: '#111114',
+        background: T.bgRaised,
         backdropFilter: 'blur(14px)',
         border: '1px solid rgba(245,158,11,0.30)',
         borderRadius: 14,

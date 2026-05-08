@@ -199,7 +199,7 @@ function Header({ style, onReload }: { style: StudioStyle; onReload: () => void 
     <div
       style={{
         padding: 24,
-        background: '#0D0D10',
+        background: T.bgCard,
         border: '1px solid rgba(255,255,255,0.06)',
         borderRadius: 16,
         display: 'flex',
@@ -459,7 +459,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div
       style={{
         padding: 18,
-        background: '#0D0D10',
+        background: T.bgCard,
         border: '1px solid rgba(255,255,255,0.06)',
         borderRadius: 14,
       }}
@@ -659,7 +659,7 @@ function Empty({ children }: { children: React.ReactNode }) {
         padding: 36,
         textAlign: 'center',
         color: T.textDim,
-        background: '#0D0D10',
+        background: T.bgCard,
         border: '1px dashed rgba(245,158,11,0.15)',
         borderRadius: 12,
       }}

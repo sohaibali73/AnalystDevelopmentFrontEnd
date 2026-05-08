@@ -372,7 +372,7 @@ function SkeletonGrid() {
           key={i}
           style={{
             height: 240,
-            background: '#0D0D10',
+            background: T.bgCard,
             border: '1px solid rgba(245,158,11,0.08)',
             borderRadius: 14,
             position: 'relative',
