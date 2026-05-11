@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Rajdhani, Quicksand, Syne, DM_Mono, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -6,6 +6,7 @@ import { FontSizeProvider } from '@/contexts/FontSizeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { TabProvider } from '@/contexts/TabContext';
 import { Toaster } from 'sonner';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -44,6 +45,40 @@ const instrumentSans = Instrument_Sans({
 export const metadata: Metadata = {
   title: 'Potomac Analyst Workbench',
   description: 'Advanced AFL code generation, trading strategy analysis, and iOS developer blueprint platform',
+  applicationName: 'Potomac',
+  manifest: '/site.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'Potomac',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    icon: [
+      { url: '/potomac-icon.png', sizes: '192x192', type: 'image/png' },
+      { url: '/potomac-icon.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/potomac-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: ['/potomac-icon.png'],
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
+  ],
 };
 
 export default function RootLayout({
@@ -69,6 +104,7 @@ export default function RootLayout({
               <TabProvider>
                 {children}
                 <Toaster richColors position="bottom-right" />
+                <ServiceWorkerRegister />
               </TabProvider>
             </AuthProvider>
           </FontSizeProvider>

@@ -71,6 +71,7 @@ import {
   TokenCounterBadge,
   TokenCounterBar,
   ToolSearchChip,
+  AutoContinuationBadge,
   API_BASE_URL_CHAT,
   type ChatPreviewFile,
 } from '@/components/chat';
@@ -101,6 +102,7 @@ import {
   FileAnalysisCard,
   SkillExecutionAnimation,
 } from '@/components/generative-ui';
+import { AFLGenerateCard } from '@/components/generative-ui/AFLCodeCard';
 
 // ── AI Elements ───────────────────────────────────────────────────────────────
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
@@ -776,10 +778,11 @@ function renderInlineCard(cardType: string, data: any, key: number): React.React
       return <MarketOverview key={key} {...data} />;
     case 'backtest':
       return <BacktestResults key={key} {...data} />;
-    // AFL card JSON is handled entirely by the tool-part renderer (AFLGenerationCard).
-    // Suppress it here so the raw JSON never leaks into the text stream.
+    // AFL card embedded as JSON in the assistant text. Render it inline so the
+    // bubble isn't blank when the backend streams the card via text instead of
+    // via a tool-part. (Tool-part path keeps using AFLGenerationCard separately.)
     case 'afl':
-      return null;
+      return <AFLGenerateCard key={key} {...data} />;
     default:
       // Unknown card type — suppress the JSON, show nothing
       return null;
@@ -1825,19 +1828,66 @@ export function ChatPage() {
             </ChainOfThought>
           )}
 
-          {/* Message body */}
-          <div style={{
-            background: T.aiBg,
-            border: `1px solid ${T.aiBdr}`,
-            borderRadius: '4px 16px 16px 16px',
-            padding: '14px 18px',
-          }}>
-            <MessageContent>
-              {renderParts()}
-              {/* ThinkingAnimation: pulsing dots before first token arrives */}
-              {msgIsStreaming && !parts.some((p: any) => p.text || isToolPart(p.type)) && <ThinkingAnimation />}
-            </MessageContent>
-          </div>
+          {/* Message body — suppressed when no visible content
+              (e.g. text was purely stripped card JSON and there are no tool parts).
+              Tool-parts render their own cards above/inside the bubble, but a
+              bubble with no text and no inline cards would otherwise show as
+              an empty rounded rectangle. */}
+          {(() => {
+            // Visible text after stripping card JSON tokens
+            const visibleText = parts
+              .filter((p: any) => p.type === 'text')
+              .map((p: any) => {
+                const stripped = !msgIsStreaming ? stripReactCodeBlocks(p.text || '') : (p.text || '');
+                if (msgIsStreaming) return stripped;
+                const segs = splitTextWithCards(stripped);
+                // If any inline-card segment renders something, the bubble is non-empty.
+                const hasRenderableCard = segs.some(
+                  (s) => s.type === 'card' && renderInlineCard(s.cardType, s.data, 0) !== null,
+                );
+                if (hasRenderableCard) return 'card';
+                return segs
+                  .filter((s) => s.type === 'text')
+                  .map((s) => (s as CardSegment).text)
+                  .join('')
+                  .trim();
+              })
+              .join('')
+              .trim();
+
+            const hasTools = parts.some((p: any) => isToolPart(p.type));
+            const hasReasoning = parts.some((p: any) => p.type === 'reasoning' && p.text);
+            const hasFiles = parts.some(
+              (p: any) => p.type === 'file' || p.type === 'data-file-download',
+            );
+
+            const shouldShowBubble =
+              msgIsStreaming || visibleText.length > 0 || hasReasoning || hasFiles;
+
+            if (!shouldShowBubble) {
+              // If there are only tool parts (which render their own cards),
+              // render them outside the bubble so we don't show an empty pill.
+              if (hasTools) {
+                return <>{renderParts()}</>;
+              }
+              return null;
+            }
+
+            return (
+              <div style={{
+                background: T.aiBg,
+                border: `1px solid ${T.aiBdr}`,
+                borderRadius: '4px 16px 16px 16px',
+                padding: '14px 18px',
+              }}>
+                <MessageContent>
+                  {renderParts()}
+                  {/* ThinkingAnimation: pulsing dots before first token arrives */}
+                  {msgIsStreaming && !parts.some((p: any) => p.text || isToolPart(p.type)) && <ThinkingAnimation />}
+                </MessageContent>
+              </div>
+            );
+          })()}
 
 
           {/* Action toolbar */}
@@ -2688,6 +2738,14 @@ export function ChatPage() {
                     <TokenCounterBadge
                       isDark={isDark}
                       tokenUsage={yangStream.tokenUsage}
+                    />
+                  )}
+
+                  {/* ── YANG: auto-continuation badge (max_tokens recovery) ── */}
+                  {yangStream.autoContinuation && (
+                    <AutoContinuationBadge
+                      isDark={isDark}
+                      state={yangStream.autoContinuation}
                     />
                   )}
 

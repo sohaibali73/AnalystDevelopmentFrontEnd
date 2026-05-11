@@ -48,6 +48,21 @@ export interface SandboxArtifact {
 }
 
 // Execution result from the API - matches backend SandboxExecuteResponse
+/**
+ * Top-level chart reference returned by `execute_python` for matplotlib /
+ * plotting outputs. Provides a persistent `file_id` + `download_url` so the
+ * UI can render rich download cards alongside the inline image artifacts.
+ */
+export interface ExecutionChart {
+  file_id: string;
+  download_url: string;
+  filename: string;
+  /** Optional, when backend provides it (e.g. "image/png"). */
+  mime_type?: string;
+  /** Optional, when backend provides it. */
+  size_bytes?: number;
+}
+
 export interface ExecutionResult {
   success: boolean;
   output: string | null;
@@ -59,6 +74,13 @@ export interface ExecutionResult {
   display_type: SandboxDisplayType;
   variables?: Record<string, string>;
   artifacts: SandboxArtifact[];
+  /**
+   * Optional top-level chart cards (matplotlib / plotting outputs) with
+   * persistent file_id + download_url. Independent of `artifacts` — the
+   * inline image preview still comes through `artifacts`, while this
+   * powers the persistent download card.
+   */
+  charts?: ExecutionChart[];
 }
 
 // Session history item from GET /sandbox/session/{session_id}/history

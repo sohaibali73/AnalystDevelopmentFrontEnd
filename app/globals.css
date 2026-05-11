@@ -2,6 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==============================
+   iOS / Mobile / PWA base
+   ============================== */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Account for the iOS Safari dynamic toolbar */
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Respect iPhone notch / dynamic island when used in standalone PWA */
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* PWA in standalone mode: remove default body padding (layout handles it) */
+@media all and (display-mode: standalone) {
+  body {
+    padding: 0;
+  }
+}
+
+/* Prevent iOS auto-zoom when focusing inputs (font must be >=16px) */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Make buttons / interactive controls feel native on touch */
+button,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Smooth momentum scrolling on iOS for any scrollable container */
+.ios-momentum-scroll,
+main,
+nav,
+aside {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Frosted Glass Backdrop Filter Support */
 @supports (backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px)) {
   .backdrop-blur-xl {

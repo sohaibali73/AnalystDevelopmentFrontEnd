@@ -111,7 +111,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div style={{
       display: 'flex',
-      minHeight: '100vh',
+      minHeight: '100dvh',
       backgroundColor: 'var(--bg)',
       fontFamily: "'Rajdhani', sans-serif",
       position: 'relative',
@@ -123,7 +123,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           top: 0,
           left: 0,
           right: 0,
-          height: '64px',
+          height: 'calc(64px + env(safe-area-inset-top, 0px))',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
            background: 'var(--bg-card)',
            backdropFilter: 'blur(20px)',
            WebkitBackdropFilter: 'blur(20px)',
@@ -215,7 +216,9 @@ export function MainLayout({ children }: MainLayoutProps) {
         left: isMobile ? (mobileMenuOpen ? 0 : '-100%') : 0,
         top: 0,
         bottom: 0,
-        width: isMobile ? '280px' : sidebarWidth,
+        width: isMobile ? 'min(85vw, 320px)' : sidebarWidth,
+        paddingTop: isMobile ? 'env(safe-area-inset-top, 0px)' : 0,
+        paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 0px)' : 0,
         background: 'var(--bg-card)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
@@ -534,13 +537,17 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Main Content */}
       <main style={{
         flex: 1,
-        height: isMobile ? 'calc(100vh - 64px)' : '100vh',
+        height: isMobile
+          ? 'calc(100dvh - 64px - env(safe-area-inset-top, 0px))'
+          : '100dvh',
         marginLeft: isMobile ? 0 : sidebarWidth,
-        marginTop: isMobile ? '64px' : 0,
+        marginTop: isMobile ? 'calc(64px + env(safe-area-inset-top, 0px))' : 0,
+        paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 0px)' : 0,
         width: isMobile ? '100%' : `calc(100% - ${sidebarWidth}px)`,
         transition: 'margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         overflowY: 'auto',
         overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
       }}>
         {children}
       </main>

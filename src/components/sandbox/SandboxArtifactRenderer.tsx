@@ -40,8 +40,20 @@ import {
   FileArchive,
   BarChart3,
 } from 'lucide-react';
-import type { ExecutionResult, SandboxArtifact, SandboxDisplayType, FileArtifactMetadata } from '@/lib/sandbox/types';
+import type { ExecutionResult, ExecutionChart, SandboxArtifact, SandboxDisplayType, FileArtifactMetadata } from '@/lib/sandbox/types';
 import { downloadSandboxFile } from '@/lib/sandbox/downloadFile';
+
+/**
+ * Resolve a relative download URL (e.g. "/files/<id>/download") against the
+ * configured API origin so the resulting href is always absolute.
+ */
+function resolveDownloadUrl(url: string): string {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  const base = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+  if (!base) return url;
+  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+}
 
 interface SandboxArtifactRendererProps {
   result: ExecutionResult;
@@ -195,6 +207,15 @@ export function SandboxArtifactRenderer({
               artifact={artifact}
               isFullscreen={isFullscreen}
             />
+          ))}
+        </div>
+      )}
+
+      {/* Top-level chart cards (matplotlib outputs with persistent file_id) */}
+      {Array.isArray(result.charts) && result.charts.length > 0 && (
+        <div style={styles.artifactsSection}>
+          {result.charts.map((chart, index) => (
+            <ChartDownloadCard key={chart.file_id || index} chart={chart} />
           ))}
         </div>
       )}
@@ -661,6 +682,72 @@ function FileArtifactDisplay({ artifact }: { artifact: SandboxArtifact }) {
             </>
           )}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ChartDownloadCard - persistent download card for matplotlib/plotting outputs
+ *
+ * Renders the new top-level `charts: [{ file_id, download_url, filename }]`
+ * array returned by `execute_python`. Inline image previews still come
+ * through the regular `artifacts` pipeline; this card adds a stable,
+ * downloadable reference that survives reloads (uses the same /files/<id>
+ * persistence layer as FileArtifactDisplay).
+ */
+function ChartDownloadCard({ chart }: { chart: ExecutionChart }) {
+  const filename = chart.filename || 'chart.png';
+  const href = resolveDownloadUrl(chart.download_url);
+  const sizeBytes = chart.size_bytes;
+  const sizeLabel = sizeBytes
+    ? sizeBytes > 1_000_000
+      ? `${(sizeBytes / 1_000_000).toFixed(1)} MB`
+      : sizeBytes > 1_000
+      ? `${(sizeBytes / 1_000).toFixed(1)} KB`
+      : `${sizeBytes} B`
+    : '';
+
+  const [hovering, setHovering] = useState(false);
+
+  return (
+    <div style={styles.fileContainer}>
+      <div style={styles.fileIcon}>
+        <BarChart3 size={24} style={{ color: '#06b6d4' }} />
+      </div>
+
+      <div style={styles.fileInfo}>
+        <div style={styles.fileNameRow}>
+          <p style={styles.fileName} title={filename}>{filename}</p>
+          <span style={styles.persistBadge} title="Saved permanently to your workspace">
+            <Check size={10} />
+            Saved
+          </span>
+        </div>
+        <p style={styles.fileMeta}>
+          Chart
+          {chart.mime_type ? ` · ${chart.mime_type}` : ''}
+          {sizeLabel ? ` · ${sizeLabel}` : ''}
+        </p>
+      </div>
+
+      <div style={styles.fileActions}>
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          download={filename}
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          style={{
+            ...styles.fileDownloadButton,
+            textDecoration: 'none',
+            ...(hovering ? styles.fileDownloadButtonHover : {}),
+          }}
+        >
+          <Download size={14} />
+          Download
+        </a>
       </div>
     </div>
   );

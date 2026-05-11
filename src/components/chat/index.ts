@@ -25,6 +25,7 @@ export {
   ToolSearchChip,
   SubagentProgress,
   BackgroundTaskCard,
+  AutoContinuationBadge,
 } from './YangInlineComponents';
 
 export {

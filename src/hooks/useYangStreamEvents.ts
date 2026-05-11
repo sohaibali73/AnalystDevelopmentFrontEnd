@@ -40,6 +40,19 @@ export interface YangStreamState {
   autoCompact: YangAutoCompactEvent | null;
   /** Live token counter — updated after every API iteration. */
   tokenUsage: YangTokenUsage | null;
+  /**
+   * Set briefly when the backend transparently continues an assistant
+   * response after a mid-stream limit hit (e.g. max_tokens). Cleared
+   * automatically after a few seconds.
+   */
+  autoContinuation: YangAutoContinuationState | null;
+}
+
+export interface YangAutoContinuationState {
+  continuation: number;
+  max: number;
+  reason: string;
+  hadPartialTool: boolean;
 }
 
 export interface UseYangStreamEventsResult extends YangStreamState {
@@ -69,6 +82,7 @@ const INITIAL: YangStreamState = {
   subagentsRunning: 0,
   autoCompact: null,
   tokenUsage: null,
+  autoContinuation: null,
 };
 
 export function useYangStreamEvents(
@@ -197,6 +211,26 @@ export function useYangStreamEvents(
 
       // Notify caller to reload messages (gives "new convo in same pane" feel)
       onCompactionRef.current?.(ev);
+      return;
+    }
+
+    // ── Auto-continuation (max_tokens recovery, transparent) ─────────
+    // Backend kept streaming on the SAME assistant message after a
+    // mid-stream limit hit. Just show a small badge for a few seconds.
+    if (item.auto_continuation) {
+      setState((s) => ({
+        ...s,
+        autoContinuation: {
+          continuation:   item.continuation ?? 1,
+          max:            item.max_continuations ?? 6,
+          reason:         item.reason || 'max_tokens',
+          hadPartialTool: !!item.had_partial_tool,
+        },
+      }));
+      // Auto-clear so the badge doesn't linger after streaming resumes.
+      setTimeout(() => {
+        setState((s) => ({ ...s, autoContinuation: null }));
+      }, 6000);
       return;
     }
 

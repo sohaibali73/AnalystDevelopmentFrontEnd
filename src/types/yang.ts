@@ -175,6 +175,23 @@ export interface YangTokenUsageEvent {
   iteration: number;
 }
 
+/**
+ * Auto-continuation — backend transparently extended an assistant message after
+ * a mid-stream limit hit (e.g. max_tokens) and is continuing on the SAME message.
+ * Purely informational for the UI — no message handling required.
+ */
+export interface YangAutoContinuationEvent {
+  auto_continuation: true;
+  /** Why the continuation was triggered (e.g. "max_tokens"). */
+  reason: string;
+  /** True when a tool call was cut off mid-arguments and had to be recovered. */
+  had_partial_tool: boolean;
+  /** 1-based continuation number for the current assistant turn. */
+  continuation: number;
+  /** Hard cap on continuations the backend will perform (e.g. 6). */
+  max_continuations: number;
+}
+
 /** Emitted after compaction fully completes — tells the frontend to reload messages. */
 export interface YangCompactionCompleteEvent {
   yang_compaction_complete: true;
@@ -198,7 +215,8 @@ export type YangStreamEvent =
   | YangSubagentsRunningEvent
   | YangAutoCompactEvent
   | YangTokenUsageEvent
-  | YangCompactionCompleteEvent;
+  | YangCompactionCompleteEvent
+  | YangAutoContinuationEvent;
 
 /** Type-guard helpers — prefer these over raw property access. */
 export function isYangEvent(item: any): item is YangStreamEvent {
@@ -214,6 +232,7 @@ export function isYangEvent(item: any): item is YangStreamEvent {
     'yang_subagents_running' in item ||
     'yang_auto_compact' in item ||
     'yang_token_usage' in item ||
-    'yang_compaction_complete' in item
+    'yang_compaction_complete' in item ||
+    'auto_continuation' in item
   );
 }

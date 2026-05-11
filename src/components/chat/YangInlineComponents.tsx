@@ -14,11 +14,11 @@ import React from 'react';
 import {
   CheckCircle2, AlertCircle, Info, Archive,
   Search as SearchIcon, GitBranch, Clock, Download, AlertTriangle,
-  Gauge,
+  Gauge, RotateCw,
 } from 'lucide-react';
 import { useYangBackgroundTasks } from '@/contexts/YangBackgroundTasksContext';
 import type { YangVerificationEvent } from '@/types/yang';
-import type { YangTokenUsage } from '@/hooks/useYangStreamEvents';
+import type { YangTokenUsage, YangAutoContinuationState } from '@/hooks/useYangStreamEvents';
 
 // ─── Shared token helpers ────────────────────────────────────────────────────
 
@@ -26,6 +26,56 @@ function fmtTokens(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
   return String(n);
+}
+
+// ─── AutoContinuationBadge ──────────────────────────────────────────────────
+//
+// Shown briefly when the backend transparently continues an assistant response
+// after a mid-stream limit hit (e.g. max_tokens). Tells the user we recovered
+// and the same message will keep streaming.
+
+export function AutoContinuationBadge({
+  isDark, state,
+}: {
+  isDark: boolean;
+  state: YangAutoContinuationState | null;
+}) {
+  if (!state) return null;
+
+  const color = '#FEC00F';
+  const title = state.hadPartialTool
+    ? `Continuing after ${state.reason} — recovering interrupted tool call (${state.continuation}/${state.max}).`
+    : `Continuing after ${state.reason} (${state.continuation}/${state.max}).`;
+
+  return (
+    <span
+      title={title}
+      style={{
+        display:       'inline-flex',
+        alignItems:    'center',
+        gap:            5,
+        padding:       '3px 10px 3px 7px',
+        borderRadius:   999,
+        border:        `1px solid ${color}40`,
+        background:     color + '14',
+        color,
+        fontSize:       10,
+        fontWeight:     700,
+        fontFamily:    "'DM Mono', monospace",
+        letterSpacing: '0.07em',
+        textTransform: 'uppercase' as const,
+        whiteSpace:    'nowrap' as const,
+        boxShadow:     `0 0 0 3px ${color}0A`,
+      }}
+    >
+      <RotateCw
+        size={10}
+        strokeWidth={2.5}
+        style={{ animation: 'spin 1.4s linear infinite' }}
+      />
+      Continuing… ({state.continuation}/{state.max})
+    </span>
+  );
 }
 
 // ─── CompletionVerificationBadge ────────────────────────────────────────────
