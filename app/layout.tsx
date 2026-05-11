@@ -81,6 +81,12 @@ export const viewport: Viewport = {
   ],
 };
 
+// Backend origin used for streaming — resolved at build time so dev & prod
+// both get correct preconnect hints. Keep in sync with NEXT_PUBLIC_API_URL.
+const BACKEND_ORIGIN = (
+  process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app'
+).replace(/\/+$/, '');
+
 export default function RootLayout({
   children,
 }: {
@@ -88,6 +94,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Preconnect + DNS prefetch to the streaming backend — saves the
+            TLS handshake (~100–300 ms) on the very first chat request. */}
+        <link rel="preconnect" href={BACKEND_ORIGIN} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={BACKEND_ORIGIN} />
+      </head>
       <body
         className={[
           inter.className,
