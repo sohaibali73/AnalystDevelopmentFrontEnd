@@ -1567,12 +1567,53 @@ export function ChatPage() {
           if (part.toolCallId && seenToolCallIds.get(part.toolCallId) !== pIdx) {
             return null;
           }
-          // Find matching file_download event for externalOutput injection
+          // Find matching file_download event for externalOutput injection.
+          //
+          // Matching strategy (in order of preference):
+          //   1. Exact filename match from tool INPUT (works for PPTX where the
+          //      LLM passes `filename` as an arg).
+          //   2. Exact filename match from tool OUTPUT (server may put the final
+          //      filename in part.output.filename — happens for DOCX/XLSX).
+          //   3. Extension-based fallback: infer the expected extension from the
+          //      tool name (e.g. generate_docx → .docx) and pick the most recent
+          //      file_download event with that extension.  This rescues the case
+          //      where the tool returns no filename anywhere (DOCX path) but the
+          //      backend still emits a file_download SSE event.
           const toolInput = part.input || {};
-          const toolFilename = toolInput.filename || toolInput.name || '';
-          const extOut = toolFilename && fileDownloadEvents[toolFilename]
-            ? fileDownloadEvents[toolFilename]
-            : undefined;
+          const toolOutput = part.output || {};
+          const toolName = (part as any).toolName || (part.type || '').replace(/^tool-/, '');
+          const candidateNames = [
+            toolInput.filename, toolInput.name,
+            toolOutput.filename, toolOutput.name,
+          ].filter(Boolean) as string[];
+
+          let extOut: any = undefined;
+          for (const cand of candidateNames) {
+            if (fileDownloadEvents[cand]) { extOut = fileDownloadEvents[cand]; break; }
+          }
+
+          if (!extOut) {
+            // Extension fallback — infer ext from tool name or input hints
+            const hint = `${toolName} ${JSON.stringify(toolInput).slice(0, 200)}`.toLowerCase();
+            let wantExt: string | null = null;
+            if (/docx|word|document/.test(hint))         wantExt = 'docx';
+            else if (/pptx|powerpoint|presentation|slide|deck/.test(hint)) wantExt = 'pptx';
+            else if (/xlsx|excel|spreadsheet/.test(hint)) wantExt = 'xlsx';
+            else if (/\bpdf\b/.test(hint))               wantExt = 'pdf';
+
+            if (wantExt) {
+              // Pick the most recent matching event (events have no timestamp,
+              // so use insertion order — last key wins).
+              const keys = Object.keys(fileDownloadEvents);
+              for (let i = keys.length - 1; i >= 0; i--) {
+                const k = keys[i];
+                if (k.toLowerCase().endsWith(`.${wantExt}`)) {
+                  extOut = fileDownloadEvents[k];
+                  break;
+                }
+              }
+            }
+          }
           return renderToolPart(part, pIdx, message.id, conversationIdRef.current, extOut);
         }
 
