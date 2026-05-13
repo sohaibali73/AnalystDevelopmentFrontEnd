@@ -114,9 +114,25 @@ function extractAFLCode(output: any): string | null {
   if (output.afl_code) return output.afl_code;
   if (output.code) return output.code;
   if (output.fixed_code) return output.fixed_code;
+  if (output.content) return output.content;
+  if (output.text) return output.text;
   if (output.data?.afl_code) return output.data.afl_code;
   if (output.data?.code) return output.data.code;
+  if (output.data?.content) return output.data.content;
   return null;
+}
+
+function extractDownloadInfo(output: any): { downloadUrl: string | null; fileId: string | null } {
+  if (!output || typeof output !== 'object') return { downloadUrl: null, fileId: null };
+  const data = output.data || {};
+  return {
+    downloadUrl:
+      output.download_url || output.downloadUrl || output.file_url || output.url ||
+      data.download_url || data.downloadUrl || data.file_url || data.url || null,
+    fileId:
+      output.file_id || output.fileId || output.document_id || output.afl_id ||
+      data.file_id || data.fileId || data.document_id || data.afl_id || null,
+  };
 }
 
 function extractFilename(output: any, input: any): string {
@@ -161,6 +177,13 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
   const [copied, setCopied] = useState(false);
   const [codePreviewOpen, setCodePreviewOpen] = useState(false);
   const [safetyTimeout, setSafetyTimeout] = useState(false);
+  const [fetchedCode, setFetchedCode] = useState<string | null>(null);
+  const [fetchingCode, setFetchingCode] = useState(false);
+  const fetchedForRef = useRef<string | null>(null);
+
+  // Resolve relative backend paths to full API base
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'https://developer-potomaac.up.railway.app').replace(/\/+$/, '');
+  const resolveUrl = (url: string) => url.startsWith('/') ? `${apiBase}${url}` : url;
 
   const startTimeRef = useRef<number>(Date.now());
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -302,34 +325,113 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
     return () => clearTimeout(timeout);
   }, [isComplete, isError]);
 
+  // ── Fetch AFL file from backend when output only contains download_url ────
+  useEffect(() => {
+    if (!isComplete) return;
+    const inlineCode = extractAFLCode(outputData);
+    if (inlineCode) return; // already have code inline
+    const { downloadUrl, fileId } = extractDownloadInfo(outputData);
+    if (!downloadUrl && !fileId) return;
+    const fetchKey = downloadUrl || fileId || '';
+    if (fetchedForRef.current === fetchKey) return; // already fetched
+    fetchedForRef.current = fetchKey;
+
+    const controller = new AbortController();
+    (async () => {
+      try {
+        setFetchingCode(true);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        const url = downloadUrl
+          ? resolveUrl(downloadUrl)
+          : `${apiBase}/files/${fileId}/download`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+        const text = await res.text();
+        if (text && text.length > 0) {
+          setFetchedCode(text);
+        }
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.error('[AFLGenerationCard] Failed to fetch AFL file:', err);
+        }
+      } finally {
+        setFetchingCode(false);
+      }
+    })();
+
+    return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isComplete, outputData]);
+
+  // ── Effective AFL code: inline > fetched ─────────────────────────────────
+  const effectiveCode = extractAFLCode(outputData) || fetchedCode;
+
   // ── Copy to clipboard ──────────────────────────────────────────────────────
   const handleCopy = useCallback(() => {
-    const code = extractAFLCode(outputData);
-    if (code) {
-      navigator.clipboard.writeText(code);
+    if (effectiveCode) {
+      navigator.clipboard.writeText(effectiveCode);
       setCopied(true);
       toast.success('AFL code copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.error('AFL code not ready yet');
     }
-  }, [outputData]);
+  }, [effectiveCode]);
 
   // ── Download AFL file ──────────────────────────────────────────────────────
-  const handleDownload = useCallback(() => {
-    const code = extractAFLCode(outputData);
-    if (!code) return;
-    
+  const handleDownload = useCallback(async () => {
     const filename = extractFilename(outputData, input);
-    const blob = new Blob([code], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(`Downloaded ${filename}`);
-  }, [outputData, input]);
+
+    // Prefer in-memory code (already fetched or inline)
+    if (effectiveCode) {
+      const blob = new Blob([effectiveCode], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${filename}`);
+      return;
+    }
+
+    // Otherwise try fetching directly from backend
+    const { downloadUrl, fileId } = extractDownloadInfo(outputData);
+    if (!downloadUrl && !fileId) {
+      toast.error('No AFL code available to download');
+      return;
+    }
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const url = downloadUrl
+        ? resolveUrl(downloadUrl)
+        : `${apiBase}/files/${fileId}/download`;
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      const text = await blob.text();
+      if (text) setFetchedCode(text);
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast.success(`Downloaded ${filename}`);
+    } catch (err) {
+      console.error('[AFLGenerationCard] Download failed:', err);
+      toast.error('Download failed — please try again');
+    }
+  }, [outputData, input, effectiveCode, apiBase]);
 
   // ── Format time ────────────────────────────────────────────────────────────
   const formatTime = (seconds: number) => {
@@ -339,7 +441,7 @@ const AFLGenerationCard: React.FC<AFLGenerationCardProps> = ({
   };
 
   // ── Derive display values ──────────────────────────────────────────────────
-  const aflCode = extractAFLCode(outputData);
+  const aflCode = effectiveCode;
   const codeLines = aflCode ? aflCode.split('\n').length : 0;
   const filename = outputData ? extractFilename(outputData, input) : null;
   const codeSize = aflCode ? `${(aflCode.length / 1024).toFixed(1)} KB` : null;
