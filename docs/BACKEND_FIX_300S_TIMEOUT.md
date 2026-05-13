@@ -756,6 +756,71 @@ agent continues.
 
 ---
 
+## Bug — `KeyError: '"error"'` from `build_desktop_system_block`
+
+If you see this Railway traceback:
+
+```
+File "/app/core/desktop_tools.py", line 354, in build_desktop_system_block
+    return _DESKTOP_SYSTEM_TEMPLATE.format(caps=", ".join(sorted(set(caps))))
+KeyError: '"error"'
+```
+
+…that's because `_DESKTOP_SYSTEM_TEMPLATE` is a string that contains literal
+`{` / `}` characters (probably a JSON example like `{"error": "..."}` or
+`{"kind":"browser"}`), and `str.format()` is trying to interpret those as named
+placeholders.
+
+### Fix (one line)
+
+Replace this:
+
+```python
+return _DESKTOP_SYSTEM_TEMPLATE.format(caps=", ".join(sorted(set(caps))))
+```
+
+…with this:
+
+```python
+return _DESKTOP_SYSTEM_TEMPLATE.replace("{caps}", ", ".join(sorted(set(caps))))
+```
+
+Or if you want to keep `.format()`, double-escape every literal brace in the
+template:
+
+```python
+# Bad (current):
+_DESKTOP_SYSTEM_TEMPLATE = '... example: {"error": "denied"} ...'
+# Good:
+_DESKTOP_SYSTEM_TEMPLATE = '... example: {{"error": "denied"}} ...'
+```
+
+The first option (`.replace()`) is strictly better — no escape hell.
+
+### Recommended robust version
+
+```python
+from string import Template
+
+_DESKTOP_SYSTEM_TEMPLATE = Template(r"""
+You are running in desktop mode with these capabilities: $caps.
+
+When you want to execute a desktop tool, call it normally. Example results:
+  - Success:  {"id": "browser:1", "title": "..."}
+  - Failure:  {"error": "user denied permission"}
+
+...rest of your system prompt...
+""")
+
+def build_desktop_system_block(caps: list[str]) -> str:
+    return _DESKTOP_SYSTEM_TEMPLATE.safe_substitute(caps=", ".join(sorted(set(caps))))
+```
+
+`string.Template` only substitutes `$identifier` and `${identifier}`, so JSON
+literals like `{"error": "..."}` are passed through unchanged.
+
+---
+
 ## Common failure modes
 
 | Symptom | Cause | Fix |
