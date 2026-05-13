@@ -56,6 +56,17 @@ export interface Schedule {
   nextRunAt?: number | null;
 }
 
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra || {}) };
+  if (typeof window !== 'undefined') {
+    try {
+      const token = window.localStorage.getItem('auth_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch { /* ignore */ }
+  }
+  return headers;
+}
+
 async function jsonOrThrow<T>(p: Promise<Response>): Promise<T> {
   const r = await p;
   if (!r.ok) {
@@ -68,21 +79,21 @@ async function jsonOrThrow<T>(p: Promise<Response>): Promise<T> {
 
 // ── Goals ───────────────────────────────────────────────────────────────────
 export const goals = {
-  list: () => jsonOrThrow<Goal[]>(fetch('/api/yang/goal', { cache: 'no-store' })),
+  list: () => jsonOrThrow<Goal[]>(fetch('/api/yang/goal', { cache: 'no-store', headers: authHeaders() })),
   create: (body: { title: string; description?: string; prompt: string }) =>
     jsonOrThrow<Goal>(fetch('/api/yang/goal', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     })),
-  get: (id: string) => jsonOrThrow<{ goal: Goal; steps: GoalStep[] }>(fetch(`/api/yang/goal/${id}`, { cache: 'no-store' })),
+  get: (id: string) => jsonOrThrow<{ goal: Goal; steps: GoalStep[] }>(fetch(`/api/yang/goal/${id}`, { cache: 'no-store', headers: authHeaders() })),
   control: (id: string, action: 'pause' | 'resume' | 'cancel') =>
     jsonOrThrow<Goal>(fetch(`/api/yang/goal/${id}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ action }),
     })),
-  delete: (id: string) => fetch(`/api/yang/goal/${id}`, { method: 'DELETE' }),
+  delete: (id: string) => fetch(`/api/yang/goal/${id}`, { method: 'DELETE', headers: authHeaders() }),
 
   /**
    * Subscribe to a goal's SSE stream. Returns an unsubscribe function.
@@ -100,7 +111,7 @@ export const goals = {
     const ctrl = new AbortController();
     void (async () => {
       try {
-        const resp = await fetch(`/api/yang/goal/${id}/stream`, { signal: ctrl.signal, cache: 'no-store' });
+        const resp = await fetch(`/api/yang/goal/${id}/stream`, { signal: ctrl.signal, cache: 'no-store', headers: authHeaders() });
         if (!resp.ok || !resp.body) throw new Error(`Stream HTTP ${resp.status}`);
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
@@ -136,26 +147,26 @@ export const goals = {
 
 // ── Memory ──────────────────────────────────────────────────────────────────
 export const memory = {
-  search: (q: string) => jsonOrThrow<Memory[]>(fetch(`/api/yang/memory?q=${encodeURIComponent(q)}`, { cache: 'no-store' })),
+  search: (q: string) => jsonOrThrow<Memory[]>(fetch(`/api/yang/memory?q=${encodeURIComponent(q)}`, { cache: 'no-store', headers: authHeaders() })),
   save: (body: { key: string; value: unknown; kind: string; tags?: string[] }) =>
     jsonOrThrow<Memory>(fetch('/api/yang/memory', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     })),
-  delete: (key: string) => fetch(`/api/yang/memory?key=${encodeURIComponent(key)}`, { method: 'DELETE' }),
+  delete: (key: string) => fetch(`/api/yang/memory?key=${encodeURIComponent(key)}`, { method: 'DELETE', headers: authHeaders() }),
 };
 
 // ── Schedules ───────────────────────────────────────────────────────────────
 export const schedules = {
-  list: () => jsonOrThrow<Schedule[]>(fetch('/api/yang/schedule', { cache: 'no-store' })),
+  list: () => jsonOrThrow<Schedule[]>(fetch('/api/yang/schedule', { cache: 'no-store', headers: authHeaders() })),
   create: (body: { name: string; cron: string; prompt: string }) =>
     jsonOrThrow<Schedule>(fetch('/api/yang/schedule', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     })),
-  delete: (id: string) => fetch(`/api/yang/schedule?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  delete: (id: string) => fetch(`/api/yang/schedule?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: authHeaders() }),
 };
 
 // ── Slash-command parser ────────────────────────────────────────────────────
