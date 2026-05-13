@@ -222,7 +222,7 @@ export async function runTool(toolName: string, args: Record<string, unknown>): 
     browser_fill:     (a) => t.browser_fill(a.targetId as string, a.selector as string, a.value as string),
 
     // ── Workflow integrations (Phase 5) ────────────────────────────────
-    terminal_run:      (a) => t.terminal_run(a.command as string, { cwd: a.cwd as string | undefined, timeoutMs: a.timeoutMs as number | undefined, env: a.env as Record<string, string> | undefined }),
+    terminal_run:      (a) => t.terminal_run((a.command || a.cmd || a.cmdline) as string, { cwd: a.cwd as string | undefined, timeoutMs: a.timeoutMs as number | undefined, env: a.env as Record<string, string> | undefined }),
     github_list_prs:   (a) => t.github_list_prs(a.repo as string, a.state as 'open' | 'closed' | 'merged' | 'all' | undefined),
     github_pr_diff:    (a) => t.github_pr_diff(a.repo as string, a.pr as number),
     github_pr_comment: (a) => t.github_pr_comment(a.repo as string, a.pr as number, a.body as string),
@@ -247,8 +247,36 @@ export async function runTool(toolName: string, args: Record<string, unknown>): 
     fs_pick_folder: ()  => tools.fs_pick_folder(),
 
     // Shell
-    shell_run:      (a) => tools.shell_run(a.command as string, (a.args as string[]) || [], { cwd: a.cwd as string | undefined, env: a.env as Record<string, string> | undefined, timeoutMs: a.timeoutMs as number | undefined, shell: a.shell as boolean | undefined }),
-    shell_open:     (a) => tools.shell_open(a.target as string),
+    // Be tolerant of three call shapes from the backend:
+    //   1) { command: "ls", args: ["-la"] }                        — canonical
+    //   2) { command: "ls -la" }                                   — single string with args
+    //   3) { cmd: "ls -la" } / { cmdline: "ls -la" } / { argv: ["ls","-la"] }  — alternate field names
+    shell_run: (a) => {
+      let command = (a.command ?? a.cmd ?? a.cmdline ?? '') as string;
+      let runArgs = (a.args ?? a.argv ?? []) as string[];
+      if (!command && Array.isArray(runArgs) && runArgs.length > 0) {
+        // backend split everything into args; first element is the command
+        command = runArgs[0]; runArgs = runArgs.slice(1);
+      }
+      if (typeof command === 'string' && command.includes(' ') && runArgs.length === 0) {
+        // backend gave us a single string — split into command + args.
+        // Naïve split on whitespace is fine for the simple cases the AI tends to produce.
+        const parts = command.match(/(?:[^\s"]+|"[^"]*")+/g) || [command];
+        command = parts[0].replace(/^"|"$/g, '');
+        runArgs = parts.slice(1).map((p) => p.replace(/^"|"$/g, ''));
+      }
+      if (!command) {
+        return Promise.resolve({ ok: false, error: { code: 'E_BAD_ARGS', message: 'shell_run: `command` is required (got undefined)' } } as ToolEnvelope<unknown>);
+      }
+      return tools.shell_run(command, runArgs || [], { cwd: a.cwd as string | undefined, env: a.env as Record<string, string> | undefined, timeoutMs: a.timeoutMs as number | undefined, shell: a.shell as boolean | undefined });
+    },
+    shell_open: (a) => {
+      const target = (a.target ?? a.path ?? a.url ?? a.file) as string | undefined;
+      if (!target || typeof target !== 'string') {
+        return Promise.resolve({ ok: false, error: { code: 'E_BAD_ARGS', message: 'shell_open: `target` is required (got undefined)' } } as ToolEnvelope<unknown>);
+      }
+      return tools.shell_open(target);
+    },
 
     // Computer use
     computer_screenshot:      (a) => tools.computer_screenshot({ displayIndex: a.displayIndex as number | undefined }),
@@ -260,8 +288,20 @@ export async function runTool(toolName: string, args: Record<string, unknown>): 
     computer_right_click:     (a) => tools.computer_right_click(a.x as number | undefined, a.y as number | undefined),
     computer_drag:            (a) => tools.computer_drag(a.from as { x: number; y: number }, a.to as { x: number; y: number }),
     computer_scroll:          (a) => tools.computer_scroll(a.direction as 'up' | 'down' | 'left' | 'right', a.amount as number),
-    computer_type:            (a) => tools.computer_type(a.text as string, { delayMs: a.delayMs as number | undefined }),
-    computer_key:             (a) => tools.computer_key(a.combo as string),
+    computer_type:            (a) => {
+      const text = (a.text ?? a.value ?? a.input) as string | undefined;
+      if (typeof text !== 'string') {
+        return Promise.resolve({ ok: false, error: { code: 'E_BAD_ARGS', message: 'computer_type: `text` is required (got undefined)' } } as ToolEnvelope<unknown>);
+      }
+      return tools.computer_type(text, { delayMs: a.delayMs as number | undefined });
+    },
+    computer_key:             (a) => {
+      const combo = (a.combo ?? a.key ?? a.keys ?? a.shortcut) as string | undefined;
+      if (typeof combo !== 'string' || combo.length === 0) {
+        return Promise.resolve({ ok: false, error: { code: 'E_BAD_ARGS', message: 'computer_key: `combo` is required (got undefined). Expected e.g. "Ctrl+S", "Win+R", or "Enter".' } } as ToolEnvelope<unknown>);
+      }
+      return tools.computer_key(combo);
+    },
   };
 
   const h = handlers[toolName];

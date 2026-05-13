@@ -91,6 +91,10 @@ function makeSSEInterceptor(getConvId: () => string | null, getAuthHeader: () =>
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let buffer = '';
+  // Dedupe: a single tool call can show up as `tool-call-streaming-start`,
+  // multiple `tool-input-delta` events, and finally `tool-input-available`.
+  // We must only execute ONCE per toolCallId.
+  const seenToolCallIds = new Set<string>();
   return new TransformStream({
     transform(chunk, controller) {
       // pass through immediately
@@ -136,6 +140,25 @@ function makeSSEInterceptor(getConvId: () => string | null, getAuthHeader: () =>
             try { console.debug('[desktop] ignoring non-desktop tool call', toolName); } catch { /* ignore */ }
             continue;
           }
+          // Dedupe: only execute the *first* time we see a given tool-call id.
+          // The AI SDK v5 stream protocol emits multiple events per call
+          // (start → delta(s) → available) and only the `tool-input-available`
+          // contains the final assembled `input`. We prefer that one if we see
+          // it, but otherwise the first event with a non-empty args wins.
+          if (seenToolCallIds.has(toolCallId)) {
+            // If we already fired but this is the canonical `tool-input-available`
+            // with richer args, we still skip — the earlier execution is in flight.
+            try { console.debug('[desktop] dedup: skipping duplicate event for', toolCallId, type); } catch { /* ignore */ }
+            continue;
+          }
+          // Prefer waiting for `tool-input-available` if we haven't seen it yet
+          // and the current event is a streaming-start with empty args.
+          if ((type === 'tool-call-streaming-start' || type === 'tool-input-start')
+              && (!args || Object.keys(args).length === 0)) {
+            try { console.debug('[desktop] waiting for tool-input-available before executing', toolCallId); } catch { /* ignore */ }
+            continue;
+          }
+          seenToolCallIds.add(toolCallId);
           emit({ kind: 'tool-call', payload: { toolName, toolCallId, args } });
           // Execute asynchronously; back to backend.
           void executeAndReport(toolName, args || {}, toolCallId, getConvId(), getAuthHeader());
