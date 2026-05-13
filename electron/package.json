@@ -1,0 +1,110 @@
+{
+  "name": "potomac-analyst-workbench-electron",
+  "version": "0.1.0",
+  "description": "Electron desktop wrapper for the Potomac Analyst Workbench",
+  "main": "dist/main.js",
+  "private": true,
+  "scripts": {
+    "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('out',{recursive:true,force:true});\"",
+    "icons": "node scripts/generate-icons.js",
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch",
+    "start": "cross-env ELECTRON_MODE=remote electron .",
+    "start:local": "cross-env ELECTRON_MODE=remote ELECTRON_REMOTE_URL=http://localhost:3000 electron .",
+    "dev": "cross-env ELECTRON_DEV=1 ELECTRON_MODE=remote ELECTRON_REMOTE_URL=http://localhost:3000 concurrently -k -n tsc,electron -c blue,green \"npm run watch\" \"wait-on dist/main.js && electron .\"",
+    "dev:vercel": "cross-env ELECTRON_DEV=1 ELECTRON_MODE=remote concurrently -k -n tsc,electron -c blue,green \"npm run watch\" \"wait-on dist/main.js && electron .\"",
+    "dist": "npm run clean && npm run icons && npm run build && electron-builder",
+    "dist:win": "npm run clean && npm run icons && npm run build && electron-builder --win",
+    "dist:mac": "npm run clean && npm run icons && npm run build && electron-builder --mac",
+    "dist:linux": "npm run clean && npm run icons && npm run build && electron-builder --linux"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/ssh2": "^1.15.5",
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5",
+    "typescript": "^5.7.2",
+    "wait-on": "^8.0.1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@nut-tree-fork/nut-js": "^4.2.6",
+    "bcryptjs": "^3.0.3",
+    "clipboardy": "^5.3.1",
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.3.9",
+    "node-pty": "^1.1.0",
+    "playwright": "^1.60.0",
+    "ssh2": "^1.17.0"
+  },
+  "build": {
+    "appId": "com.potomac.analyst-workbench",
+    "productName": "Potomac Analyst Workbench",
+    "copyright": "Copyright © 2025 Potomac",
+    "directories": {
+      "output": "out",
+      "buildResources": "resources"
+    },
+    "files": [
+      "dist/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "dist/main.js"
+    },
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "Potomac Analyst Workbench",
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "installerHeaderIcon": "resources/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "resources/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office",
+      "icon": "resources/icon.png"
+    },
+    "publish": null
+  }
+}

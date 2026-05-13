@@ -2502,6 +2502,18 @@ export function ChatPage() {
                   setInput('');
                   setPageError('');
 
+                  // ── YANG Autopilot slash-commands (/goal, /remember, /schedule) ──
+                  // Only intercept when no files are attached; lets the user attach
+                  // files to a regular chat msg that just happens to start with `/`.
+                  if (files.length === 0 && /^\s*\/(goal|remember|schedule)\b/i.test(text)) {
+                    const { handleSlashCommand } = await import('@/lib/yang/slash-commands');
+                    const consumed = await handleSlashCommand(text, {
+                      success: (m) => toast.success(m),
+                      error:   (m) => toast.error(m),
+                    });
+                    if (consumed) return;
+                  }
+
                   const convId = await ensureConversation();
                   if (!convId) return;
 

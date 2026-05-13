@@ -95,6 +95,11 @@ export async function POST(req: NextRequest) {
   const authToken = req.headers.get('authorization') || '';
   const conversationId = body.conversationId || data.conversationId || null;
 
+  // Desktop-client capability envelope — forwarded so the backend can decide
+  // whether to register fs/shell/computer tools for this turn. Web clients
+  // omit this field entirely and behavior is unchanged.
+  const clientEnvelope = body.client || data.client || null;
+
   const backendBody = {
     content: finalContent,
     conversation_id: conversationId,
@@ -107,6 +112,7 @@ export async function POST(req: NextRequest) {
     max_iterations: data.max_iterations ?? body.max_iterations ?? 5,
     pin_model_version: data.pin_model_version ?? body.pin_model_version ?? false,
     yang: data.yang ?? body.yang ?? null,
+    client: clientEnvelope,
   };
 
   const upstreamPath = USE_UI_STREAM ? '/chat/agent/ui-stream' : '/chat/agent';
@@ -114,12 +120,21 @@ export async function POST(req: NextRequest) {
   // ── Forward to backend ────────────────────────────────────────────────
   let upstream: Response;
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: authToken,
+    };
+    // Forward the desktop-client hint so the backend can register desktop
+    // tools without parsing the JSON body twice.
+    if (clientEnvelope?.kind) {
+      headers['X-Potomac-Client'] = String(clientEnvelope.kind);
+      if (Array.isArray(clientEnvelope.capabilities)) {
+        headers['X-Potomac-Capabilities'] = clientEnvelope.capabilities.join(',');
+      }
+    }
     upstream = await fetch(`${API_BASE_URL}${upstreamPath}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: authToken,
-      },
+      headers,
       body: JSON.stringify(backendBody),
       // Edge runtime supports streaming responses natively
       cache: 'no-store',

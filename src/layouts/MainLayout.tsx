@@ -41,6 +41,7 @@ const navItems: NavItem[] = [
   { name: 'CHAT', href: '/chat', icon: MessageCircle },
   { name: 'KNOWLEDGE BASE', href: '/knowledge', icon: Database },
   { name: 'STUDIO', href: '/studio', icon: Wand2, badge: 'NEW' },
+  { name: 'YANG AUTOPILOT', href: '/yang', icon: Rocket, badge: 'NEW' },
   { name: 'STACKS', href: '/stacks', icon: Layers },
   { name: 'SETTINGS', href: '/settings', icon: Settings },
 ];
