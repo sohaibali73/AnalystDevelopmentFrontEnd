@@ -76,6 +76,10 @@ export interface PotomacToolsAPI {
   browser_eval:     (targetId: string, script: string) => Promise<ToolEnvelope<unknown>>;
   browser_pin_note: (targetId: string, x: number, y: number, text: string) => Promise<ToolEnvelope<void>>;
   browser_get_pins: (targetId: string) => Promise<ToolEnvelope<unknown[]>>;
+  browser_download: (targetId: string, url: string, filename?: string) => Promise<ToolEnvelope<{ path: string; bytes: number; name: string }>>;
+  browser_list_downloads: (targetId: string) => Promise<ToolEnvelope<Array<{ path: string; name: string; ts: number; url: string }>>>;
+  browser_wait_for: (targetId: string, selector: string, timeoutMs?: number) => Promise<ToolEnvelope<void>>;
+  browser_fill:     (targetId: string, selector: string, value: string) => Promise<ToolEnvelope<void>>;
 
   // ── Terminals (Phase 5) ──────────────────────────────────────────────
   terminal_open:    (opts?: { shell?: string; cwd?: string; cols?: number; rows?: number; env?: Record<string, string> }) => Promise<ToolEnvelope<{ handleId: string; shell: string; cwd: string }>>;
@@ -212,6 +216,10 @@ export async function runTool(toolName: string, args: Record<string, unknown>): 
     browser_eval:     (a) => t.browser_eval(a.targetId as string, a.script as string),
     browser_pin_note: (a) => t.browser_pin_note(a.targetId as string, a.x as number, a.y as number, a.text as string),
     browser_get_pins: (a) => t.browser_get_pins(a.targetId as string),
+    browser_download: (a) => t.browser_download(a.targetId as string, a.url as string, a.filename as string | undefined),
+    browser_list_downloads: (a) => t.browser_list_downloads(a.targetId as string),
+    browser_wait_for: (a) => t.browser_wait_for(a.targetId as string, a.selector as string, a.timeoutMs as number | undefined),
+    browser_fill:     (a) => t.browser_fill(a.targetId as string, a.selector as string, a.value as string),
 
     // ── Workflow integrations (Phase 5) ────────────────────────────────
     terminal_run:      (a) => t.terminal_run(a.command as string, { cwd: a.cwd as string | undefined, timeoutMs: a.timeoutMs as number | undefined, env: a.env as Record<string, string> | undefined }),
@@ -286,6 +294,7 @@ export const DESKTOP_TOOL_NAMES = {
     'cu_open_target', 'cu_close', 'cu_list_targets', 'cu_screenshot', 'cu_get_content',
     'cu_click', 'cu_double_click', 'cu_type', 'cu_key', 'cu_scroll', 'cu_size',
     'browser_navigate', 'browser_eval', 'browser_pin_note', 'browser_get_pins',
+    'browser_download', 'browser_list_downloads', 'browser_wait_for', 'browser_fill',
   ],
   // YANG Autopilot — workflow integrations (Phase 5).
   yang_workflow: [

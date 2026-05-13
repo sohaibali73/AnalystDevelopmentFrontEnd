@@ -44,6 +44,8 @@ const ALL_DESKTOP_TOOL_NAMES = new Set<string>([
   ...DESKTOP_TOOL_NAMES.fs,
   ...DESKTOP_TOOL_NAMES.shell,
   ...DESKTOP_TOOL_NAMES.computer,
+  ...DESKTOP_TOOL_NAMES.yang_cu,        // cu_*, browser_*  — was missing!
+  ...DESKTOP_TOOL_NAMES.yang_workflow,  // terminal_*, github_*, ssh_*  — was missing!
 ]);
 
 /** Conversation id captured from request body, used when POSTing tool results back. */
@@ -112,7 +114,11 @@ function makeSSEInterceptor(getConvId: () => string | null, getAuthHeader: () =>
           const toolCallId = (evt.toolCallId || evt.tool_call_id) as string | undefined;
           const args = (evt.args || evt.input) as Record<string, unknown> | undefined;
           if (!toolName || !toolCallId) continue;
-          if (!ALL_DESKTOP_TOOL_NAMES.has(toolName)) continue;
+          if (!ALL_DESKTOP_TOOL_NAMES.has(toolName)) {
+            // Surface a debug breadcrumb so unknown tool names are visible in DevTools.
+            try { console.debug('[desktop] ignoring non-desktop tool call', toolName); } catch { /* ignore */ }
+            continue;
+          }
           emit({ kind: 'tool-call', payload: { toolName, toolCallId, args } });
           // Execute asynchronously; back to backend.
           void executeAndReport(toolName, args || {}, toolCallId, getConvId(), getAuthHeader());
@@ -153,6 +159,10 @@ async function executeAndReport(
   } catch (err) {
     console.warn('[desktop] failed to POST tool result', err);
   }
+  // Also log success/failure for diagnostics.
+  try {
+    console.debug('[desktop] tool-result posted', { toolName, toolCallId, ok: !error, durationMs, error });
+  } catch { /* ignore */ }
 }
 
 export function installDesktopRuntime(): void {
@@ -185,7 +195,26 @@ export function installDesktopRuntime(): void {
         } catch { /* ignore */ }
       }
       const getConvId = () => convFromHeader || convFromBody;
-      const authHeader = (init?.headers && (init.headers as Record<string, string>)['Authorization']) || '';
+      // Headers may be a plain object, a Headers instance, or a [string,string][] tuple.
+      // Try all three, plus fall back to localStorage.auth_token (next-auth client pattern).
+      let authHeader = '';
+      try {
+        const h = init?.headers;
+        if (h instanceof Headers) authHeader = h.get('Authorization') || h.get('authorization') || '';
+        else if (Array.isArray(h)) {
+          const pair = h.find(([k]) => /^authorization$/i.test(k));
+          authHeader = pair?.[1] || '';
+        } else if (h && typeof h === 'object') {
+          const rec = h as Record<string, string>;
+          authHeader = rec.Authorization || rec.authorization || '';
+        }
+      } catch { /* ignore */ }
+      if (!authHeader) {
+        try {
+          const tok = window.localStorage.getItem('auth_token');
+          if (tok) authHeader = `Bearer ${tok}`;
+        } catch { /* ignore */ }
+      }
       const teed = resp.body?.pipeThrough(makeSSEInterceptor(getConvId, () => authHeader));
       return new Response(teed, { status: resp.status, statusText: resp.statusText, headers: resp.headers });
     }

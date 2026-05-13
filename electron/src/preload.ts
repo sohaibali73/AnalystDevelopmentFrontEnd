@@ -105,6 +105,10 @@ const tools = {
   browser_eval:      (targetId: string, script: string) => ipcRenderer.invoke('cu:browser.evaluate', targetId, script),
   browser_pin_note:  (targetId: string, x: number, y: number, text: string) => ipcRenderer.invoke('cu:browser.pin-note', targetId, x, y, text),
   browser_get_pins:  (targetId: string) => ipcRenderer.invoke('cu:browser.get-pins', targetId),
+  browser_download:  (targetId: string, url: string, filename?: string) => ipcRenderer.invoke('cu:browser.download', targetId, url, filename),
+  browser_list_downloads: (targetId: string) => ipcRenderer.invoke('cu:browser.list-downloads', targetId),
+  browser_wait_for:  (targetId: string, selector: string, timeoutMs?: number) => ipcRenderer.invoke('cu:browser.wait', targetId, selector, timeoutMs),
+  browser_fill:      (targetId: string, selector: string, value: string) => ipcRenderer.invoke('cu:browser.fill', targetId, selector, value),
 
   // ── Terminals (xterm.js-backed) ──────────────────────────────────────
   terminal_open:    (opts?: { shell?: string; cwd?: string; cols?: number; rows?: number; env?: Record<string, string> }) => ipcRenderer.invoke('term:open', opts),

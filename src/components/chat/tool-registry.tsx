@@ -1143,7 +1143,7 @@ export function renderToolPart(
   }
 
   // ── Unknown / dynamic tool — smart fallback ────────────────────────────────
-  return renderDynamicTool(part, pIdx, toolName);
+  return renderDynamicTool(part, pIdx, toolName, messageId, conversationId, externalOutput);
 }
 
 // ─── Dynamic / Unknown Tool Renderer ─────────────────────────────────────────
@@ -1152,11 +1152,87 @@ function renderDynamicTool(
   part: ToolPartState,
   pIdx: number,
   toolName: string,
+  messageId?: string,
+  conversationId?: string | null,
+  externalOutput?: any,
 ): React.ReactNode {
   // Check output for both output-available AND output-error states
-  // This allows us to show usable artifacts even after errors
+  // This allows us to show usable artifacts even after errors.
+  // Merge externalOutput (e.g. file_download SSE events) into output so that
+  // tools whose schema doesn't natively return download metadata can still
+  // surface a download card.
   const hasOutput = typeof part.output === 'object' && part.output;
-  const out = (hasOutput ? part.output : {}) as any;
+  const out = { ...((hasOutput ? part.output : {}) as any), ...((externalOutput && typeof externalOutput === 'object') ? externalOutput : {}) } as any;
+
+  // ── Document-file output detection (.docx / .xlsx / .pptx / .pdf) ──────
+  // Routes to the dedicated per-extension card so the user gets the rich
+  // progress UI + preview + download — even if the backend used an
+  // unfamiliar tool name we don't have in TOOL_REGISTRY.
+  const filename: string | undefined = out.filename || out.name;
+  if (filename || out.download_url || out.file_id || out.document_id) {
+    const ext = (filename || '').toLowerCase().match(/\.(docx|xlsx|pptx|pdf)$/)?.[1];
+    if (ext === 'docx') {
+      return (
+        <DocxGenerationCard
+          key={pIdx}
+          toolCallId={part.toolCallId || `${messageId || 'msg'}_${pIdx}`}
+          toolName={toolName}
+          input={part.input}
+          output={part.state === 'output-available' ? out : undefined}
+          externalOutput={externalOutput}
+          state={(part.state || 'output-available') as any}
+          errorText={part.errorText}
+          conversationId={conversationId || undefined}
+        />
+      );
+    }
+    if (ext === 'xlsx') {
+      return (
+        <XlsxGenerationCard
+          key={pIdx}
+          toolCallId={part.toolCallId || `${messageId || 'msg'}_${pIdx}`}
+          toolName={toolName}
+          input={part.input}
+          output={part.state === 'output-available' ? out : undefined}
+          externalOutput={externalOutput}
+          state={(part.state || 'output-available') as any}
+          errorText={part.errorText}
+          conversationId={conversationId || undefined}
+        />
+      );
+    }
+    if (ext === 'pptx') {
+      return (
+        <PptxGenerationCard
+          key={pIdx}
+          toolCallId={part.toolCallId || `${messageId || 'msg'}_${pIdx}`}
+          toolName={toolName}
+          input={part.input}
+          output={part.state === 'output-available' ? out : undefined}
+          externalOutput={externalOutput}
+          state={(part.state || 'output-available') as any}
+          errorText={part.errorText}
+          conversationId={conversationId || undefined}
+        />
+      );
+    }
+    // pdf / unknown ext / missing ext but has download metadata → generic card
+    if (ext === 'pdf' || out.download_url || out.file_id || out.document_id) {
+      return (
+        <DocumentGenerationCard
+          key={pIdx}
+          toolCallId={part.toolCallId || `${messageId || 'msg'}_${pIdx}`}
+          toolName={toolName}
+          input={part.input}
+          output={part.state === 'output-available' ? out : undefined}
+          externalOutput={externalOutput}
+          state={(part.state || 'output-available') as any}
+          errorText={part.errorText}
+          conversationId={conversationId || undefined}
+        />
+      );
+    }
+  }
   
   // ── Check for sandbox execution output (execute_react, execute_python, etc.) ────
   // Sandbox results have: success, output, execution_time_ms, language, artifacts, display_type

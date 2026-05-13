@@ -1,5 +1,10 @@
 node_modules/
 dist/
 out/
+out2/
+*.exe
+*.dmg
+*.AppImage
+*.blockmap
 *.log
 .DS_Store

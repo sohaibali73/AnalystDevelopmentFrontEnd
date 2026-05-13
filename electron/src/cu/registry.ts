@@ -104,6 +104,18 @@ export function registerCuTools(): void {
   ipcMain.handle('cu:browser.get-pins', (_e, targetId: string) =>
     envelope('browser_get_pins')(async () => browser.getPinNotes(targetId)),
   );
+  ipcMain.handle('cu:browser.download', (_e, targetId: string, url: string, filename?: string) =>
+    envelope('browser_download')(async () => browser.downloadUrl(targetId, url, filename)),
+  );
+  ipcMain.handle('cu:browser.list-downloads', (_e, targetId: string) =>
+    envelope('browser_list_downloads')(async () => browser.listDownloads(targetId)),
+  );
+  ipcMain.handle('cu:browser.wait', (_e, targetId: string, selector: string, timeoutMs?: number) =>
+    envelope<void>('browser_wait_for')(async () => browser.waitForSelector(targetId, selector, timeoutMs)),
+  );
+  ipcMain.handle('cu:browser.fill', (_e, targetId: string, selector: string, value: string) =>
+    envelope<void>('browser_fill')(async () => browser.fill(targetId, selector, value)),
+  );
 }
 
 export async function shutdownCu(): Promise<void> {
