@@ -59,6 +59,7 @@ import {
   XlsxAnalysisCard,
   XlsxTransformCard,
   PerformanceCard,
+  PerformanceLoadingCard,
 } from '@/components/generative-ui';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
@@ -976,6 +977,10 @@ export function renderToolPart(
         // Skill-dispatch tools get the animated SkillExecutionAnimation card
         if (entry.skillAnimation) {
           return <SkillExecutionAnimation key={pIdx} skillSlug={toolName} />;
+        }
+        // Performance Engine gets its own branded loading card
+        if (toolName === 'calculate_performance') {
+          return <PerformanceLoadingCard key={pIdx} input={part.input} />;
         }
         return <ToolLoading key={pIdx} toolName={loadingName} input={part.input} />;
       case 'output-available': {

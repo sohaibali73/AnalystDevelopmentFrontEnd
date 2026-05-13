@@ -172,3 +172,4 @@ export { SkillExecutionAnimation } from './SkillExecutionAnimation';
 
 // NEW: Performance Engine Card (calculate_performance tool / data-card_performance envelope)
 export { PerformanceCard } from './PerformanceCard';
+export { PerformanceLoadingCard } from './PerformanceLoadingCard';
