@@ -117,8 +117,17 @@ function makeSSEInterceptor(getConvId: () => string | null, getAuthHeader: () =>
           }
           // AI SDK v5 emits parts. Recognize tool-call parts; tool name could
           // live under any of these keys depending on backend serialization.
+          //
+          // Potomac DevBackend also emits a custom breadcrumb event of the
+          // form { desktop_tool_pending: true, tool_call_id, tool_name }
+          // when it's waiting for the client to execute a tool — we treat
+          // that as equivalent to `tool-input-available`.
+          //
+          // Goal-mode SSE (via /api/yang/goal/{id}/stream) wraps the real
+          // tool-call event inside { type: "step", step: { kind: "tool-call",
+          // content: { id, name, args } } } — unwrap that here too.
           const type = evt.type as string | undefined;
-          const isToolCall =
+          const isCanonicalToolCall =
             type === 'tool-call'
             || type === 'tool_call'
             || type === 'tool-call-streaming-start'
@@ -127,10 +136,27 @@ function makeSSEInterceptor(getConvId: () => string | null, getAuthHeader: () =>
             || type === 'tool_input_available'
             || type === 'tool-input-start'
             || type === 'tool-input-delta';
-          if (!isToolCall) continue;
-          const toolName = (evt.toolName || evt.tool_name || evt.name) as string | undefined;
-          const toolCallId = (evt.toolCallId || evt.tool_call_id || evt.id) as string | undefined;
-          const args = (evt.args || evt.input || evt.arguments) as Record<string, unknown> | undefined;
+          const isDesktopBreadcrumb = evt.desktop_tool_pending === true;
+          const isGoalStepToolCall =
+            type === 'step'
+            && evt.step
+            && typeof evt.step === 'object'
+            && (evt.step as { kind?: string }).kind === 'tool-call';
+          if (!isCanonicalToolCall && !isDesktopBreadcrumb && !isGoalStepToolCall) continue;
+
+          let toolName: string | undefined;
+          let toolCallId: string | undefined;
+          let args: Record<string, unknown> | undefined;
+          if (isGoalStepToolCall) {
+            const stepContent = (evt.step as { content?: Record<string, unknown> }).content || {};
+            toolName = (stepContent.name || stepContent.tool_name) as string | undefined;
+            toolCallId = (stepContent.id || stepContent.tool_call_id) as string | undefined;
+            args = (stepContent.args || stepContent.input) as Record<string, unknown> | undefined;
+          } else {
+            toolName = (evt.toolName || evt.tool_name || evt.name) as string | undefined;
+            toolCallId = (evt.toolCallId || evt.tool_call_id || evt.id) as string | undefined;
+            args = (evt.args || evt.input || evt.arguments) as Record<string, unknown> | undefined;
+          }
           if (!toolName || !toolCallId) {
             try { console.debug('[desktop] tool-call event missing name/id', evt); } catch { /* ignore */ }
             continue;
@@ -223,8 +249,20 @@ export function installDesktopRuntime(): void {
     const resp = await originalFetch(input, init);
 
     // 2) Intercept SSE stream for desktop tool calls.
+    //    Sources we wrap:
+    //      • /api/chat               — main chat SSE stream
+    //      • /api/yang/goal/.../stream  — autonomous-goal SSE stream
+    //    Both can emit client-executable tool-call events that we need to
+    //    pick up and dispatch to `window.potomacTools`.
     const ct = resp.headers.get('content-type') || '';
-    if (resp.ok && ct.includes('text/event-stream') && url.includes('/api/chat') && !url.includes('/tool-result')) {
+    const isInterceptable =
+      ct.includes('text/event-stream')
+      && resp.ok
+      && (
+        (url.includes('/api/chat') && !url.includes('/tool-result'))
+        || /\/api\/yang\/goal\/[^/]+\/stream/.test(url)
+      );
+    if (isInterceptable) {
       // Pull conversation_id out of the request body or response header.
       const convFromHeader = resp.headers.get('X-Conversation-Id');
       let convFromBody: string | null = null;
