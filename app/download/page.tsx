@@ -116,10 +116,30 @@ export default function DownloadPage() {
 
       {/* Header */}
       <header className="px-6 md:px-12 py-6 flex items-center justify-between border-b border-neutral-900/60 backdrop-blur-sm">
-        <a href="/" className="flex items-center gap-3">
-          <img src="/potomac-icon.png" alt="Potomac" className="w-9 h-9 rounded-lg" />
-          <span className="text-sm tracking-[0.22em] font-semibold text-neutral-200">POTOMAC</span>
-        </a>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                window.history.back();
+              } else {
+                window.location.href = '/yang';
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-xs tracking-wider text-neutral-400 hover:text-neutral-100 transition-colors"
+            aria-label="Back"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+              <path d="M19 12H5" />
+              <path d="m12 19-7-7 7-7" />
+            </svg>
+            BACK
+          </button>
+          <span className="text-neutral-800">|</span>
+          <a href="/" className="flex items-center gap-3">
+            <img src="/potomac-icon.png" alt="Potomac" className="w-9 h-9 rounded-lg" />
+            <span className="text-sm tracking-[0.22em] font-semibold text-neutral-200">POTOMAC</span>
+          </a>
+        </div>
         <a
           href="/chat"
           className="text-xs tracking-wider text-neutral-400 hover:text-neutral-100 transition-colors"
