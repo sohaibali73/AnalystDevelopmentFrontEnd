@@ -42,7 +42,7 @@ export default function ToolActivityDrawer() {
       if (ev.kind === 'tool-call') {
         const p = ev.payload as { toolCallId: string; toolName: string; args?: Record<string, unknown> };
         setRows((prev) => [
-          { toolCallId: p.toolCallId, toolName: p.toolName, args: p.args, status: 'running', startedAt: Date.now() },
+          { toolCallId: p.toolCallId, toolName: p.toolName, args: p.args, status: 'running' as const, startedAt: Date.now() },
           ...prev,
         ].slice(0, 200));
       } else if (ev.kind === 'tool-result') {

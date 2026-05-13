@@ -59,6 +59,56 @@ export interface PotomacToolsAPI {
     };
   }>;
   meta_reset_session_approvals: () => Promise<{ ok: boolean }>;
+
+  // ── Background Computer Use (Phase 1-2) ──────────────────────────────
+  cu_open_target:   (opts: { kind: 'browser' | 'native' | 'virtual-desktop'; url?: string; app?: string; args?: string[]; windowTitle?: string }) => Promise<ToolEnvelope<unknown>>;
+  cu_close:         (targetId: string) => Promise<ToolEnvelope<void>>;
+  cu_list_targets:  () => Promise<ToolEnvelope<unknown[]>>;
+  cu_screenshot:    (targetId: string) => Promise<ToolEnvelope<{ pngBase64: string; width: number; height: number }>>;
+  cu_get_content:   (targetId: string) => Promise<ToolEnvelope<unknown>>;
+  cu_click:         (targetId: string, x: number, y: number, opts?: { button?: 'left' | 'right' | 'middle' }) => Promise<ToolEnvelope<void>>;
+  cu_double_click:  (targetId: string, x: number, y: number) => Promise<ToolEnvelope<void>>;
+  cu_type:          (targetId: string, text: string, opts?: { delayMs?: number }) => Promise<ToolEnvelope<void>>;
+  cu_key:           (targetId: string, combo: string) => Promise<ToolEnvelope<void>>;
+  cu_scroll:        (targetId: string, x: number, y: number, dx: number, dy: number) => Promise<ToolEnvelope<void>>;
+  cu_size:          (targetId: string) => Promise<ToolEnvelope<{ width: number; height: number }>>;
+  browser_navigate: (targetId: string, url: string) => Promise<ToolEnvelope<unknown>>;
+  browser_eval:     (targetId: string, script: string) => Promise<ToolEnvelope<unknown>>;
+  browser_pin_note: (targetId: string, x: number, y: number, text: string) => Promise<ToolEnvelope<void>>;
+  browser_get_pins: (targetId: string) => Promise<ToolEnvelope<unknown[]>>;
+
+  // ── Terminals (Phase 5) ──────────────────────────────────────────────
+  terminal_open:    (opts?: { shell?: string; cwd?: string; cols?: number; rows?: number; env?: Record<string, string> }) => Promise<ToolEnvelope<{ handleId: string; shell: string; cwd: string }>>;
+  terminal_write:   (id: string, data: string) => void;
+  terminal_resize:  (id: string, cols: number, rows: number) => Promise<unknown>;
+  terminal_close:   (id: string) => Promise<unknown>;
+  terminal_run:     (command: string, opts?: { cwd?: string; timeoutMs?: number; env?: Record<string, string> }) => Promise<ToolEnvelope<{ stdout: string; command: string; durationMs: number }>>;
+  onTerminalOut:    (id: string, cb: (data: string) => void) => () => void;
+  onTerminalExit:   (id: string, cb: (info: { exitCode: number | null; signal: number | null }) => void) => () => void;
+
+  // ── GitHub (Phase 5) ─────────────────────────────────────────────────
+  github_list_prs:   (repo: string, state?: 'open' | 'closed' | 'merged' | 'all') => Promise<ToolEnvelope<unknown[]>>;
+  github_pr_diff:    (repo: string, pr: number) => Promise<ToolEnvelope<{ diff: string }>>;
+  github_pr_comment: (repo: string, pr: number, body: string) => Promise<ToolEnvelope<{ url: string }>>;
+  github_pr_review:  (repo: string, pr: number, opts: { event: 'approve' | 'request_changes' | 'comment'; body?: string }) => Promise<ToolEnvelope<unknown>>;
+  github_clone:      (repo: string, dest?: string) => Promise<ToolEnvelope<unknown>>;
+  github_status:     () => Promise<ToolEnvelope<{ authenticated: boolean; info: string }>>;
+
+  // ── SSH (Phase 5) ────────────────────────────────────────────────────
+  ssh_profiles_list:   () => Promise<unknown[]>;
+  ssh_profiles_save:   (p: Record<string, unknown>) => Promise<unknown>;
+  ssh_profiles_remove: (id: string) => Promise<unknown>;
+  ssh_connect:         (opts: Record<string, unknown>) => Promise<ToolEnvelope<{ connectionId: string }>>;
+  ssh_exec:            (connectionId: string, command: string) => Promise<ToolEnvelope<{ exitCode: number | null; stdout: string; stderr: string }>>;
+  ssh_disconnect:      (connectionId: string) => Promise<ToolEnvelope<{ closed: boolean }>>;
+
+  // ── MCP (Phase 6) ────────────────────────────────────────────────────
+  mcp_list_configs:    () => Promise<unknown[]>;
+  mcp_list_running:    () => Promise<Array<{ id: string; name: string; status: string; tools: string[]; error?: string }>>;
+  mcp_save_config:     (cfg: Record<string, unknown>) => Promise<unknown>;
+  mcp_remove_config:   (id: string) => Promise<unknown>;
+  mcp_reconnect:       (id: string) => Promise<unknown>;
+  mcp_call_tool:       (qualifiedName: string, args: Record<string, unknown>) => Promise<ToolEnvelope<unknown>>;
 }
 
 export interface PotomacSettingsAPI {

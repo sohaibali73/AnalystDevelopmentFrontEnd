@@ -186,7 +186,7 @@ export function installDesktopRuntime(): void {
       }
       const getConvId = () => convFromHeader || convFromBody;
       const authHeader = (init?.headers && (init.headers as Record<string, string>)['Authorization']) || '';
-      const teed = resp.body?.pipeThrough(makeSSEInterceptor(getConvId, authHeader));
+      const teed = resp.body?.pipeThrough(makeSSEInterceptor(getConvId, () => authHeader));
       return new Response(teed, { status: resp.status, statusText: resp.statusText, headers: resp.headers });
     }
 
