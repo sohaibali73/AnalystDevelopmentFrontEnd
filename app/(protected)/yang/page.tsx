@@ -63,6 +63,10 @@ export default function YangAutopilotPage() {
               <div className="text-sm font-medium">MCP Servers</div>
               <div className="text-xs text-neutral-500 mt-1">Plug in Model Context Protocol servers.</div>
             </a>
+            <a href="/yang/tester" className="block rounded-lg border border-emerald-900/40 bg-emerald-950/10 p-4 hover:bg-emerald-950/20 transition-colors">
+              <div className="text-sm font-medium text-emerald-300">Computer-Use Tester</div>
+              <div className="text-xs text-neutral-400 mt-1">Open apps & control mouse/keyboard manually (no AI required).</div>
+            </a>
             <a href="/settings/desktop" className="block rounded-lg border border-neutral-800 p-4 hover:bg-neutral-900 transition-colors">
               <div className="text-sm font-medium">Desktop Settings</div>
               <div className="text-xs text-neutral-500 mt-1">Workspace, allowlist, kill switch, audit log.</div>
