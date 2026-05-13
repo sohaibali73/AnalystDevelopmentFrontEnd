@@ -58,6 +58,7 @@ import {
   XlsxGenerationCard,
   XlsxAnalysisCard,
   XlsxTransformCard,
+  PerformanceCard,
 } from '@/components/generative-ui';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
@@ -268,6 +269,7 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
 
   // ── Market Data ──────────────────────────────────────────────────────────
   get_stock_data:           { component: StockCard },
+  calculate_performance:    { component: PerformanceCard },
   get_stock_chart:          { component: LiveStockChart },
   technical_analysis:       { component: TechnicalAnalysis },
   get_weather:              { component: WeatherCard },

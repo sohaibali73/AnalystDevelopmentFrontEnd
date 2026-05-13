@@ -99,6 +99,7 @@ import {
   NewsHeadlines,
   MarketOverview,
   BacktestResults,
+  PerformanceCard,
   FileAnalysisCard,
   SkillExecutionAnimation,
 } from '@/components/generative-ui';
@@ -778,6 +779,8 @@ function renderInlineCard(cardType: string, data: any, key: number): React.React
       return <MarketOverview key={key} {...data} />;
     case 'backtest':
       return <BacktestResults key={key} {...data} />;
+    case 'performance':
+      return <PerformanceCard key={key} data={data} />;
     // AFL card embedded as JSON in the assistant text. Render it inline so the
     // bubble isn't blank when the backend streams the card via text instead of
     // via a tool-part. (Tool-part path keeps using AFLGenerationCard separately.)

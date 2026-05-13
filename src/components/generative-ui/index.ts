@@ -169,3 +169,6 @@ export { FileAnalysisCard } from './FileAnalysisCard';
 
 // Claude-style animated skill execution card (invoke_skill loading state)
 export { SkillExecutionAnimation } from './SkillExecutionAnimation';
+
+// NEW: Performance Engine Card (calculate_performance tool / data-card_performance envelope)
+export { PerformanceCard } from './PerformanceCard';
