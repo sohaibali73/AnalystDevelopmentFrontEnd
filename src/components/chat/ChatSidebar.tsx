@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import {
   Plus, MessageSquare, Trash2, ChevronLeft,
   Search, Pencil, X, Wifi, WifiOff, Sparkles,
+  CheckSquare, Square, ListChecks,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Shimmer } from '@/components/ai-elements/shimmer';
@@ -32,6 +33,7 @@ interface ChatSidebarProps {
   onSelectConversation: (conv: ConversationType) => void;
   onNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
+  onBulkDeleteConversations?: (ids: string[]) => void | Promise<void>;
   onCollapse: () => void;
   onRecheckConnection: () => void;
   onConversationsUpdate: (updater: (prev: ConversationType[]) => ConversationType[]) => void;
@@ -52,6 +54,7 @@ export function ChatSidebar({
   onSelectConversation,
   onNewConversation,
   onDeleteConversation,
+  onBulkDeleteConversations,
   onCollapse,
   onRecheckConnection,
   onConversationsUpdate,
@@ -61,6 +64,40 @@ export function ChatSidebar({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [hoveredConvId, setHoveredConvId] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} conversation${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    try {
+      if (onBulkDeleteConversations) {
+        await onBulkDeleteConversations(ids);
+      } else {
+        for (const id of ids) onDeleteConversation(id);
+      }
+      toast.success(`Deleted ${ids.length} conversation${ids.length === 1 ? '' : 's'}`);
+    } catch {
+      toast.error('Failed to delete some conversations');
+    } finally {
+      exitSelectionMode();
+    }
+  };
 
   const handleRename = (conv: ConversationType, newTitle: string) => {
     const title = newTitle || conv.title || 'New Conversation';
@@ -228,35 +265,120 @@ export function ChatSidebar({
             </div>
           </div>
         </div>
-        <button
-          onClick={onCollapse}
-          style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            background: modernColors.cardBg,
-            border: `1px solid ${modernColors.border}`,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: modernColors.textSecondary,
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = modernColors.cardHover;
-            e.currentTarget.style.borderColor = modernColors.borderHover;
-            e.currentTarget.style.color = modernColors.text;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = modernColors.cardBg;
-            e.currentTarget.style.borderColor = modernColors.border;
-            e.currentTarget.style.color = modernColors.textSecondary;
-          }}
-        >
-          <ChevronLeft size={16} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={() => {
+              if (selectionMode) exitSelectionMode();
+              else setSelectionMode(true);
+            }}
+            title={selectionMode ? 'Cancel selection' : 'Select multiple'}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: selectionMode ? modernColors.accentLight : modernColors.cardBg,
+              border: `1px solid ${selectionMode ? modernColors.borderActive : modernColors.border}`,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: selectionMode ? modernColors.accent : modernColors.textSecondary,
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <ListChecks size={16} />
+          </button>
+          <button
+            onClick={onCollapse}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: modernColors.cardBg,
+              border: `1px solid ${modernColors.border}`,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: modernColors.textSecondary,
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = modernColors.cardHover;
+              e.currentTarget.style.borderColor = modernColors.borderHover;
+              e.currentTarget.style.color = modernColors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = modernColors.cardBg;
+              e.currentTarget.style.borderColor = modernColors.border;
+              e.currentTarget.style.color = modernColors.textSecondary;
+            }}
+          >
+            <ChevronLeft size={16} />
+          </button>
+        </div>
       </div>
+
+      {/* Bulk selection bar */}
+      {selectionMode && (
+        <div style={{
+          padding: '0 16px 12px',
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <button
+            onClick={() => {
+              const allIds = filtered.map((c) => c.id);
+              const allSelected = allIds.every((id) => selectedIds.has(id));
+              setSelectedIds(allSelected ? new Set() : new Set(allIds));
+            }}
+            style={{
+              flex: 1,
+              padding: '8px 10px',
+              fontSize: '12px',
+              fontWeight: 600,
+              borderRadius: '8px',
+              border: `1px solid ${modernColors.border}`,
+              background: modernColors.cardBg,
+              color: modernColors.text,
+              cursor: 'pointer',
+              fontFamily: "'Inter', system-ui, sans-serif",
+            }}
+          >
+            {filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id))
+              ? 'Deselect all'
+              : 'Select all'}
+            <span style={{ marginLeft: 6, color: modernColors.textMuted, fontWeight: 500 }}>
+              ({selectedIds.size})
+            </span>
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            disabled={selectedIds.size === 0}
+            title="Delete selected"
+            style={{
+              padding: '8px 12px',
+              fontSize: '12px',
+              fontWeight: 600,
+              borderRadius: '8px',
+              border: `1px solid ${selectedIds.size === 0 ? modernColors.border : 'rgba(239, 68, 68, 0.5)'}`,
+              background: selectedIds.size === 0 ? modernColors.cardBg : 'rgba(239, 68, 68, 0.12)',
+              color: selectedIds.size === 0 ? modernColors.textMuted : modernColors.error,
+              cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontFamily: "'Inter', system-ui, sans-serif",
+            }}
+          >
+            <Trash2 size={13} />
+            Delete
+          </button>
+        </div>
+      )}
 
       {/* New Chat Button */}
       <div style={{ padding: '0 16px 12px', position: 'relative', zIndex: 1 }}>
@@ -446,12 +568,18 @@ export function ChatSidebar({
           filtered.map((conv, index) => {
             const isSelected = selectedConversation?.id === conv.id;
             const isHovered = hoveredConvId === conv.id;
-            
+            const isChecked = selectedIds.has(conv.id);
+
             return (
               <div
                 key={conv.id}
                 onClick={() => {
-                  if (renamingId !== conv.id) onSelectConversation(conv);
+                  if (renamingId === conv.id) return;
+                  if (selectionMode) {
+                    toggleSelected(conv.id);
+                    return;
+                  }
+                  onSelectConversation(conv);
                 }}
                 onMouseEnter={() => setHoveredConvId(conv.id)}
                 onMouseLeave={() => setHoveredConvId(null)}
@@ -464,18 +592,43 @@ export function ChatSidebar({
                   alignItems: 'center',
                   gap: '12px',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  background: isSelected 
+                  background: (selectionMode && isChecked)
                     ? modernColors.cardActive
-                    : isHovered
-                      ? modernColors.cardHover
-                      : 'transparent',
-                  border: isSelected
+                    : isSelected
+                      ? modernColors.cardActive
+                      : isHovered
+                        ? modernColors.cardHover
+                        : 'transparent',
+                  border: (selectionMode && isChecked)
                     ? `1px solid ${modernColors.borderActive}`
-                    : `1px solid transparent`,
+                    : isSelected
+                      ? `1px solid ${modernColors.borderActive}`
+                      : `1px solid transparent`,
                   transform: isHovered && !isSelected ? 'translateX(4px)' : 'none',
                   animation: `fadeInSlide 0.3s ease-out ${index * 0.03}s both`,
                 }}
               >
+                {/* Checkbox (selection mode) */}
+                {selectionMode && (
+                  <div
+                    onClick={(e) => { e.stopPropagation(); toggleSelected(conv.id); }}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '6px',
+                      border: `1.5px solid ${isChecked ? modernColors.accent : modernColors.borderHover}`,
+                      background: isChecked ? modernColors.accent : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {isChecked && <CheckSquare size={14} style={{ color: '#0A0A0B' }} />}
+                  </div>
+                )}
+
                 {/* Icon */}
                 <div style={{
                   width: '36px',
@@ -563,7 +716,7 @@ export function ChatSidebar({
                 )}
 
                 {/* Actions */}
-                {renamingId !== conv.id && (isHovered || isSelected) && (
+                {renamingId !== conv.id && !selectionMode && (isHovered || isSelected) && (
                   <div style={{ 
                     display: 'flex', 
                     gap: '4px',

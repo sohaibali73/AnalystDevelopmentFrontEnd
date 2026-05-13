@@ -1458,6 +1458,28 @@ export function ChatPage() {
     }
   };
 
+  const handleBulkDeleteConversations = async (ids: string[]) => {
+    if (!ids.length) return;
+    const idSet = new Set(ids);
+    const results = await Promise.allSettled(ids.map((id) => apiClient.deleteConversation(id)));
+    const failed: string[] = [];
+    results.forEach((r, i) => { if (r.status === 'rejected') failed.push(ids[i]); });
+    const deletedIds = ids.filter((id) => !failed.includes(id));
+    if (deletedIds.length) {
+      const deletedSet = new Set(deletedIds);
+      setConversations((prev) => prev.filter((c) => !deletedSet.has(c.id)));
+      if (selectedConversation && deletedSet.has(selectedConversation.id)) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+    }
+    if (failed.length) {
+      console.error('Failed to delete some conversations:', failed);
+      setPageError(`Failed to delete ${failed.length} conversation${failed.length === 1 ? '' : 's'}`);
+      throw new Error('Bulk delete partial failure');
+    }
+  };
+
   const handleCopyMessage = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(() => toast.success('Copied!')).catch(() => toast.error('Copy failed'));
   }, []);
@@ -2132,6 +2154,7 @@ export function ChatPage() {
         onSelectConversation={setSelectedConversation}
         onNewConversation={handleNewConversation}
         onDeleteConversation={handleDeleteConversation}
+        onBulkDeleteConversations={handleBulkDeleteConversations}
         onCollapse={() => setSidebarCollapsed(true)}
         onRecheckConnection={recheckConnection}
         onConversationsUpdate={setConversations}
