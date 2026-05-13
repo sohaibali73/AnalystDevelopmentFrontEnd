@@ -105,15 +105,32 @@ function makeSSEInterceptor(getConvId: () => string | null, getAuthHeader: () =>
           if (!json || json === '[DONE]') continue;
           let evt: Record<string, unknown>;
           try { evt = JSON.parse(json); } catch { continue; }
+          // Diagnostic: log every SSE event type the backend emits so we can
+          // tell whether the frontend's tool-call interceptor is missing the
+          // backend's event-name convention.
+          if (typeof window !== 'undefined' && (window as any).__POTOMAC_SSE_DEBUG__) {
+            try { console.debug('[desktop:sse]', evt.type, evt); } catch { /* ignore */ }
+          }
           // AI SDK v5 emits parts. Recognize tool-call parts; tool name could
           // live under any of these keys depending on backend serialization.
           const type = evt.type as string | undefined;
-          const isToolCall = type === 'tool-call' || type === 'tool_call' || type === 'tool-call-streaming-start' || type === 'tool-input-available';
+          const isToolCall =
+            type === 'tool-call'
+            || type === 'tool_call'
+            || type === 'tool-call-streaming-start'
+            || type === 'tool-input-available'
+            || type === 'tool_use'
+            || type === 'tool_input_available'
+            || type === 'tool-input-start'
+            || type === 'tool-input-delta';
           if (!isToolCall) continue;
-          const toolName = (evt.toolName || evt.tool_name) as string | undefined;
-          const toolCallId = (evt.toolCallId || evt.tool_call_id) as string | undefined;
-          const args = (evt.args || evt.input) as Record<string, unknown> | undefined;
-          if (!toolName || !toolCallId) continue;
+          const toolName = (evt.toolName || evt.tool_name || evt.name) as string | undefined;
+          const toolCallId = (evt.toolCallId || evt.tool_call_id || evt.id) as string | undefined;
+          const args = (evt.args || evt.input || evt.arguments) as Record<string, unknown> | undefined;
+          if (!toolName || !toolCallId) {
+            try { console.debug('[desktop] tool-call event missing name/id', evt); } catch { /* ignore */ }
+            continue;
+          }
           if (!ALL_DESKTOP_TOOL_NAMES.has(toolName)) {
             // Surface a debug breadcrumb so unknown tool names are visible in DevTools.
             try { console.debug('[desktop] ignoring non-desktop tool call', toolName); } catch { /* ignore */ }
