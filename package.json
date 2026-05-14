@@ -65,6 +65,7 @@
     "cmdk": "^1.1.1",
     "docx-preview": "^0.3.7",
     "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.38.0",
     "input-otp": "^1.4.2",
     "js-yaml": "^4.1.1",
     "jszip": "^3.10.1",
