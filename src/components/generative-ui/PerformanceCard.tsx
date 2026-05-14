@@ -8,18 +8,28 @@
  *   • Raw tool result with nested groups: meta / returns / drawdown /
  *     risk_ratios / statistics / ulcer / trade_stats
  *   • Flat GenUI envelope payload (annual_return_pct, max_drawdown_pct, ...).
- *
- * Numbers are rendered verbatim from the backend — no recompute, display
- * rounding only.
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const YELLOW = '#FEC00F';
-const DARK = '#212121';
-const GREEN = '#22C55E';
-const RED = '#EB2F5C';
+// ── Design tokens ────────────────────────────────────────────────────────────
+const C = {
+  yellow:      '#FEC00F',
+  dark:        '#141414',
+  darkMid:     '#1E1E1E',
+  surface:     '#252525',
+  surfaceAlt:  '#2C2C2C',
+  border:      '#333333',
+  muted:       '#888888',
+  label:       '#AAAAAA',
+  body:        '#E0E0E0',
+  white:       '#FFFFFF',
+  green:       '#3DD68C',
+  red:         '#FF5A6A',
+  greenDim:    'rgba(61,214,140,0.12)',
+  redDim:      'rgba(255,90,106,0.12)',
+};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,15 +143,15 @@ const fmtPct = (v: any, dp = 2): string =>
 const fmtUSD = (v: any): string =>
   !isNum(v)
     ? '—'
-    : `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    : `$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
 const fmtNum = (v: any, dp = 2): string =>
   !isNum(v) ? '—' : v.toFixed(dp);
 
 const colorFor = (v: any): string =>
-  !isNum(v) ? DARK : v > 0 ? GREEN : v < 0 ? RED : DARK;
+  !isNum(v) ? C.body : v > 0 ? C.green : v < 0 ? C.red : C.body;
 
-// ── Normaliser: collapse nested OR flat input into one shape ────────────────
+// ── Normaliser ───────────────────────────────────────────────────────────────
 
 function normalise(input: PerformanceInput) {
   const meta = {
@@ -154,146 +164,248 @@ function normalise(input: PerformanceInput) {
     years: input.meta?.years ?? input.years,
   };
   const returns = {
-    annual_return_pct:
-      input.returns?.annual_return_pct ?? input.annual_return_pct ?? null,
-    total_return_pct:
-      input.returns?.total_return_pct ?? input.total_return_pct ?? null,
-    net_profit_usd:
-      input.returns?.net_profit_usd ?? input.net_profit_usd ?? null,
-    final_equity_usd:
-      input.returns?.final_equity_usd ?? input.final_equity_usd ?? null,
+    annual_return_pct: input.returns?.annual_return_pct ?? input.annual_return_pct ?? null,
+    total_return_pct: input.returns?.total_return_pct ?? input.total_return_pct ?? null,
+    net_profit_usd: input.returns?.net_profit_usd ?? input.net_profit_usd ?? null,
+    final_equity_usd: input.returns?.final_equity_usd ?? input.final_equity_usd ?? null,
   };
   const drawdown = {
-    max_system_drawdown_pct:
-      input.drawdown?.max_system_drawdown_pct ?? input.max_drawdown_pct ?? null,
-    max_system_drawdown_usd:
-      input.drawdown?.max_system_drawdown_usd ?? input.max_drawdown_usd ?? null,
+    max_system_drawdown_pct: input.drawdown?.max_system_drawdown_pct ?? input.max_drawdown_pct ?? null,
+    max_system_drawdown_usd: input.drawdown?.max_system_drawdown_usd ?? input.max_drawdown_usd ?? null,
     peak_date: input.drawdown?.peak_date ?? input.peak_date ?? null,
     trough_date: input.drawdown?.trough_date ?? input.trough_date ?? null,
-    recovery_date:
-      input.drawdown?.recovery_date ?? input.recovery_date ?? null,
-    dd_duration_days:
-      input.drawdown?.dd_duration_days ?? input.dd_duration_days ?? null,
+    recovery_date: input.drawdown?.recovery_date ?? input.recovery_date ?? null,
+    dd_duration_days: input.drawdown?.dd_duration_days ?? input.dd_duration_days ?? null,
   };
   const risk_ratios = {
-    recovery_factor:
-      input.risk_ratios?.recovery_factor ?? input.recovery_factor ?? null,
+    recovery_factor: input.risk_ratios?.recovery_factor ?? input.recovery_factor ?? null,
     car_maxdd: input.risk_ratios?.car_maxdd ?? input.car_maxdd ?? null,
     rar_maxdd: input.risk_ratios?.rar_maxdd ?? input.rar_maxdd ?? null,
   };
   const statistics = {
-    ann_volatility_pct:
-      input.statistics?.ann_volatility_pct ?? input.ann_volatility_pct ?? null,
+    ann_volatility_pct: input.statistics?.ann_volatility_pct ?? input.ann_volatility_pct ?? null,
     sharpe_ratio: input.statistics?.sharpe_ratio ?? input.sharpe_ratio ?? null,
     k_ratio: input.statistics?.k_ratio ?? input.k_ratio ?? null,
   };
   const ulcer = {
     ulcer_index: input.ulcer?.ulcer_index ?? input.ulcer_index ?? null,
-    ulcer_performance_index:
-      input.ulcer?.ulcer_performance_index ??
-      input.ulcer_performance_index ??
-      null,
+    ulcer_performance_index: input.ulcer?.ulcer_performance_index ?? input.ulcer_performance_index ?? null,
   };
   const trade_stats = {
     win_rate_pct: input.trade_stats?.win_rate_pct ?? input.win_rate_pct ?? null,
-    profit_factor:
-      input.trade_stats?.profit_factor ?? input.profit_factor ?? null,
-    win_loss_ratio:
-      input.trade_stats?.win_loss_ratio ?? input.win_loss_ratio ?? null,
+    profit_factor: input.trade_stats?.profit_factor ?? input.profit_factor ?? null,
+    win_loss_ratio: input.trade_stats?.win_loss_ratio ?? input.win_loss_ratio ?? null,
     avg_win_pct: input.trade_stats?.avg_win_pct ?? input.avg_win_pct ?? null,
     avg_loss_pct: input.trade_stats?.avg_loss_pct ?? input.avg_loss_pct ?? null,
   };
   return { meta, returns, drawdown, risk_ratios, statistics, ulcer, trade_stats };
 }
 
+// ── Shared inline styles (avoids Tailwind color-interp issues) ───────────────
+
+const cardStyle: React.CSSProperties = {
+  maxWidth: 720,
+  background: C.dark,
+  border: `1px solid ${C.border}`,
+  borderRadius: 16,
+  overflow: 'hidden',
+  fontFamily: '"DM Sans", "Inter", system-ui, sans-serif',
+  color: C.body,
+  boxShadow: '0 8px 40px rgba(0,0,0,0.55)',
+};
+
+const headerStyle: React.CSSProperties = {
+  background: C.darkMid,
+  borderBottom: `1px solid ${C.border}`,
+  padding: '14px 20px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+};
+
+const tickerStyle: React.CSSProperties = {
+  fontSize: 22,
+  fontWeight: 700,
+  letterSpacing: '0.04em',
+  color: C.white,
+  fontFamily: '"DM Mono", "Courier New", monospace',
+};
+
+const subheadStyle: React.CSSProperties = {
+  fontSize: 11,
+  color: C.muted,
+  marginTop: 2,
+  letterSpacing: '0.02em',
+};
+
+const metaBadgeStyle: React.CSSProperties = {
+  fontSize: 11,
+  color: C.muted,
+  textAlign: 'right',
+  letterSpacing: '0.02em',
+};
+
+// Hero section
+const heroGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr',
+  gap: 0,
+  borderBottom: `1px solid ${C.border}`,
+};
+
+const heroItemStyle = (isLast?: boolean): React.CSSProperties => ({
+  textAlign: 'center',
+  padding: '20px 12px',
+  borderRight: isLast ? 'none' : `1px solid ${C.border}`,
+});
+
+const heroValueStyle = (color: string): React.CSSProperties => ({
+  fontSize: 26,
+  fontWeight: 700,
+  color,
+  fontFamily: '"DM Mono", "Courier New", monospace',
+  letterSpacing: '-0.01em',
+  lineHeight: 1.1,
+});
+
+const heroLabelStyle: React.CSSProperties = {
+  fontSize: 10,
+  textTransform: 'uppercase',
+  letterSpacing: '0.12em',
+  color: C.muted,
+  marginTop: 6,
+  fontWeight: 500,
+};
+
+// Panels
+const panelGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  borderBottom: `1px solid ${C.border}`,
+};
+
+const panelStyle = (withBorder?: boolean): React.CSSProperties => ({
+  padding: '16px 20px',
+  borderRight: withBorder ? `1px solid ${C.border}` : 'none',
+});
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: 10,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.14em',
+  fontWeight: 700,
+  color: C.yellow,
+  marginBottom: 12,
+  paddingBottom: 6,
+  borderBottom: `1px solid ${C.border}`,
+};
+
+const rowStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '5px 0',
+  borderBottom: `1px solid rgba(255,255,255,0.04)`,
+};
+
+const rowLabelStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: C.label,
+  fontWeight: 400,
+};
+
+const rowValueStyle = (color?: string): React.CSSProperties => ({
+  fontSize: 12,
+  color: color || C.body,
+  fontFamily: '"DM Mono", "Courier New", monospace',
+  fontWeight: 500,
+  letterSpacing: '0.01em',
+});
+
+// Trade stat tiles
+const tileGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(5, 1fr)',
+  borderBottom: `1px solid ${C.border}`,
+};
+
+const tileStyle = (withBorder?: boolean): React.CSSProperties => ({
+  textAlign: 'center',
+  padding: '14px 8px',
+  borderRight: withBorder ? `1px solid ${C.border}` : 'none',
+});
+
+const tileValueStyle = (color?: string): React.CSSProperties => ({
+  fontSize: 15,
+  fontWeight: 700,
+  color: color || C.body,
+  fontFamily: '"DM Mono", "Courier New", monospace',
+  lineHeight: 1.2,
+});
+
+const tileLabelStyle: React.CSSProperties = {
+  fontSize: 9,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.1em',
+  color: C.muted,
+  marginTop: 5,
+  fontWeight: 500,
+};
+
+// Footer
+const footerStyle: React.CSSProperties = {
+  padding: '12px 20px',
+  fontSize: 12,
+  color: C.label,
+  background: C.darkMid,
+  borderTop: `2px solid ${C.yellow}`,
+  lineHeight: 1.6,
+};
+
 // ── Subcomponents ────────────────────────────────────────────────────────────
 
-const Hero = ({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color: string;
-}) => (
-  <div className="text-center">
-    <div
-      className="text-3xl font-bold"
-      style={{ color, fontFamily: 'Rajdhani, "Inter", system-ui, sans-serif' }}
-    >
-      {value}
+function Hero({ label, value, color, isLast }: { label: string; value: string; color: string; isLast?: boolean }) {
+  return (
+    <div style={heroItemStyle(isLast)}>
+      <div style={heroValueStyle(color)}>{value}</div>
+      <div style={heroLabelStyle}>{label}</div>
     </div>
-    <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">
-      {label}
-    </div>
-  </div>
-);
+  );
+}
 
-const Section = ({
-  title,
-  leftBorder,
-  children,
-}: {
-  title: string;
-  leftBorder?: boolean;
-  children: React.ReactNode;
-}) => (
-  <div className={`p-5 ${leftBorder ? 'border-l border-gray-100' : ''}`}>
-    <div
-      className="text-[10px] uppercase tracking-widest font-bold mb-2"
-      style={{
-        color: DARK,
-        borderBottom: `2px solid ${YELLOW}`,
-        paddingBottom: 4,
-        display: 'inline-block',
-      }}
-    >
-      {title}
+function Row({ label, value, valueColor }: { label: string; value: React.ReactNode; valueColor?: string }) {
+  return (
+    <div style={rowStyle}>
+      <span style={rowLabelStyle}>{label}</span>
+      <span style={rowValueStyle(valueColor)}>{value}</span>
     </div>
-    {children}
-  </div>
-);
+  );
+}
 
-const Row = ({ k, v }: { k: string; v: React.ReactNode }) => (
-  <div className="flex justify-between text-sm py-1">
-    <span className="text-gray-500">{k}</span>
-    <span className="font-mono">{v}</span>
-  </div>
-);
-
-const Tile = ({
-  k,
-  v,
-  color,
-}: {
-  k: string;
-  v: string;
-  color?: string;
-}) => (
-  <div className="text-center">
-    <div className="text-base font-bold" style={{ color: color || DARK }}>
-      {v}
+function Tile({ label, value, color, isLast }: { label: string; value: string; color?: string; isLast?: boolean }) {
+  return (
+    <div style={tileStyle(!isLast)}>
+      <div style={tileValueStyle(color)}>{value}</div>
+      <div style={tileLabelStyle}>{label}</div>
     </div>
-    <div className="text-[10px] uppercase text-gray-500">{k}</div>
-  </div>
-);
+  );
+}
 
 // ── Error card ───────────────────────────────────────────────────────────────
 
-function PerformanceErrorCard({
-  error,
-  ticker,
-}: {
-  error?: string;
-  ticker?: string;
-}) {
+function PerformanceErrorCard({ error, ticker }: { error?: string; ticker?: string }) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 my-2 max-w-xl">
-      <div className="text-sm font-bold text-red-700">
+    <div style={{
+      borderRadius: 12,
+      border: `1px solid ${C.red}44`,
+      background: C.redDim,
+      padding: '12px 16px',
+      maxWidth: 480,
+    }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.red }}>
         Performance data unavailable{ticker ? ` for ${ticker}` : ''}
       </div>
-      <div className="text-xs text-red-600 mt-1">
+      <div style={{ fontSize: 12, color: C.label, marginTop: 4 }}>
         {error || 'The Performance Engine returned no data.'}
       </div>
     </div>
@@ -303,61 +415,52 @@ function PerformanceErrorCard({
 // ── Main card ────────────────────────────────────────────────────────────────
 
 export interface PerformanceCardProps {
-  /** Preferred: pass the tool result / envelope payload under `data`. */
   data?: PerformanceInput;
-  /** Fallback: tool-registry spreads top-level keys directly as props. */
   [key: string]: any;
 }
 
 export function PerformanceCard(props: PerformanceCardProps) {
-  // The card is invoked from two paths:
-  //   1. Inline envelope renderer   → <PerformanceCard data={envelope.data} />
-  //   2. tool-registry tool-result  → <PerformanceCard {...toolOutput} />
-  // Accept either by picking `data` if present, otherwise treating props
-  // themselves as the payload.
   const raw: PerformanceInput =
     ((props.data && typeof props.data === 'object'
       ? props.data
       : (props as unknown as PerformanceInput)) || {}) as PerformanceInput;
 
-  // Error short-circuit.
   if (raw.status === 'error' || raw.success === false || raw.error) {
     return <PerformanceErrorCard error={raw.error} ticker={raw.ticker} />;
   }
 
   const ticker = raw.ticker || '—';
   const frequency = raw.frequency || 'daily';
-  const { meta, returns, drawdown, risk_ratios, statistics, ulcer, trade_stats } =
-    normalise(raw);
+  const { meta, returns, drawdown, risk_ratios, statistics, ulcer, trade_stats } = normalise(raw);
+
+  const ddPctColor = isNum(drawdown.max_system_drawdown_pct)
+    ? C.red
+    : C.body;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="rounded-2xl border border-gray-200 bg-white shadow-md overflow-hidden my-2"
-      style={{ maxWidth: 720 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      style={cardStyle}
     >
-      {/* Header bar */}
-      <div
-        className="px-5 py-3 flex justify-between items-baseline"
-        style={{ background: DARK, color: 'white' }}
-      >
+      {/* ── Header ── */}
+      <div style={headerStyle}>
         <div>
-          <div className="text-lg font-bold tracking-wide">{ticker}</div>
-          <div className="text-xs opacity-70">
-            Performance Engine · live yfinance · {frequency} bars
+          <div style={tickerStyle}>{ticker}</div>
+          <div style={subheadStyle}>
+            Performance Engine &middot; live yfinance &middot; {frequency} bars
             {meta.start_date ? ` · since ${meta.start_date}` : ''}
           </div>
         </div>
-        <div className="text-xs opacity-80 text-right">
-          {isNum(meta.years) ? `${meta.years.toFixed(1)} yrs` : ''}
-          {isNum(meta.bars) ? ` · ${meta.bars.toLocaleString()} bars` : ''}
+        <div style={metaBadgeStyle}>
+          {isNum(meta.years) && <div>{meta.years.toFixed(1)} yrs</div>}
+          {isNum(meta.bars) && <div>{meta.bars.toLocaleString()} bars</div>}
         </div>
       </div>
 
-      {/* Hero metrics */}
-      <div className="grid grid-cols-3 gap-3 px-5 py-5 border-b border-gray-100">
+      {/* ── Hero metrics ── */}
+      <div style={heroGridStyle}>
         <Hero
           label="CAGR"
           value={fmtPct(returns.annual_return_pct)}
@@ -372,73 +475,84 @@ export function PerformanceCard(props: PerformanceCardProps) {
           label="Net Profit"
           value={fmtUSD(returns.net_profit_usd)}
           color={colorFor(returns.net_profit_usd)}
+          isLast
         />
       </div>
 
-      {/* Risk + Ratios grid */}
-      <div className="grid grid-cols-2 gap-0 border-b border-gray-100">
-        <Section title="Risk">
+      {/* ── Risk + Ratios ── */}
+      <div style={panelGridStyle}>
+        <div style={panelStyle(true)}>
+          <div style={sectionTitleStyle}>Risk</div>
           <Row
-            k="Max Drawdown"
-            v={
-              <span style={{ color: RED }}>
-                {fmtPct(drawdown.max_system_drawdown_pct)} ·{' '}
-                {fmtUSD(drawdown.max_system_drawdown_usd)}
+            label="Max Drawdown"
+            value={
+              <span>
+                <span style={{ color: ddPctColor }}>{fmtPct(drawdown.max_system_drawdown_pct)}</span>
+                <span style={{ color: C.muted }}> / </span>
+                <span style={{ color: ddPctColor }}>{fmtUSD(drawdown.max_system_drawdown_usd)}</span>
               </span>
             }
           />
-          <Row k="Peak" v={drawdown.peak_date || '—'} />
-          <Row k="Trough" v={drawdown.trough_date || '—'} />
+          <Row label="Peak" value={drawdown.peak_date || '—'} />
+          <Row label="Trough" value={drawdown.trough_date || '—'} />
           <Row
-            k="Recovery"
-            v={drawdown.recovery_date || 'Not yet recovered'}
+            label="Recovery"
+            value={drawdown.recovery_date || 'Not yet recovered'}
+            valueColor={drawdown.recovery_date ? C.body : C.muted}
           />
           <Row
-            k="Duration"
-            v={
-              isNum(drawdown.dd_duration_days)
-                ? `${drawdown.dd_duration_days} days`
-                : '—'
-            }
+            label="DD Duration"
+            value={isNum(drawdown.dd_duration_days) ? `${drawdown.dd_duration_days} days` : '—'}
           />
-        </Section>
+        </div>
 
-        <Section title="Ratios" leftBorder>
-          <Row k="Sharpe" v={fmtNum(statistics.sharpe_ratio)} />
+        <div style={panelStyle()}>
+          <div style={sectionTitleStyle}>Ratios</div>
           <Row
-            k="Volatility (ann)"
-            v={fmtPct(statistics.ann_volatility_pct)}
+            label="Sharpe"
+            value={fmtNum(statistics.sharpe_ratio)}
+            valueColor={colorFor(statistics.sharpe_ratio)}
           />
-          <Row k="Recovery Factor" v={fmtNum(risk_ratios.recovery_factor)} />
-          <Row k="CAR / MaxDD" v={fmtNum(risk_ratios.car_maxdd)} />
-          <Row k="Ulcer Index" v={fmtNum(ulcer.ulcer_index)} />
-          <Row k="UPI" v={fmtNum(ulcer.ulcer_performance_index)} />
-          <Row k="K-Ratio" v={fmtNum(statistics.k_ratio, 4)} />
-        </Section>
+          <Row
+            label="Volatility (ann)"
+            value={fmtPct(statistics.ann_volatility_pct)}
+            valueColor={isNum(statistics.ann_volatility_pct) ? C.red : C.body}
+          />
+          <Row
+            label="Recovery Factor"
+            value={fmtNum(risk_ratios.recovery_factor)}
+            valueColor={colorFor(risk_ratios.recovery_factor)}
+          />
+          <Row
+            label="CAR / MaxDD"
+            value={fmtNum(risk_ratios.car_maxdd)}
+            valueColor={colorFor(risk_ratios.car_maxdd)}
+          />
+          <Row label="Ulcer Index" value={fmtNum(ulcer.ulcer_index)} />
+          <Row
+            label="UPI"
+            value={fmtNum(ulcer.ulcer_performance_index)}
+            valueColor={colorFor(ulcer.ulcer_performance_index)}
+          />
+          <Row
+            label="K-Ratio"
+            value={fmtNum(statistics.k_ratio, 4)}
+            valueColor={colorFor(statistics.k_ratio)}
+          />
+        </div>
       </div>
 
-      {/* Trade stats */}
-      <div className="px-5 py-3 grid grid-cols-5 gap-2 text-sm border-b border-gray-100">
-        <Tile k="Win Rate" v={fmtPct(trade_stats.win_rate_pct, 1)} />
-        <Tile k="Profit Factor" v={fmtNum(trade_stats.profit_factor)} />
-        <Tile k="W/L Ratio" v={fmtNum(trade_stats.win_loss_ratio)} />
-        <Tile
-          k="Avg Win"
-          v={fmtPct(trade_stats.avg_win_pct)}
-          color={GREEN}
-        />
-        <Tile
-          k="Avg Loss"
-          v={fmtPct(trade_stats.avg_loss_pct)}
-          color={RED}
-        />
+      {/* ── Trade stats ── */}
+      <div style={tileGridStyle}>
+        <Tile label="Win Rate" value={fmtPct(trade_stats.win_rate_pct, 1)} color={colorFor(trade_stats.win_rate_pct)} />
+        <Tile label="Profit Factor" value={fmtNum(trade_stats.profit_factor)} color={colorFor(trade_stats.profit_factor)} />
+        <Tile label="W/L Ratio" value={fmtNum(trade_stats.win_loss_ratio)} color={colorFor(trade_stats.win_loss_ratio)} />
+        <Tile label="Avg Win" value={fmtPct(trade_stats.avg_win_pct)} color={C.green} />
+        <Tile label="Avg Loss" value={fmtPct(trade_stats.avg_loss_pct)} color={C.red} isLast />
       </div>
 
-      {/* Footer summary */}
-      <div
-        className="px-5 py-3 text-sm text-gray-700"
-        style={{ borderTop: `2px solid ${YELLOW}` }}
-      >
+      {/* ── Footer ── */}
+      <div style={footerStyle}>
         {raw.summary ||
           `${ticker} returned ${fmtPct(returns.annual_return_pct)} CAGR${
             isNum(meta.years) ? ` over ${meta.years.toFixed(1)} years` : ''
