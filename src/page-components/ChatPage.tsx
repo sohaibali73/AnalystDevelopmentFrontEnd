@@ -712,33 +712,130 @@ interface CardToken {
 type TextSegment = CardSegment | CardToken;
 
 /**
- * Strip raw tool-call markup that Claude sometimes leaks into the visible
- * assistant text:
+ * Salvaged tool-result payloads recovered from leaked `<function_response>`
+ * blocks. The text-segment pipeline consumes these and renders them as
+ * inline cards so the strategy still shows up even when the backend forgot
+ * to deliver the tool result as a proper SSE part.
+ *
+ * Currently we recognise AFL generator payloads (`afl_code` / `validation_*`
+ * fields). Extend with other tool shapes as needed.
+ */
+interface SalvagedCard {
+  cardType: string;
+  data: any;
+}
+
+/**
+ * Strip raw tool-call markup that the model / streaming layer sometimes
+ * leaks into the visible assistant text:
  *   <function_calls>…</function_calls>
+ *   <function_response>…</function_response>
  *   <invoke name="…">…</invoke>
  *   <parameter name="…">…</parameter>
- * Each tag — whether self-closing, opening, or closing — gets removed along
- * with the content of well-formed `<function_calls>` / `<invoke>` blocks
- * (which are tool-call directives, not user-facing content).
+ *   <function_calls> / <invoke> / <parameter>  (claude-flavoured)
+ *
+ * As a side-effect, any `<function_response>` block whose JSON we recognise
+ * gets pushed into `salvaged` so the caller can render it as a card. The
+ * markup itself is always removed from the returned text.
  */
-function stripToolCallMarkup(text: string): string {
+function stripToolCallMarkup(text: string, salvaged?: SalvagedCard[]): string {
   let out = text;
-  // Greedy block strip — full <function_calls>…</function_calls> (and nested
-  // invoke/parameter inside it). Multi-line, dot-matches-newline via [\s\S].
-  out = out.replace(/<function_calls\b[^>]*>[\s\S]*?<\/function_calls>/gi, '');
-  out = out.replace(/<invoke\b[^>]*>[\s\S]*?<\/invoke>/gi, '');
-  out = out.replace(/<parameter\b[^>]*>[\s\S]*?<\/parameter>/gi, '');
-  // Orphan opening/closing tags that survived (truncated streams etc.)
-  out = out.replace(/<\/?(?:function_calls|invoke|parameter)\b[^>]*>/gi, '');
-  // Collapse the giant whitespace gap a stripped block leaves behind.
+
+  // ── Salvage function_response payloads BEFORE stripping ──────────────
+  if (salvaged) {
+    const respRe = /<(?:antml:)?function_response\b[^>]*>([\s\S]*?)<\/(?:antml:)?function_response>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = respRe.exec(out)) !== null) {
+      const body = (m[1] || '').trim();
+      if (!body) continue;
+      try {
+        const parsed = JSON.parse(body);
+        const card = tryAdaptToolResult(parsed);
+        if (card) salvaged.push(card);
+      } catch {
+        /* not JSON — nothing to salvage */
+      }
+    }
+  }
+
+  // ── Strip full blocks (multi-line, [\s\S] = dot-matches-newline) ─────
+  out = out.replace(/<(?:antml:)?function_calls\b[^>]*>[\s\S]*?<\/(?:antml:)?function_calls>/gi, '');
+  out = out.replace(/<(?:antml:)?function_response\b[^>]*>[\s\S]*?<\/(?:antml:)?function_response>/gi, '');
+  out = out.replace(/<(?:antml:)?invoke\b[^>]*>[\s\S]*?<\/(?:antml:)?invoke>/gi, '');
+  out = out.replace(/<(?:antml:)?parameter\b[^>]*>[\s\S]*?<\/(?:antml:)?parameter>/gi, '');
+  // ── Strip orphan opening/closing tags (truncated streams) ────────────
+  out = out.replace(/<\/?(?:antml:)?(?:function_calls|function_response|invoke|parameter)\b[^>]*>/gi, '');
+  // ── Collapse the giant blank-line gaps stripped blocks leave behind ──
   out = out.replace(/\n{3,}/g, '\n\n');
   return out;
+}
+
+/**
+ * Best-effort adapter: given a parsed JSON tool result, produce a card
+ * envelope if we recognise the shape. Returns null for shapes we can't
+ * convert.
+ */
+function tryAdaptToolResult(parsed: any): SalvagedCard | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  // AFL generator result shape — has afl_code + validation_* fields.
+  if (typeof parsed.afl_code === 'string' && parsed.afl_code.length > 0) {
+    const issues = Array.isArray(parsed.issues)
+      ? parsed.issues
+      : [
+          ...(Array.isArray(parsed.errors)
+            ? parsed.errors.map((m: any) => (typeof m === 'string' ? { severity: 'ERROR', message: m } : m))
+            : []),
+          ...(Array.isArray(parsed.warnings)
+            ? parsed.warnings.map((m: any) => (typeof m === 'string' ? { severity: 'WARNING', message: m } : m))
+            : []),
+        ];
+    return {
+      cardType: 'afl_strategy',
+      data: {
+        title: parsed.title || parsed.strategy_name || 'AFL Strategy',
+        description: parsed.description,
+        strategy_type: parsed.strategy_type,
+        trade_timing: parsed.trade_timing,
+        afl_code: parsed.afl_code,
+        explanation: parsed.explanation,
+        validation: {
+          is_valid: parsed.validation_valid ?? parsed.valid ?? parsed.validation_status === 'passed',
+          errors: parsed.validation_errors ?? parsed.error_count ?? (Array.isArray(parsed.errors) ? parsed.errors.length : 0),
+          warnings: parsed.validation_warnings ?? parsed.warning_count ?? (Array.isArray(parsed.warnings) ? parsed.warnings.length : 0),
+          suggestions: parsed.suggestion_count ?? 0,
+          info: parsed.info_count ?? 0,
+          quality_score: parsed.quality_score,
+          issues,
+        },
+        stats: {
+          generation_time_ms:
+            parsed.generation_time_ms ??
+            (typeof parsed.generation_time === 'number' ? Math.round(parsed.generation_time * 1000) : undefined),
+          model: parsed.model,
+          line_count: parsed.line_count,
+          has_buy_sell: parsed.has_buy_sell,
+          has_plot: parsed.has_plot,
+          has_sections: parsed.has_section_markers,
+        },
+      },
+    };
+  }
+
+  return null;
 }
 
 function splitTextWithCards(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
   // Pre-process: remove leaked XML tool-call markup before card extraction.
-  const cleaned = stripToolCallMarkup(text);
+  // Anything parseable inside a <function_response> gets salvaged into a
+  // card so the strategy still surfaces when the backend leaks tool output
+  // into the text stream instead of as a proper tool-result part.
+  const salvaged: SalvagedCard[] = [];
+  const cleaned = stripToolCallMarkup(text, salvaged);
+  for (const s of salvaged) {
+    segments.push({ type: 'card', cardType: s.cardType, data: s.data });
+  }
   let lastIndex = 0;
   let i = 0;
 
