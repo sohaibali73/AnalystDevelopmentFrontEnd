@@ -89,12 +89,38 @@ interface AFLStats {
   has_sections?: boolean;
 }
 
+/**
+ * A single AFL source file in a composite strategy bundle.
+ *
+ *   name        Display name (e.g. "main.afl", "momentum.afl").
+ *   path        Filesystem path used when the bundle is downloaded
+ *               (e.g. "main.afl", "Include/momentum.afl"). The "Include/"
+ *               prefix is preserved so the .zip mirrors AmiBroker's
+ *               on-disk layout.
+ *   code        File contents.
+ *   is_main     True for the entry-point file (rendered first, marked
+ *               in the tab strip). Backend should set exactly one.
+ *   description Optional one-line description shown as a tooltip.
+ */
+interface AFLFile {
+  name: string;
+  path?: string;
+  code: string;
+  is_main?: boolean;
+  description?: string;
+}
+
 interface AFLStrategyData {
   title?: string;
   description?: string;
   strategy_type?: string;
   trade_timing?: string;
+  /** The main/entry-point AFL source. Always present. */
   afl_code?: string;
+  /** Optional list of files in a composite bundle. When > 1 file, the
+   *  Code tab renders a file-tab strip and bundles a "Download all" .zip
+   *  that preserves the Include/ folder layout. */
+  files?: AFLFile[];
   explanation?: string;
   validation?: AFLValidation;
   stats?: AFLStats;
@@ -647,12 +673,40 @@ const AFLStrategyCard: React.FC<Props> = ({ data }) => {
   const infoCount = validation.info ?? 0;
   const isValid = validation.is_valid ?? (errorCount === 0);
   const issues = Array.isArray(validation.issues) ? validation.issues : [];
-  const lineCount = stats.line_count ?? (d.afl_code ? d.afl_code.split('\n').length : 0);
+
+  // ─── Composite file bundle ────────────────────────────────────────────────
+  // Backend emits `files: [{name, path, code, is_main}, ...]` for composite
+  // strategies (main + Include/ helpers). When absent or single-file, the
+  // card behaves exactly as before (one tab, no file strip).
+  const files = useMemo<AFLFile[]>(() => {
+    const raw = Array.isArray(d.files) ? d.files : [];
+    const normalised: AFLFile[] = raw
+      .filter((f) => f && typeof f.code === 'string')
+      .map((f) => ({
+        name: f.name || (f.path ? f.path.split(/[\\/]/).pop() || 'file.afl' : 'file.afl'),
+        path: f.path || f.name || 'file.afl',
+        code: f.code || '',
+        is_main: !!f.is_main,
+        description: f.description,
+      }));
+    // Synthesise a single-file bundle from afl_code if backend didn't send files.
+    if (normalised.length === 0 && d.afl_code) {
+      const fname = `${slugify(d.title || 'strategy')}.afl`;
+      normalised.push({ name: fname, path: fname, code: d.afl_code, is_main: true });
+    }
+    // Ensure the main file is first.
+    normalised.sort((a, b) => (a.is_main === b.is_main ? 0 : a.is_main ? -1 : 1));
+    return normalised;
+  }, [d.files, d.afl_code, d.title]);
+
+  const isComposite = files.length > 1;
 
   // ─── Local state ───────────────────────────────────────────────────────────
   const [tab, setTab] = useState<TabKey>('code');
+  const [activeFileIdx, setActiveFileIdx] = useState(0);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [downloadedAll, setDownloadedAll] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [revalidating, setRevalidating] = useState(false);
@@ -677,21 +731,36 @@ const AFLStrategyCard: React.FC<Props> = ({ data }) => {
     if (extraExplanation) setTab('explanation');
   }, [extraExplanation]);
 
+  // ─── Active file (composite-aware) ─────────────────────────────────────────
+  const activeFile = files[activeFileIdx] || files[0];
+  const activeCode = activeFile?.code || d.afl_code || '';
+  const lineCount = useMemo(
+    () => (activeCode ? activeCode.split('\n').length : (stats.line_count ?? 0)),
+    [activeCode, stats.line_count],
+  );
+
+  // Clamp activeFileIdx if files array shrinks/grows between renders.
+  useEffect(() => {
+    if (activeFileIdx >= files.length && files.length > 0) {
+      setActiveFileIdx(0);
+    }
+  }, [files.length, activeFileIdx]);
+
   // ─── Actions ───────────────────────────────────────────────────────────────
   const copyCode = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(d.afl_code || '');
+      await navigator.clipboard.writeText(activeCode || '');
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       /* swallow */
     }
-  }, [d.afl_code]);
+  }, [activeCode]);
 
   const downloadAfl = useCallback(() => {
     try {
-      const filename = `${slugify(d.title || 'strategy')}.afl`;
-      const blob = new Blob([d.afl_code || ''], { type: 'text/plain;charset=utf-8' });
+      const filename = activeFile?.name || `${slugify(d.title || 'strategy')}.afl`;
+      const blob = new Blob([activeCode || ''], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -705,7 +774,39 @@ const AFLStrategyCard: React.FC<Props> = ({ data }) => {
     } catch {
       /* swallow */
     }
-  }, [d.afl_code, d.title]);
+  }, [activeCode, activeFile, d.title]);
+
+  /**
+   * Bundle every file in the composite as a .zip mirroring AmiBroker's
+   * on-disk layout. Files with paths like "Include/foo.afl" go into the
+   * Include/ subfolder inside the zip. JSZip is loaded lazily so the
+   * single-file render path doesn't pay the bundle cost.
+   */
+  const downloadAllZip = useCallback(async () => {
+    if (files.length === 0) return;
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      for (const f of files) {
+        const p = (f.path || f.name || 'file.afl').replace(/^[\\/]+/, '');
+        zip.file(p, f.code || '');
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${slugify(d.title || 'composite-strategy')}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setDownloadedAll(true);
+      window.setTimeout(() => setDownloadedAll(false), 1800);
+    } catch {
+      /* JSZip import or zip generation failed — silently fall back to single-file download */
+      downloadAfl();
+    }
+  }, [files, d.title, downloadAfl]);
 
   const revalidate = useCallback(async () => {
     if (!d.afl_code) return;
@@ -1003,40 +1104,89 @@ const AFLStrategyCard: React.FC<Props> = ({ data }) => {
       <div style={{ padding: '14px 16px' }}>
         {tab === 'code' && (
           <div>
+            {isComposite && (
+              <FileTabStrip
+                files={files}
+                activeIdx={activeFileIdx}
+                onChange={setActiveFileIdx}
+              />
+            )}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 marginBottom: '10px',
+                marginTop: isComposite ? '10px' : 0,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                 <FileText size={12} color={SLATE} />
-                <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: SLATE }}>
-                  AFL source
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    color: isComposite ? YELLOW : SLATE,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '320px',
+                  }}
+                  title={activeFile?.path || 'AFL source'}
+                >
+                  {isComposite ? (activeFile?.path || activeFile?.name || 'AFL source') : 'AFL source'}
                 </span>
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', flexShrink: 0 }}>
                   · {lineCount} line{lineCount === 1 ? '' : 's'}
                 </span>
+                {isComposite && (
+                  <span
+                    style={{
+                      fontSize: '10.5px',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(254,192,15,0.10)',
+                      border: `1px solid ${YELLOW}33`,
+                      color: YELLOW,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      flexShrink: 0,
+                    }}
+                    title="This strategy spans multiple AFL files"
+                  >
+                    Composite · {files.length} files
+                  </span>
+                )}
               </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                 {requested.has('copy') && (
                   <ActionButton icon={<Copy size={12} />} label={copied ? 'Copied' : 'Copy'} onClick={copyCode} done={copied} />
                 )}
                 {requested.has('download_afl') && (
                   <ActionButton
                     icon={<Download size={12} />}
-                    label={downloaded ? 'Downloaded' : 'Download .afl'}
+                    label={downloaded ? 'Downloaded' : isComposite ? 'Download file' : 'Download .afl'}
                     onClick={downloadAfl}
                     done={downloaded}
+                  />
+                )}
+                {isComposite && (
+                  <ActionButton
+                    icon={<Download size={12} />}
+                    label={downloadedAll ? 'Bundled' : 'Download all (.zip)'}
+                    onClick={downloadAllZip}
+                    done={downloadedAll}
+                    tone="primary"
                   />
                 )}
               </div>
             </div>
             <CodeView
               ref={codeRef}
-              code={d.afl_code || '/* No AFL code provided */'}
+              code={activeCode || '/* No AFL code provided */'}
               highlightLine={highlightLine}
               onLineClick={(ln) => setHighlightLine(ln)}
             />
@@ -1376,6 +1526,99 @@ const AFLStrategyCard: React.FC<Props> = ({ data }) => {
 };
 
 // ─── Sub-components used inside the main card ────────────────────────────────
+
+/**
+ * Horizontal scrollable file-tab strip for composite AFL bundles.
+ * Mirrors a typical IDE file-tab row: filename + active underline,
+ * `Include/` subfolder prefix shown muted, "main" badge on the entry-point.
+ */
+function FileTabStrip({
+  files,
+  activeIdx,
+  onChange,
+}: {
+  files: AFLFile[];
+  activeIdx: number;
+  onChange: (idx: number) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="AFL files"
+      style={{
+        display: 'flex',
+        gap: '2px',
+        padding: '8px 4px 0 4px',
+        borderBottom: `1px solid ${SUBTLE}`,
+        backgroundColor: 'rgba(255,255,255,0.015)',
+        borderRadius: '8px 8px 0 0',
+        overflowX: 'auto',
+      }}
+    >
+      {files.map((f, i) => {
+        const isActive = i === activeIdx;
+        const path = f.path || f.name;
+        const inSubfolder = path.includes('/') || path.includes('\\');
+        const folder = inSubfolder ? path.replace(/[\\/][^\\/]+$/, '').replace(/\\/g, '/') : '';
+        const baseName = path.split(/[\\/]/).pop() || f.name;
+        return (
+          <button
+            key={i}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(i)}
+            title={path}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 11px 8px 11px',
+              fontSize: '11.5px',
+              fontWeight: 600,
+              background: isActive ? 'rgba(254, 192, 15, 0.10)' : 'transparent',
+              border: 'none',
+              borderBottom: `2px solid ${isActive ? YELLOW : 'transparent'}`,
+              borderRadius: '6px 6px 0 0',
+              color: isActive ? YELLOW : 'rgba(255,255,255,0.65)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.12s ease',
+              minWidth: 0,
+              maxWidth: '260px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            <FileText size={12} color={isActive ? YELLOW : 'rgba(255,255,255,0.45)'} />
+            {folder && (
+              <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
+                {folder}/
+              </span>
+            )}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{baseName}</span>
+            {f.is_main && (
+              <span
+                style={{
+                  fontSize: '9.5px',
+                  padding: '1px 5px',
+                  borderRadius: '3px',
+                  backgroundColor: isActive ? `${YELLOW}33` : 'rgba(255,255,255,0.06)',
+                  color: isActive ? YELLOW : 'rgba(255,255,255,0.55)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                main
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function FilterChip({
   active,
