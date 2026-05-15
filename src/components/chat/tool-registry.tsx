@@ -65,6 +65,7 @@ import PersistentGenerationCard from '@/components/generative-ui/PersistentGener
 import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
 import AFLGenerationCard from '@/components/generative-ui/AFLGenerationCard';
 import AFLStrategyCard from '@/components/generative-ui/AFLStrategyCard';
+import AFLGeneratingCard from '@/components/generative-ui/AFLGeneratingCard';
 
 /**
  * AFLGenerateAdapter
@@ -1008,6 +1009,10 @@ export function renderToolPart(
         // Performance Engine gets its own branded loading card
         if (toolName === 'calculate_performance') {
           return <PerformanceLoadingCard key={pIdx} input={part.input} />;
+        }
+        // AFL generation gets a premium loading card matching the result surface
+        if (toolName === 'generate_afl_code') {
+          return <AFLGeneratingCard key={pIdx} input={part.input} />;
         }
         return <ToolLoading key={pIdx} toolName={loadingName} input={part.input} />;
       case 'output-available': {
