@@ -104,6 +104,7 @@ import {
   SkillExecutionAnimation,
 } from '@/components/generative-ui';
 import { AFLGenerateCard } from '@/components/generative-ui/AFLCodeCard';
+import AFLStrategyCard from '@/components/generative-ui/AFLStrategyCard';
 
 // ── AI Elements ───────────────────────────────────────────────────────────────
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
@@ -786,6 +787,12 @@ function renderInlineCard(cardType: string, data: any, key: number): React.React
     // via a tool-part. (Tool-part path keeps using AFLGenerationCard separately.)
     case 'afl':
       return <AFLGenerateCard key={key} {...data} />;
+    // Rich AFL envelope emitted by the unified `generate_afl_code` pipeline.
+    // Backend wraps the tool result in {type:"afl_strategy", data:{...}} —
+    // we render the dedicated AFLStrategyCard so the raw envelope never
+    // leaks into the chat bubble as text.
+    case 'afl_strategy':
+      return <AFLStrategyCard key={key} data={data} />;
     default:
       // Unknown card type — suppress the JSON, show nothing
       return null;

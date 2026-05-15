@@ -141,6 +141,11 @@ export { XlsxTransformCard } from './XlsxTransformCard';
 // NEW: AFL Generation Card with code preview and download (amibroker-afl-developer skill)
 export { default as AFLGenerationCard } from './AFLGenerationCard';
 
+// NEW: AFL Strategy Card — rich GenUI envelope renderer for `afl_strategy` cards
+// emitted by the unified `generate_afl_code` pipeline (validation panel,
+// quality score, issue navigation, debug / validate / explain actions).
+export { default as AFLStrategyCard } from './AFLStrategyCard';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SKILL EXECUTION RESULT CARDS
 // Generative UI components for Claude Custom Beta Skills

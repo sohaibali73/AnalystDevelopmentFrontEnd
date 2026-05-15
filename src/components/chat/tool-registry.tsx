@@ -64,6 +64,30 @@ import {
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
 import AFLGenerationCard from '@/components/generative-ui/AFLGenerationCard';
+import AFLStrategyCard from '@/components/generative-ui/AFLStrategyCard';
+
+/**
+ * AFLGenerateAdapter
+ * ------------------
+ * The unified `generate_afl_code` pipeline wraps its result in a GenUI envelope:
+ *
+ *   { ...legacyFields, genui_card: { type: 'afl_strategy', data: {...} } }
+ *
+ * When the envelope is present we render the rich AFLStrategyCard (validation
+ * panel, quality score, issue navigation, action bar). Legacy tool results
+ * (no envelope) continue to render the original AFLGenerateCard so existing
+ * Generator / Reverse-Engineer pages keep working without changes.
+ *
+ * Designed so the raw envelope JSON never leaks into the UI — only typed
+ * fields are passed into the card.
+ */
+function AFLGenerateAdapter(props: any) {
+  const envelope = props?.genui_card;
+  if (envelope && envelope.type === 'afl_strategy' && envelope.data) {
+    return <AFLStrategyCard data={envelope.data} />;
+  }
+  return <AFLGenerateCard {...props} />;
+}
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
 import { SandboxArtifactRenderer } from '@/components/sandbox';
@@ -305,19 +329,22 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   code_execution:           { component: SandboxArtifactRenderer, mode: 'sandbox', displayName: 'Code Execution' },
 
   // ── AFL Tools ────────────────────────────────────────────�����───────────────
-  generate_afl_code:        { component: AFLGenerateCard },
+  // Unified AFL pipeline — adapter prefers the rich `afl_strategy` envelope
+  // (validation panel, quality score, issue navigation) and falls back to the
+  // simple AFLGenerateCard for legacy tool outputs.
+  generate_afl_code:        { component: AFLGenerateAdapter },
   validate_afl:             { component: AFLValidateCard },
   debug_afl_code:           { component: AFLDebugCard },
   explain_afl_code:         { component: AFLExplainCard },
   sanity_check_afl:         { component: AFLSanityCheckCard },
-  generate_afl:             { component: AFLGenerateCard, displayName: 'AFL Generator' },
-  afl_generate:             { component: AFLGenerateCard, displayName: 'AFL Generator' },
-  afl_code:                 { component: AFLGenerateCard, displayName: 'AFL Code' },
-  create_afl:               { component: AFLGenerateCard, displayName: 'AFL Creator' },
-  write_afl:                { component: AFLGenerateCard, displayName: 'AFL Writer' },
-  afl_strategy:             { component: AFLGenerateCard, displayName: 'AFL Strategy' },
-  amibroker:                { component: AFLGenerateCard, displayName: 'AmiBroker' },
-  afl:                      { component: AFLGenerateCard, displayName: 'AFL' },
+  generate_afl:             { component: AFLGenerateAdapter, displayName: 'AFL Generator' },
+  afl_generate:             { component: AFLGenerateAdapter, displayName: 'AFL Generator' },
+  afl_code:                 { component: AFLGenerateAdapter, displayName: 'AFL Code' },
+  create_afl:               { component: AFLGenerateAdapter, displayName: 'AFL Creator' },
+  write_afl:                { component: AFLGenerateAdapter, displayName: 'AFL Writer' },
+  afl_strategy:             { component: AFLGenerateAdapter, displayName: 'AFL Strategy' },
+  amibroker:                { component: AFLGenerateAdapter, displayName: 'AmiBroker' },
+  afl:                      { component: AFLGenerateAdapter, displayName: 'AFL' },
 
   // ── Web Search ───────────────────────────────────────────────────────────
   web_search:               { component: WebSearchResults },
