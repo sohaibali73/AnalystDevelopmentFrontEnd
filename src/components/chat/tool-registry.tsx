@@ -91,7 +91,16 @@ import {
  */
 function AFLGenerateAdapter(props: any) {
   const envelope = props?.genui_card;
-  if (envelope && envelope.type === 'afl_strategy' && envelope.data) {
+  // Accept both the canonical bare type ('afl_strategy') and the
+  // data-card-prefixed form ('data-card_afl_strategy'). The backend
+  // currently emits the bare form for this envelope and the prefixed
+  // form for the other AFL cards; tolerate both so the card renders
+  // regardless of which contract the server is on.
+  if (
+    envelope &&
+    envelope.data &&
+    (envelope.type === 'afl_strategy' || envelope.type === 'data-card_afl_strategy')
+  ) {
     return <AFLStrategyCard data={envelope.data} />;
   }
   // No GenUI envelope — synthesise one from the legacy tool fields so the

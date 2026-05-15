@@ -1151,6 +1151,8 @@ interface RefSection {
   entries?: any[];
   code?: string;
   rules?: string[];
+  /** Backend currently emits sections as multi-line text blocks: { title, body }. */
+  body?: string;
 }
 
 export interface AFLReferenceData {
@@ -1185,10 +1187,15 @@ export function AFLReferenceCard({ data }: { data?: AFLReferenceData }) {
 
   const activeSection = sections[active] || { title: '', entries: [] };
   const title = String(activeSection.title || `Section ${active + 1}`).toLowerCase();
-  const isSignatures = title.includes('signature') || title.includes('function');
-  const isReserved = title.includes('reserved') || title.includes('keyword');
+  const hasEntries = Array.isArray(activeSection.entries) && activeSection.entries.length > 0;
+  const isSignatures = (title.includes('signature') || title.includes('function')) && hasEntries;
+  const isReserved = (title.includes('reserved') || title.includes('keyword')) && hasEntries;
   const isCode = !!activeSection.code;
   const isRules = Array.isArray(activeSection.rules) && activeSection.rules.length > 0;
+  // Backend body fallback — most sections currently arrive as { title, body }
+  // multi-line text. Render those as a monospace code-style pane so the
+  // signature lines / param/optimize template / timeframe rules stay aligned.
+  const isBody = !isSignatures && !isReserved && !isCode && !isRules && typeof activeSection.body === 'string' && activeSection.body.trim().length > 0;
 
   return (
     <CardShell
@@ -1279,7 +1286,16 @@ export function AFLReferenceCard({ data }: { data?: AFLReferenceData }) {
           </ul>
         )}
 
-        {!isSignatures && !isReserved && !isCode && !isRules && (
+        {isBody && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '6px' }}>
+              <CopyButton text={activeSection.body!} label="Copy" />
+            </div>
+            <CodePane code={activeSection.body!} maxHeight="400px" />
+          </div>
+        )}
+
+        {!isSignatures && !isReserved && !isCode && !isRules && !isBody && (
           <div style={{ fontSize: '12.5px', color: SLATE, fontStyle: 'italic' }}>No content for this section.</div>
         )}
       </div>
