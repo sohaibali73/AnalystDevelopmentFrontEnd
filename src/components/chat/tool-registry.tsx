@@ -66,6 +66,13 @@ import DocumentGenerationCard from '@/components/generative-ui/DocumentGeneratio
 import AFLGenerationCard from '@/components/generative-ui/AFLGenerationCard';
 import AFLStrategyCard from '@/components/generative-ui/AFLStrategyCard';
 import AFLGeneratingCard from '@/components/generative-ui/AFLGeneratingCard';
+import {
+  AFLValidationCard,
+  AFLSanityCheckEnvelopeCard,
+  AFLDebugDiffCard,
+  AFLExplanationCard,
+  AFLReferenceCard,
+} from '@/components/generative-ui';
 
 /**
  * AFLGenerateAdapter
@@ -87,7 +94,185 @@ function AFLGenerateAdapter(props: any) {
   if (envelope && envelope.type === 'afl_strategy' && envelope.data) {
     return <AFLStrategyCard data={envelope.data} />;
   }
+  // No GenUI envelope — synthesise one from the legacy tool fields so the
+  // flagship AFLStrategyCard renders consistently across every code path.
+  if (props?.afl_code || props?.code) {
+    const issues = Array.isArray(props.issues)
+      ? props.issues
+      : [
+          ...(Array.isArray(props.errors) ? props.errors.map((m: string) => ({ severity: 'ERROR', message: m })) : []),
+          ...(Array.isArray(props.warnings) ? props.warnings.map((m: string) => ({ severity: 'WARNING', message: m })) : []),
+        ];
+    return (
+      <AFLStrategyCard
+        data={{
+          title: props.title || props.strategy_name || 'AFL Strategy',
+          description: props.description,
+          strategy_type: props.strategy_type,
+          trade_timing: props.trade_timing,
+          afl_code: props.afl_code || props.code,
+          explanation: props.explanation,
+          validation: {
+            is_valid: props.validation_valid ?? props.valid,
+            errors: props.validation_errors ?? props.error_count ?? (props.errors?.length ?? 0),
+            warnings: props.validation_warnings ?? props.warning_count ?? (props.warnings?.length ?? 0),
+            suggestions: props.suggestion_count ?? 0,
+            info: props.info_count ?? 0,
+            quality_score: props.quality_score,
+            issues,
+          },
+          stats: {
+            generation_time_ms: props.generation_time_ms ?? (typeof props.generation_time === 'number' ? Math.round(props.generation_time * 1000) : undefined),
+            model: props.model,
+            line_count: props.line_count,
+            has_buy_sell: props.has_buy_sell,
+            has_plot: props.has_plot,
+            has_sections: props.has_section_markers,
+          },
+        }}
+      />
+    );
+  }
   return <AFLGenerateCard {...props} />;
+}
+
+/** Route validate_afl tool output to the new flagship AFLValidationCard. */
+function AFLValidateAdapter(props: any) {
+  const envelope = props?.genui_card;
+  if (envelope?.type === 'data-card_afl_validation' && envelope.data) {
+    return <AFLValidationCard data={envelope.data} />;
+  }
+  const errors = Array.isArray(props.errors) ? props.errors : [];
+  const warnings = Array.isArray(props.warnings) ? props.warnings : [];
+  const suggestions = Array.isArray(props.suggestions) ? props.suggestions : [];
+  const issues = Array.isArray(props.issues) && props.issues.length > 0
+    ? props.issues
+    : [
+        ...errors.map((m: any) => (typeof m === 'string' ? { severity: 'ERROR', message: m } : m)),
+        ...warnings.map((m: any) => (typeof m === 'string' ? { severity: 'WARNING', message: m } : m)),
+        ...suggestions.map((m: any) => (typeof m === 'string' ? { severity: 'SUGGESTION', message: m } : m)),
+      ];
+  return (
+    <AFLValidationCard
+      data={{
+        valid: props.valid ?? props.success,
+        line_count: props.line_count,
+        counts: {
+          errors: props.error_count ?? errors.length,
+          warnings: props.warning_count ?? warnings.length,
+          suggestions: props.suggestion_count ?? suggestions.length,
+          info: props.info_count ?? 0,
+          cascades: props.cascade_count ?? 0,
+        },
+        structure: {
+          has_buy_sell: props.has_buy_sell,
+          has_plot: props.has_plot,
+          has_section_markers: props.has_section_markers,
+        },
+        issues,
+        summary: props.summary,
+      }}
+    />
+  );
+}
+
+/** Route sanity_check_afl tool output to the new flagship AFLSanityCheckCard. */
+function AFLSanityCheckAdapter(props: any) {
+  const envelope = props?.genui_card;
+  if (envelope?.type === 'data-card_afl_sanity_check' && envelope.data) {
+    return <AFLSanityCheckEnvelopeCard data={envelope.data} />;
+  }
+  const errors = Array.isArray(props.errors) ? props.errors : [];
+  const warnings = Array.isArray(props.warnings) ? props.warnings : [];
+  const issues = Array.isArray(props.issues) && props.issues.length > 0
+    ? props.issues
+    : [
+        ...errors.map((m: any) => (typeof m === 'string' ? { severity: 'ERROR', message: m } : m)),
+        ...warnings.map((m: any) => (typeof m === 'string' ? { severity: 'WARNING', message: m } : m)),
+      ];
+  const byCategory: Record<string, number> = {};
+  for (const it of issues) {
+    const c = (it && it.category) || 'Other';
+    byCategory[c] = (byCategory[c] || 0) + 1;
+  }
+  return (
+    <AFLSanityCheckEnvelopeCard
+      data={{
+        is_valid: props.is_valid ?? props.original_valid ?? props.valid,
+        total_issues: props.total_issues ?? props.total_issues_found ?? issues.length,
+        counts: {
+          errors: props.error_count ?? errors.length,
+          warnings: props.warning_count ?? warnings.length,
+          suggestions: props.suggestion_count ?? 0,
+          info: props.info_count ?? 0,
+          cascades: props.cascade_count ?? 0,
+        },
+        line_count: props.line_count,
+        auto_fix_applied: props.auto_fix ?? props.auto_fixed,
+        report: props.report,
+        issues_by_category: byCategory,
+        issues,
+        summary: props.summary,
+      }}
+    />
+  );
+}
+
+/** Route debug_afl_code tool output to the new flagship AFLDebugDiffCard. */
+function AFLDebugAdapter(props: any) {
+  const envelope = props?.genui_card;
+  if (envelope?.type === 'data-card_afl_debug' && envelope.data) {
+    return <AFLDebugDiffCard data={envelope.data} />;
+  }
+  return (
+    <AFLDebugDiffCard
+      data={{
+        error_message: props.error_message,
+        original_code_preview: props.original_code_preview ?? props.original_code,
+        original_code: props.original_code,
+        fixed_code: props.fixed_code,
+        diff_summary: props.diff_summary,
+        summary: props.summary,
+      }}
+    />
+  );
+}
+
+/** Route explain_afl_code tool output to the new flagship AFLExplanationCard. */
+function AFLExplainAdapter(props: any) {
+  const envelope = props?.genui_card;
+  if (envelope?.type === 'data-card_afl_explanation' && envelope.data) {
+    return <AFLExplanationCard data={envelope.data} />;
+  }
+  return (
+    <AFLExplanationCard
+      data={{
+        code_preview: props.code_preview ?? props.code,
+        code: props.code,
+        sections: props.sections,
+        explanation_raw: props.explanation_raw ?? props.explanation,
+        explanation: props.explanation,
+        summary: props.summary,
+      }}
+    />
+  );
+}
+
+/** Route get_afl_syntax_reference tool output to the new flagship AFLReferenceCard. */
+function AFLReferenceAdapter(props: any) {
+  const envelope = props?.genui_card;
+  if (envelope?.type === 'data-card_afl_reference' && envelope.data) {
+    return <AFLReferenceCard data={envelope.data} />;
+  }
+  return (
+    <AFLReferenceCard
+      data={{
+        sections: props.sections,
+        reference: props.reference,
+        summary: props.summary,
+      }}
+    />
+  );
 }
 import DocumentDownloadCard from '@/components/ai-elements/document-download-card';
 import { Tool as AITool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '@/components/ai-elements/tool';
@@ -334,10 +519,11 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   // (validation panel, quality score, issue navigation) and falls back to the
   // simple AFLGenerateCard for legacy tool outputs.
   generate_afl_code:        { component: AFLGenerateAdapter },
-  validate_afl:             { component: AFLValidateCard },
-  debug_afl_code:           { component: AFLDebugCard },
-  explain_afl_code:         { component: AFLExplainCard },
-  sanity_check_afl:         { component: AFLSanityCheckCard },
+  validate_afl:             { component: AFLValidateAdapter },
+  debug_afl_code:           { component: AFLDebugAdapter },
+  explain_afl_code:         { component: AFLExplainAdapter },
+  sanity_check_afl:         { component: AFLSanityCheckAdapter },
+  get_afl_syntax_reference: { component: AFLReferenceAdapter },
   generate_afl:             { component: AFLGenerateAdapter, displayName: 'AFL Generator' },
   afl_generate:             { component: AFLGenerateAdapter, displayName: 'AFL Generator' },
   afl_code:                 { component: AFLGenerateAdapter, displayName: 'AFL Code' },

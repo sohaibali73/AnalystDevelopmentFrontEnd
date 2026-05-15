@@ -103,7 +103,6 @@ import {
   FileAnalysisCard,
   SkillExecutionAnimation,
 } from '@/components/generative-ui';
-import { AFLGenerateCard } from '@/components/generative-ui/AFLCodeCard';
 import AFLStrategyCard from '@/components/generative-ui/AFLStrategyCard';
 import {
   AFLValidationCard,
@@ -712,63 +711,121 @@ interface CardToken {
 }
 type TextSegment = CardSegment | CardToken;
 
+/**
+ * Strip raw tool-call markup that Claude sometimes leaks into the visible
+ * assistant text:
+ *   <function_calls>…</function_calls>
+ *   <invoke name="…">…</invoke>
+ *   <parameter name="…">…</parameter>
+ * Each tag — whether self-closing, opening, or closing — gets removed along
+ * with the content of well-formed `<function_calls>` / `<invoke>` blocks
+ * (which are tool-call directives, not user-facing content).
+ */
+function stripToolCallMarkup(text: string): string {
+  let out = text;
+  // Greedy block strip — full <function_calls>…</function_calls> (and nested
+  // invoke/parameter inside it). Multi-line, dot-matches-newline via [\s\S].
+  out = out.replace(/<function_calls\b[^>]*>[\s\S]*?<\/function_calls>/gi, '');
+  out = out.replace(/<invoke\b[^>]*>[\s\S]*?<\/invoke>/gi, '');
+  out = out.replace(/<parameter\b[^>]*>[\s\S]*?<\/parameter>/gi, '');
+  // Orphan opening/closing tags that survived (truncated streams etc.)
+  out = out.replace(/<\/?(?:function_calls|invoke|parameter)\b[^>]*>/gi, '');
+  // Collapse the giant whitespace gap a stripped block leaves behind.
+  out = out.replace(/\n{3,}/g, '\n\n');
+  return out;
+}
+
 function splitTextWithCards(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
+  // Pre-process: remove leaked XML tool-call markup before card extraction.
+  const cleaned = stripToolCallMarkup(text);
   let lastIndex = 0;
   let i = 0;
 
   // Patterns we want to strip and optionally render as a card:
-  //   {"card":"...",...}          — original format
-  //   {"type":"data-card_afl",...} — AFL skill output format
-  const JSON_OPENERS = ['{"card":"', '{"type":"data-card_'];
+  //   {"card":"...",...}            — original format (value-based type)
+  //   {"type":"data-card_X",...}    — explicit envelope
+  //   {"data-card_X":{...}}         — key-based envelope (model often emits this)
+  const JSON_OPENERS = ['{"card":"', '{"type":"data-card_', '{"data-card_'];
 
-  while (i < text.length) {
+  while (i < cleaned.length) {
     // Find the earliest occurrence of any opener from current position
     let start = -1;
-    let matchedOpener = '';
     for (const opener of JSON_OPENERS) {
-      const pos = text.indexOf(opener, i);
+      const pos = cleaned.indexOf(opener, i);
       if (pos !== -1 && (start === -1 || pos < start)) {
         start = pos;
-        matchedOpener = opener;
       }
     }
     if (start === -1) break;
 
-    // Walk forward counting braces to find the matching closing }
+    // Walk forward counting braces to find the matching closing }.
+    // Skip braces inside strings so we don't terminate early on `"}"`-like content.
     let depth = 0;
     let j = start;
     let found = -1;
-    while (j < text.length) {
-      if (text[j] === '{') depth++;
-      else if (text[j] === '}') {
-        depth--;
-        if (depth === 0) { found = j; break; }
+    let inStr = false;
+    let escape = false;
+    while (j < cleaned.length) {
+      const ch = cleaned[j];
+      if (inStr) {
+        if (escape) escape = false;
+        else if (ch === '\\') escape = true;
+        else if (ch === '"') inStr = false;
+      } else {
+        if (ch === '"') inStr = true;
+        else if (ch === '{') depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) { found = j; break; }
+        }
       }
       j++;
     }
     if (found === -1) break;
 
-    const json = text.slice(start, found + 1);
+    const json = cleaned.slice(start, found + 1);
+    let consumed = false;
     try {
       const parsed = JSON.parse(json);
-      // Support both {"card":"...", "data":...} and {"type":"data-card_...", "data":...}
-      const cardType: string | undefined =
-        parsed.card ||
-        (typeof parsed.type === 'string' && parsed.type.startsWith('data-card_')
-          ? parsed.type.replace('data-card_', '')
-          : undefined);
+      // Discover the card type from any of three envelope shapes.
+      let cardType: string | undefined;
+      let cardData: any;
+      if (typeof parsed.card === 'string') {
+        cardType = parsed.card;
+        cardData = parsed.data ?? parsed;
+      } else if (typeof parsed.type === 'string' && parsed.type.startsWith('data-card_')) {
+        cardType = parsed.type.replace('data-card_', '');
+        cardData = parsed.data ?? parsed;
+      } else {
+        // Key-based form: { "data-card_X": {...} } where the only key is the envelope.
+        const keys = Object.keys(parsed);
+        const envKey = keys.find((k) => k.startsWith('data-card_'));
+        if (envKey) {
+          cardType = envKey.replace('data-card_', '');
+          cardData = parsed[envKey];
+        }
+      }
 
       if (cardType !== undefined) {
-        if (start > lastIndex) segments.push({ type: 'text', text: text.slice(lastIndex, start) });
-        segments.push({ type: 'card', cardType, data: parsed.data ?? parsed });
+        if (start > lastIndex) segments.push({ type: 'text', text: cleaned.slice(lastIndex, start) });
+        segments.push({ type: 'card', cardType, data: cardData });
         lastIndex = found + 1;
+        consumed = true;
       }
-    } catch { /* not valid JSON, skip */ }
+    } catch { /* not valid JSON — leave it as text */ }
+    // If we recognised an envelope shape (even one we don't render) we should
+    // still suppress the raw JSON from the bubble; renderInlineCard already
+    // returns null for unknown types. The `consumed` flag ensures lastIndex
+    // moves past the envelope so it doesn't reappear as text.
+    if (!consumed) {
+      // Look ahead from the next character, not past the failed parse — we
+      // might still find a later valid envelope.
+    }
     i = found + 1;
   }
 
-  if (lastIndex < text.length) segments.push({ type: 'text', text: text.slice(lastIndex) });
+  if (lastIndex < cleaned.length) segments.push({ type: 'text', text: cleaned.slice(lastIndex) });
   return segments;
 }
 
@@ -789,11 +846,47 @@ function renderInlineCard(cardType: string, data: any, key: number): React.React
       return <BacktestResults key={key} {...data} />;
     case 'performance':
       return <PerformanceCard key={key} data={data} />;
-    // AFL card embedded as JSON in the assistant text. Render it inline so the
-    // bubble isn't blank when the backend streams the card via text instead of
-    // via a tool-part. (Tool-part path keeps using AFLGenerationCard separately.)
-    case 'afl':
-      return <AFLGenerateCard key={key} {...data} />;
+    // AFL card embedded as JSON in the assistant text. Adapt the legacy
+    // shape into the flagship AFLStrategyCard envelope so all paths render
+    // the same premium surface.
+    case 'afl': {
+      const issues = Array.isArray(data?.issues)
+        ? data.issues
+        : [
+            ...(Array.isArray(data?.errors) ? data.errors.map((m: string) => ({ severity: 'ERROR', message: m })) : []),
+            ...(Array.isArray(data?.warnings) ? data.warnings.map((m: string) => ({ severity: 'WARNING', message: m })) : []),
+          ];
+      return (
+        <AFLStrategyCard
+          key={key}
+          data={{
+            title: data?.title || data?.strategy_name || 'AFL Strategy',
+            description: data?.description,
+            strategy_type: data?.strategy_type,
+            trade_timing: data?.trade_timing,
+            afl_code: data?.afl_code || data?.code,
+            explanation: data?.explanation,
+            validation: {
+              is_valid: data?.validation_valid ?? data?.valid ?? data?.validated,
+              errors: data?.validation_errors ?? data?.error_count ?? (data?.errors?.length ?? 0),
+              warnings: data?.validation_warnings ?? data?.warning_count ?? (data?.warnings?.length ?? 0),
+              suggestions: data?.suggestion_count ?? 0,
+              info: data?.info_count ?? 0,
+              quality_score: data?.quality_score,
+              issues,
+            },
+            stats: {
+              generation_time_ms: data?.generation_time_ms,
+              model: data?.model,
+              line_count: data?.line_count,
+              has_buy_sell: data?.has_buy_sell,
+              has_plot: data?.has_plot,
+              has_sections: data?.has_section_markers,
+            },
+          }}
+        />
+      );
+    }
     // Rich AFL envelope emitted by the unified `generate_afl_code` pipeline.
     // Backend wraps the tool result in {type:"afl_strategy", data:{...}} —
     // we render the dedicated AFLStrategyCard so the raw envelope never
