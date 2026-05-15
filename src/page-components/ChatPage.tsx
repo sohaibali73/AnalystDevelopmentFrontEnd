@@ -105,6 +105,13 @@ import {
 } from '@/components/generative-ui';
 import { AFLGenerateCard } from '@/components/generative-ui/AFLCodeCard';
 import AFLStrategyCard from '@/components/generative-ui/AFLStrategyCard';
+import {
+  AFLValidationCard,
+  AFLSanityCheckCard,
+  AFLDebugDiffCard,
+  AFLExplanationCard,
+  AFLReferenceCard,
+} from '@/components/generative-ui/AFLToolCards';
 
 // ── AI Elements ───────────────────────────────────────────────────────────────
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
@@ -793,6 +800,19 @@ function renderInlineCard(cardType: string, data: any, key: number): React.React
     // leaks into the chat bubble as text.
     case 'afl_strategy':
       return <AFLStrategyCard key={key} data={data} />;
+    // GenUI envelopes for the rest of the AFL toolchain.
+    // Backend emits {type:"data-card_afl_<name>", data:{...}} from the
+    // matching handler in core/tools.py.
+    case 'afl_validation':
+      return <AFLValidationCard key={key} data={data} />;
+    case 'afl_sanity_check':
+      return <AFLSanityCheckCard key={key} data={data} />;
+    case 'afl_debug':
+      return <AFLDebugDiffCard key={key} data={data} />;
+    case 'afl_explanation':
+      return <AFLExplanationCard key={key} data={data} />;
+    case 'afl_reference':
+      return <AFLReferenceCard key={key} data={data} />;
     default:
       // Unknown card type — suppress the JSON, show nothing
       return null;

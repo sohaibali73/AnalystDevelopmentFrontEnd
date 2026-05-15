@@ -146,6 +146,22 @@ export { default as AFLGenerationCard } from './AFLGenerationCard';
 // quality score, issue navigation, debug / validate / explain actions).
 export { default as AFLStrategyCard } from './AFLStrategyCard';
 
+// AFL Tool Cards — GenUI envelope renderers for the five other AFL tools.
+// These consume the canonical { type: "data-card_afl_<name>", data: {...} }
+// envelope, distinct from the legacy spread-props cards in AFLCodeCard.tsx.
+//   data-card_afl_validation     -> validate_afl
+//   data-card_afl_sanity_check   -> sanity_check_afl
+//   data-card_afl_debug          -> debug_afl_code
+//   data-card_afl_explanation    -> explain_afl_code
+//   data-card_afl_reference      -> get_afl_syntax_reference
+export {
+  AFLValidationCard,
+  AFLSanityCheckCard as AFLSanityCheckEnvelopeCard,
+  AFLDebugDiffCard,
+  AFLExplanationCard,
+  AFLReferenceCard,
+} from './AFLToolCards';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SKILL EXECUTION RESULT CARDS
 // Generative UI components for Claude Custom Beta Skills
