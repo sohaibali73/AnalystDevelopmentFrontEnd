@@ -1090,6 +1090,33 @@ export function ChatPage() {
   useEffect(() => { maxIterationsRef.current = maxIterations; }, [maxIterations]);
   useEffect(() => { pinModelVersionRef.current = pinModelVersion; }, [pinModelVersion]);
 
+  // ── Auto-attach a Knowledge stack handed off from the Knowledge page ─────
+  // The Knowledge page writes a PendingStackAttach payload to localStorage
+  // under KB_PENDING_ATTACH_KEY when the user clicks "Use in chat" on a
+  // stack card, then routes here. Read it once on mount, attach, and clear
+  // the key so reloading /chat doesn't keep re-attaching.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem('kb_pending_attach_v1');
+      if (!raw) return;
+      window.localStorage.removeItem('kb_pending_attach_v1');
+      const parsed = JSON.parse(raw) as Partial<AttachedStack>;
+      if (!parsed || !parsed.id || !parsed.name) return;
+      setAttachedStack({
+        id: String(parsed.id),
+        name: String(parsed.name),
+        icon: parsed.icon ?? null,
+        color: parsed.color ?? null,
+        document_count: Number(parsed.document_count ?? 0),
+        total_chunks: Number(parsed.total_chunks ?? 0),
+        mode: (parsed.mode === 'full_content' ? 'full_content' : 'rag') as StackMode,
+      });
+    } catch {
+      /* swallow — corrupt payload shouldn't break chat */
+    }
+  }, []);
+
   const artifacts = selectedConversation ? (artifactsByConv[selectedConversation.id] || []) : [];
 
   // ── YANG: feature flags + stream events + checkpoints ────────────────────
