@@ -433,6 +433,7 @@ const INVOKE_DOC_INTERPRETER_SLUGS = new Set([
 ]);
 
 const INVOKE_AFL_SLUGS = new Set([
+  'afl-developer',
   'amibroker_afl_developer',
   'afl_developer',
   'generate_afl',

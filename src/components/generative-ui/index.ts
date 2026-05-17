@@ -138,7 +138,7 @@ export { XlsxAnalysisCard } from './XlsxAnalysisCard';
 // XLSX — transform_xlsx (pipeline preview, before/after row counts, download)
 export { XlsxTransformCard } from './XlsxTransformCard';
 
-// NEW: AFL Generation Card with code preview and download (amibroker-afl-developer skill)
+// AFL Generation Card with code preview and download — renders generate_afl_code results
 export { default as AFLGenerationCard } from './AFLGenerationCard';
 
 // NEW: AFL Strategy Card — rich GenUI envelope renderer for `afl_strategy` cards

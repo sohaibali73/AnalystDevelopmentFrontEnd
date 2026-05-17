@@ -4,8 +4,7 @@
  * AFLStrategyCard
  * ---------------
  * Premium generative-UI card for the unified AFL generation pipeline
- * (`generate_afl_code` / `generate_afl_with_skill` / `afl-developer` skill /
- *  `POST /afl/generate`).
+ * (`generate_afl_code` / `generate_afl_with_skill` / `POST /afl/generate`).
  *
  * Consumes the GenUI envelope:
  *

@@ -126,7 +126,7 @@ const SKILL_SLUG_LABELS: Record<string, string> = {
   'potomac-xlsx':        'Creating Excel Spreadsheet',
   'dcf-model':           'Building DCF Model',
   'doc-interpreter':     'Reading Document',
-  'amibroker-afl-developer': 'Generating AFL Code',
+  'afl-developer':       'Generating AFL Code',
   'backtest-expert':     'Backtest Analysis',
   'quant-analyst':       'Quant Analysis',
   'us-market-bubble-detector': 'Bubble Detection',

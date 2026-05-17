@@ -525,7 +525,7 @@ export function AFLGeneratorPage() {
       },
       body: () => ({
         conversationId: conversationIdRef.current,
-        skill_slug: 'amibroker_afl_developer',
+        skill_slug: 'afl-developer',
       }),
     }),
     onFinish: () => {
@@ -1660,7 +1660,7 @@ export function AFLGeneratorPage() {
                           }
                         }
 
-                        sendMessage({ text: messageText }, { body: { conversationId: convId, skill_slug: 'amibroker_afl_developer' } });
+                        sendMessage({ text: messageText }, { body: { conversationId: convId, skill_slug: 'afl-developer' } });
                       }}
                     >
                       <AttachmentsDisplay 

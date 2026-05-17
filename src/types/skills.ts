@@ -245,7 +245,7 @@ export const SKILL_SLUGS = {
   PDF: 'pdf',
   DOCX: 'docx',
   // Custom skills
-  AMIBROKER_AFL: 'amibroker-afl-developer',
+  AMIBROKER_AFL: 'afl-developer',
   POTOMAC_DOCX: 'potomac-docx-skill',
   POTOMAC_PPTX: 'potomac-pptx',
   AI_ELEMENTS: 'ai-elements',
