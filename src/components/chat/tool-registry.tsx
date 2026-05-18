@@ -78,6 +78,7 @@ import {
   WorkspaceListCard,
   WorkspaceExecutionCard,
 } from '@/components/generative-ui/WorkspaceCards';
+import { PdfReadCard, type PdfReadCardPayload } from '@/components/generative-ui/PdfReadCard';
 
 /**
  * AFLGenerateAdapter
@@ -348,6 +349,17 @@ function WorkspaceListFilesAdapter(props: any) {
       }}
     />
   );
+}
+
+function ReadPdfAdapter(props: any) {
+  // The tool result puts the renderable summary on `genui_card.data` but also
+  // exposes the same fields at the top level. Accept both shapes so we render
+  // correctly whether the chat hook flattens or preserves the envelope.
+  const data: PdfReadCardPayload =
+    (props?.genui_card?.data && typeof props.genui_card.data === 'object')
+      ? props.genui_card.data
+      : (props && typeof props === 'object' ? props : {});
+  return <PdfReadCard payload={data} />;
 }
 
 function WorkspaceExecuteFileAdapter(props: any) {
@@ -627,6 +639,9 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   workspace_read_file:    { component: WorkspaceReadFileAdapter,    displayName: 'Workspace · Read'  },
   workspace_list_files:   { component: WorkspaceListFilesAdapter,   displayName: 'Workspace · Files' },
   workspace_execute_file: { component: WorkspaceExecuteFileAdapter, displayName: 'Workspace · Run'   },
+
+  // ── PDF reader (replaces ad-hoc execute_python(pdfplumber) flow) ─────────
+  read_pdf:               { component: ReadPdfAdapter,              displayName: 'PDF · Read'        },
   generate_afl:             { component: AFLGenerateAdapter, displayName: 'AFL Generator' },
   afl_generate:             { component: AFLGenerateAdapter, displayName: 'AFL Generator' },
   afl_code:                 { component: AFLGenerateAdapter, displayName: 'AFL Code' },

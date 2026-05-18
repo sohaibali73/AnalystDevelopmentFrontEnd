@@ -23,6 +23,7 @@ const toolMeta: Record<string, { icon: React.ReactNode; label: string; color: st
   workspace_read_file:  { icon: <FileCode2 size={13} />,  label: 'Reading workspace file',   color: '#FEC00F' },
   workspace_list_files: { icon: <Layers size={13} />,     label: 'Listing workspace files',  color: '#FEC00F' },
   workspace_execute_file: { icon: <Play size={13} />,     label: 'Running workspace file',   color: '#FEC00F' },
+  read_pdf:             { icon: <BookOpen size={13} />,   label: 'Reading PDF',              color: '#fb7185' },
   get_live_scores:      { icon: <Zap size={13} />,        label: 'Fetching live scores',     color: '#fb923c' },
   get_search_trends:    { icon: <Globe size={13} />,      label: 'Loading trends',           color: '#818cf8' },
   create_linkedin_post: { icon: <Globe size={13} />,      label: 'Composing post',           color: '#38bdf8' },
