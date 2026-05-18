@@ -13,6 +13,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
+import { Code2 } from 'lucide-react';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import WorkspacePanel from './WorkspacePanel';
 
@@ -108,61 +109,170 @@ function WorkspaceObserver({ streamMessages }: { streamMessages: ChatMessageLike
 }
 
 // ─── Dock ────────────────────────────────────────────────────────────────────
-// Hides the panel entirely when there are no files, and respects the user's
-// collapse preference (kept in localStorage so it sticks across reloads).
+// Defaults to COLLAPSED. The panel never auto-opens, even when the agent
+// writes a new file — instead a small "•" indicator appears on the strip to
+// hint that something changed since the user last looked. Clicking the strip
+// expands the IDE; the open/closed preference persists in localStorage.
+//
+// Storage keys:
+//   workspace_panel_collapsed_v1 — '1' collapsed (default), '0' open
+//   workspace_panel_seen_count_v1 — last file count the user observed open
 
 const COLLAPSED_KEY = 'workspace_panel_collapsed_v1';
+const SEEN_COUNT_KEY = 'workspace_panel_seen_count_v1';
 
 function WorkspaceDock() {
   const { files } = useWorkspace();
+  // Default: collapsed. Only the explicit '0' value opens it on load.
   const [collapsed, setCollapsed] = React.useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    try { return window.localStorage.getItem(COLLAPSED_KEY) === '1'; } catch { return false; }
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem(COLLAPSED_KEY) !== '0';
+    } catch {
+      return true;
+    }
   });
 
-  // When new files arrive after a collapse, un-collapse so the user sees them.
-  const lastCountRef = useRef(files.length);
-  useEffect(() => {
-    if (files.length > lastCountRef.current) {
-      setCollapsed(false);
-      try { window.localStorage.removeItem(COLLAPSED_KEY); } catch {/* */}
+  // Track how many files the user has "seen" — used to render a small dot
+  // on the collapsed strip when fresh files arrive.
+  const [seenCount, setSeenCount] = React.useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const n = parseInt(window.localStorage.getItem(SEEN_COUNT_KEY) || '0', 10);
+      return Number.isFinite(n) ? n : 0;
+    } catch {
+      return 0;
     }
-    lastCountRef.current = files.length;
+  });
+
+  // When the panel is open, the user is "seeing" the current file count.
+  // Persist that so reloading the page doesn't re-flag everything as new.
+  useEffect(() => {
+    if (!collapsed) {
+      setSeenCount(files.length);
+      try { window.localStorage.setItem(SEEN_COUNT_KEY, String(files.length)); } catch {/* */}
+    }
+  }, [collapsed, files.length]);
+
+  const open = React.useCallback(() => {
+    setCollapsed(false);
+    setSeenCount(files.length);
+    try {
+      window.localStorage.setItem(COLLAPSED_KEY, '0');
+      window.localStorage.setItem(SEEN_COUNT_KEY, String(files.length));
+    } catch {/* */}
   }, [files.length]);
 
+  const close = React.useCallback(() => {
+    setCollapsed(true);
+    try { window.localStorage.setItem(COLLAPSED_KEY, '1'); } catch {/* */}
+  }, []);
+
   if (files.length === 0) return null;
+
   if (collapsed) {
-    return (
-      <button
-        type="button"
-        onClick={() => { setCollapsed(false); try { window.localStorage.removeItem(COLLAPSED_KEY); } catch {/* */} }}
-        title={`Open workspace · ${files.length} file${files.length === 1 ? '' : 's'}`}
-        style={{
-          flexShrink: 0,
-          width: 32,
-          height: '100%',
-          background: 'rgba(254,192,15,0.06)',
-          border: 'none',
-          borderLeft: '1px solid rgba(254,192,15,0.25)',
-          color: '#FEC00F',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          writingMode: 'vertical-rl',
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 10,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-        }}
-      >
-        Workspace · {files.length}
-      </button>
-    );
+    const hasNew = files.length > seenCount;
+    return <CollapsedStrip count={files.length} hasNew={hasNew} onOpen={open} />;
   }
 
+  return <WorkspacePanel onCollapse={close} />;
+}
+
+// ─── Sleek collapsed strip ──────────────────────────────────────────────────
+// Visibility model:
+//
+//   hover === true   → fully visible (the user is reaching for it)
+//   hasNew === true  → fully visible (the agent just wrote something — show
+//                                     so the user notices without hovering)
+//   otherwise        → opacity 0 (no visual weight at all)
+//
+// The 22 px-wide button is ALWAYS in the layout so the chat content never
+// reflows. It just animates its opacity in/out. Pointer events keep working
+// at opacity 0, so moving the cursor to the right edge of the chat triggers
+// `mouseenter` and reveals the strip.
+
+function CollapsedStrip({
+  count, hasNew, onOpen,
+}: {
+  count: number;
+  hasNew: boolean;
+  onOpen: () => void;
+}) {
+  const [hover, setHover] = React.useState(false);
+  const visible = hover || hasNew;
+
   return (
-    <WorkspacePanel onCollapse={() => { setCollapsed(true); try { window.localStorage.setItem(COLLAPSED_KEY, '1'); } catch {/* */} }} />
+    <button
+      type="button"
+      onClick={onOpen}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => setHover(false)}
+      title={`Open workspace · ${count} file${count === 1 ? '' : 's'}${hasNew ? ' · new activity' : ''}`}
+      aria-label={`Open workspace (${count} files)`}
+      style={{
+        flexShrink: 0,
+        width: 22,
+        height: '100%',
+        // Background only paints when actively hovered, and only at low
+        // opacity. When invisible we don't render any chrome at all.
+        background: hover ? 'rgba(255,255,255,0.045)' : 'transparent',
+        border: 'none',
+        borderLeft: visible ? '1px solid rgba(255,255,255,0.05)' : '1px solid transparent',
+        color: hover ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        padding: '14px 0',
+        opacity: visible ? 1 : 0,
+        transition: 'opacity .2s ease, background .14s ease, color .14s ease, border-color .14s ease',
+        position: 'relative',
+        // Outline only when keyboard-focused; the focus ring uses opacity 1.
+        outline: 'none',
+      }}
+    >
+      <span style={{ position: 'relative', display: 'inline-flex' }}>
+        <Code2 size={13} />
+        {hasNew && (
+          <span
+            aria-hidden
+            className="workspace-strip-dot"
+            style={{
+              position: 'absolute',
+              top: -3,
+              right: -4,
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#FEC00F',
+              boxShadow: '0 0 6px rgba(254,192,15,0.7)',
+            }}
+          />
+        )}
+      </span>
+      <span
+        style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 9.5,
+          fontWeight: 600,
+          letterSpacing: '0.02em',
+          color: 'inherit',
+        }}
+      >
+        {count}
+      </span>
+      <style>{`
+        @keyframes ws-strip-dot-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50%      { transform: scale(1.4); opacity: 0.6; }
+        }
+        .workspace-strip-dot { animation: ws-strip-dot-pulse 1.8s ease-in-out infinite; }
+      `}</style>
+    </button>
   );
 }
 

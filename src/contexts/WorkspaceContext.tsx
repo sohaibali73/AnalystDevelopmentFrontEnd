@@ -320,6 +320,10 @@ export function WorkspaceProvider({
             durationMs: result.execution_time_ms ?? null,
           },
         }));
+        // Pick up any files the script wrote (output.csv, etc.).
+        if (Array.isArray(result.workspace_files_changed) && result.workspace_files_changed.length > 0) {
+          void refresh();
+        }
       } catch (e) {
         setOutput((o) => ({
           ...o,
@@ -365,6 +369,14 @@ export function WorkspaceProvider({
             },
           };
         });
+      },
+      onWorkspaceFilesChanged: ({ filenames }) => {
+        // Script wrote files (output.csv, data.json, etc.) that the backend
+        // mirrored into workspace_files. Refresh the file list so the new
+        // tabs appear in the IDE panel.
+        if (Array.isArray(filenames) && filenames.length > 0) {
+          void refresh();
+        }
       },
       onError: ({ message }) => {
         streamCancelRef.current.delete(filename);

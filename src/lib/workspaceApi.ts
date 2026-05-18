@@ -48,12 +48,20 @@ export interface WorkspaceExecuteResponse {
   exit_code?:         number | null;
   artifacts?:         unknown[];
   execution_time_ms?: number | null;
+  /** Set when the script wrote new text files we mirrored into workspace_files.
+   *  Caller should refresh its file list so the new tabs appear. */
+  workspace_files_changed?: string[];
 }
 
 // SSE frame shapes (live execution stream). Backend buffers stdout/stderr
 // per line with a 50 ms idle flush and pushes chunks as the script writes
 // them. The `end` event carries `timed_out: true` (and exit_code 124) when
 // the sandbox kills a script that overruns SANDBOX_STREAM_TIMEOUT_S.
+//
+// `workspace_files_changed` arrives AFTER `end` when the script wrote one
+// or more text files (output.csv, data.json, scratch.py, etc.) that the
+// backend mirrored into workspace_files. Refresh the panel's file list
+// when this fires so the new tabs appear.
 export type WorkspaceStreamEvent =
   | { event: 'start';  data: { filename: string; language: string } }
   | { event: 'stdout'; data: { text: string } }
@@ -64,6 +72,7 @@ export type WorkspaceStreamEvent =
         execution_time_ms: number | null;
         timed_out: boolean;
       } }
+  | { event: 'workspace_files_changed'; data: { filenames: string[] } }
   | { event: 'error';  data: { message: string } };
 
 export interface WorkspaceStreamHandlers {
@@ -76,6 +85,9 @@ export interface WorkspaceStreamHandlers {
     execution_time_ms: number | null;
     timed_out: boolean;
   }) => void;
+  /** Fired after `end` when the script wrote files we mirrored back into
+   *  workspace_files. Caller should refresh its file list. */
+  onWorkspaceFilesChanged?: (d: { filenames: string[] }) => void;
   onError?:  (d: { message: string }) => void;
 }
 
@@ -270,6 +282,15 @@ export const workspaceApi = {
     });
     es.addEventListener('end', (e) => {
       try { handlers.onEnd?.(JSON.parse((e as MessageEvent).data)); } catch {/* */}
+      // NOTE: do NOT close on 'end' — the server may follow up with a
+      // 'workspace_files_changed' frame once the post-exec mirror finishes.
+      // The connection closes naturally when the server stops writing.
+    });
+    es.addEventListener('workspace_files_changed', (e) => {
+      try {
+        handlers.onWorkspaceFilesChanged?.(JSON.parse((e as MessageEvent).data));
+      } catch {/* */}
+      // This is always the LAST event for a run. Safe to close now.
       es.close();
     });
     // Named application-level 'error' frame from the server.

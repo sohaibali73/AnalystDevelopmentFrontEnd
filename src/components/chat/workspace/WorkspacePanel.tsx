@@ -57,9 +57,9 @@ const Monaco = dynamic(
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PANEL_WIDTH_KEY = 'workspace_panel_width_v1';
-const DEFAULT_WIDTH = 620;
-const MIN_WIDTH = 380;
-const MAX_WIDTH_PCT = 0.72;
+const DEFAULT_WIDTH = 500;
+const MIN_WIDTH = 360;
+const MAX_WIDTH_PCT = 0.65;
 const YELLOW = '#FEC00F';
 const GREEN = '#22c55e';
 const RED = '#ef4444';
