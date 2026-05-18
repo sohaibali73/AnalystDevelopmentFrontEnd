@@ -178,7 +178,7 @@ export function WorkspacePanel({ onCollapse }: { onCollapse?: () => void }) {
       >
         {/* Brand chip */}
         <div
-          title="Workspace IDE — files the agent created or modified in this chat"
+          title="Workspace IDE — files YANG created or modified in this chat"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -272,7 +272,7 @@ export function WorkspacePanel({ onCollapse }: { onCollapse?: () => void }) {
                 </span>
                 {agent && (
                   <span
-                    title="Last edited by the agent"
+                    title="Last edited by YANG"
                     style={{ display: 'inline-flex', alignItems: 'center', color: INDIGO, opacity: 0.75 }}
                   >
                     <Sparkles size={10} />

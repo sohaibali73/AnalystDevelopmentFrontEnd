@@ -129,7 +129,10 @@ function authorIcon(author?: string, size = 11) {
 }
 
 function authorLabel(author?: string): string {
-  if (author === 'agent') return 'Agent';
+  // Backend stores the assistant author as the literal string 'agent', but
+  // the product brand for that author is YANG. Only the user-visible label
+  // is rewritten — the API field stays as 'agent' so payloads still match.
+  if (author === 'agent') return 'YANG';
   if (author === 'system') return 'System';
   return 'You';
 }
@@ -511,7 +514,7 @@ export function WorkspaceFileCard({
   }, [ws, filename]);
 
   const eyebrow = mode === 'write'
-    ? (file.last_author === 'agent' ? 'Agent wrote · Workspace' : 'Saved · Workspace')
+    ? (file.last_author === 'agent' ? 'YANG wrote · Workspace' : 'Saved · Workspace')
     : 'Read · Workspace';
 
   return (
