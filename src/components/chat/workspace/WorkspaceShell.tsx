@@ -74,7 +74,6 @@ function WorkspaceObserver({ streamMessages }: { streamMessages: ChatMessageLike
           part.toolName
           || part.toolInvocation?.toolName
           || (partType.startsWith('tool-') ? partType.replace('tool-', '') : '');
-        if (!toolName.startsWith('workspace_')) return;
 
         // Only ingest when the result is actually present.
         const isReady = part.state === 'output-available'
@@ -82,11 +81,24 @@ function WorkspaceObserver({ streamMessages }: { streamMessages: ChatMessageLike
           || part.state === undefined; // legacy shapes
         if (!isReady) return;
 
+        const payload = part.output ?? part.result ?? part.toolInvocation?.result ?? null;
+
+        // Two ways a tool result can touch the workspace:
+        //  1. Explicit workspace_* tool call from the agent.
+        //  2. execute_python auto-mirror — the backend silently saves the
+        //     executed source as a workspace file and tags the result with
+        //     a `workspace_file` field. Refresh the panel in both cases.
+        let touchesWorkspace = toolName.startsWith('workspace_');
+        if (!touchesWorkspace && toolName === 'execute_python') {
+          const p = (payload ?? {}) as { workspace_file?: unknown };
+          touchesWorkspace = !!p && !!p.workspace_file;
+        }
+        if (!touchesWorkspace) return;
+
         const key = `${msg.id ?? '?'}::${toolName}::${idx}`;
         if (ingestedRef.current.has(key)) return;
         ingestedRef.current.add(key);
 
-        const payload = part.output ?? part.result ?? part.toolInvocation?.result ?? null;
         ingestToolResult(toolName, payload);
       });
     }

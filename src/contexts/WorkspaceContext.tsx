@@ -462,6 +462,16 @@ export function WorkspaceProvider({
       exit_code?: number | null;
       execution_time_ms?: number | null;
       success?: boolean;
+      // Auto-save mirror surfaced on execute_python results when the
+      // executed source was substantive enough for the backend to keep.
+      workspace_file?: {
+        filename:    string;
+        version:     number;
+        language:    WorkspaceLanguage;
+        size_bytes:  number;
+        last_author: 'agent' | 'user' | 'system';
+        auto_saved:  boolean;
+      };
     };
 
     if (toolName === 'workspace_write_file' && data.file) {
@@ -501,6 +511,32 @@ export function WorkspaceProvider({
           durationMs: data.execution_time_ms ?? null,
         },
       }));
+    } else if (toolName === 'execute_python' && data.workspace_file) {
+      // Backend silently mirrored the executed source into the workspace.
+      // We don't have the full file content here (refresh() will fetch it),
+      // but we can optimistically add the row to the list and auto-select it
+      // so the IDE panel pops in immediately.
+      const wf = data.workspace_file;
+      setFiles((list) => {
+        const idx = list.findIndex((f) => f.filename === wf.filename);
+        const summary: WorkspaceFileSummary = {
+          id: null,
+          filename:    wf.filename,
+          language:    wf.language,
+          version:     wf.version,
+          last_author: wf.last_author,
+          created_at:  null,
+          updated_at:  null,
+          size_bytes:  wf.size_bytes,
+        };
+        if (idx === -1) return [...list, summary];
+        const next = list.slice();
+        // Preserve known timestamps from the existing summary; only the
+        // mutable fields (version, size, author) change on a re-run.
+        next[idx] = { ...next[idx], ...summary, created_at: next[idx].created_at };
+        return next;
+      });
+      setActiveFilename((cur) => cur ?? wf.filename);
     }
 
     // Always reconcile against the server.

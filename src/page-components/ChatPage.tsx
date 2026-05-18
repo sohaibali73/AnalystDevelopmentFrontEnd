@@ -3086,6 +3086,14 @@ export function ChatPage() {
         focus={yangStream.focusSnapshot}
         enabled={yangSettingsHook.settings.focus_chain}
       />
+
+      {/* ── Workspace IDE (right dock, only renders when this conversation
+            has any workspace files). Lives inside the chat flex-row so the
+            panel reserves real horizontal space instead of floating. ── */}
+      <WorkspaceShell
+        conversationId={selectedConversation?.id ?? null}
+        streamMessages={streamMessages as unknown as Parameters<typeof WorkspaceShell>[0]['streamMessages']}
+      />
       </div>
 
       {/* ── YANG Checkpoints panel (portal-rendered drawer) ────────────────── */}
@@ -3123,13 +3131,6 @@ export function ChatPage() {
         document.body,
       )}
 
-      {/* ── Workspace IDE (right dock, only renders when this conversation
-            has any workspace files). Listens to streamMessages for
-            workspace_* tool-result parts and refreshes optimistically. ── */}
-      <WorkspaceShell
-        conversationId={selectedConversation?.id ?? null}
-        streamMessages={streamMessages as unknown as Parameters<typeof WorkspaceShell>[0]['streamMessages']}
-      />
     </div>
     </>
   );
