@@ -6,17 +6,31 @@ const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL ||
     : 'https://developer-potomaac.up.railway.app')).replace(/\/+$/, '');
 
 /**
- * Proxy route for File Upload
- * 
+ * DEPRECATED proxy route for File Upload.
+ *
+ * Frontend code should now use `src/lib/uploadConversationFile.ts` which
+ * POSTs DIRECTLY to the FastAPI backend at /upload/conversations/{id}.
+ *
+ * Why this route is bad:
+ *   • `await req.formData()` buffers the entire request body in memory on
+ *     the Next.js server BEFORE it forwards. On Vercel deployments this
+ *     hits the 4.5 MB serverless function body cap and returns 413 for
+ *     uploads that the backend (10 GB cap) would have happily accepted.
+ *   • Adds a wasted TLS hop and gives no extra functionality —
+ *     no auth, no normalization, no transformation.
+ *
+ * Kept here only as a back-compat shim for any old client that may still
+ * call /api/upload. New code MUST go through uploadConversationFile().
+ *
  * Proxies requests to backend: POST /upload/conversations/{conversation_id}
- * Supports file uploads with optional conversation context
- * 
+ * Supports file uploads with optional conversation context.
+ *
  * Query params:
  * - conversationId: The conversation to attach the file to (required)
- * 
+ *
  * Request body: multipart/form-data
  * - file: binary file data
- * 
+ *
  * Response:
  * {
  *   file_id: string,

@@ -7,6 +7,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { toast } from 'sonner';
 import apiClient from '@/lib/api';
+import { uploadConversationFile } from '@/lib/uploadConversationFile';
 import { Conversation as ConversationType } from '@/types/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -733,21 +734,14 @@ export function ReverseEngineerPage() {
                         } else { continue; }
 
                         const toastId = toast.loading(`Uploading ${fileName}...`);
-                        const formData = new FormData();
-                        formData.append('file', actualFile);
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 30000);
-                        const resp = await fetch(`/api/upload?conversationId=${convId}`, {
-                          method: 'POST',
-                          headers: { 'Authorization': token ? `Bearer ${token}` : '' },
-                          body: formData,
-                          signal: controller.signal,
-                        });
-                        clearTimeout(timeoutId);
-                        if (!resp.ok) {
-                          const errorData = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
-                          throw new Error(errorData.error || `Upload failed with status ${resp.status}`);
-                        }
+                        // Direct-to-backend upload (bypasses /api/upload proxy
+                        // so we don't hit Vercel's 4.5 MB serverless body cap).
+                        await uploadConversationFile(
+                          convId,
+                          actualFile,
+                          fileName,
+                          { bearerToken: token ?? undefined, timeoutMs: 30000 },
+                        );
                         uploaded.push(fileName);
                         toast.success(`Uploaded ${fileName}`, { id: toastId });
                       } catch (err) {

@@ -5,7 +5,8 @@
  *
  *   - Reuses the same /api/chat → /chat/agent stream as the main chat.
  *   - Renders text via streamdown (MessageResponse), tools via tool-registry.
- *   - Supports file uploads via /api/upload?conversationId=...
+ *   - File uploads go DIRECT to the backend via uploadConversationFile()
+ *     (skips the Next.js /api/upload proxy which 413s past 4.5 MB on Vercel).
  *   - YANG branding: "YANG" name + indigo ring avatar.
  */
 
@@ -21,6 +22,7 @@ import { MessageResponse } from '@/components/ai-elements/message';
 import { renderToolPart, isToolPart } from '@/components/chat/tool-registry';
 import { ChatFilePreviewModal } from '@/components/chat/ChatFilePreviewModal';
 import { API_BASE_URL_CHAT, type ChatPreviewFile } from '@/components/chat/chat-utils';
+import { uploadConversationFile } from '@/lib/uploadConversationFile';
 import { ChatModelSelector } from '@/components/chat/ChatModelSelector';
 
 interface Props {
@@ -186,24 +188,17 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
     setUploading(true);
     try {
       for (const file of files) {
-        const fd = new FormData();
-        fd.append('file', file);
         const t = getAuthToken();
-        const res = await fetch(
-          `/api/upload?conversationId=${project.conversation_id}`,
-          {
-            method: 'POST',
-            headers: t ? { Authorization: `Bearer ${t}` } : {},
-            body: fd,
-          },
+        // Direct-to-backend upload (bypasses /api/upload Next.js proxy,
+        // which hits Vercel's 4.5 MB serverless body cap on large files).
+        const j = await uploadConversationFile(
+          project.conversation_id,
+          file,
+          file.name,
+          { bearerToken: t ?? undefined },
         );
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `Upload failed: ${res.status}`);
-        }
-        const j = await res.json();
-        const fname = j.filename || file.name;
-        const fid = j.id || j.file_id || `f-${Date.now()}`;
+        const fname = (j.filename as string) || file.name;
+        const fid = (j.id as string) || (j.file_id as string) || `f-${Date.now()}`;
         setAttachments((prev) => [
           ...prev,
           {
@@ -213,8 +208,9 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
             type: j.content_type || file.type || 'application/octet-stream',
           },
         ]);
-        if (j.id || j.file_id) {
-          setFilenameToId((prev) => ({ ...prev, [fname]: j.id || j.file_id }));
+        const knownId: string | undefined = j.id || j.file_id;
+        if (knownId) {
+          setFilenameToId((prev) => ({ ...prev, [fname]: knownId }));
         }
       }
       toast.success(`Uploaded ${files.length} file${files.length > 1 ? 's' : ''}`);

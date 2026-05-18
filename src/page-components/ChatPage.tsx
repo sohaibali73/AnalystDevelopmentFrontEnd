@@ -34,6 +34,7 @@ import { DefaultChatTransport } from 'ai';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import apiClient from '@/lib/api';
+import { uploadConversationFile } from '@/lib/uploadConversationFile';
 import { Conversation as ConversationType } from '@/types/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -658,18 +659,19 @@ function ImmediateUploader({
           const fileObj = new File([blob], file.filename || 'file', {
             type: file.mediaType || 'application/octet-stream',
           });
-          const fd = new FormData();
-          fd.append('file', fileObj);
 
-          const token = getAuthToken();
-          const uploadResp = await fetch(`/api/upload?conversationId=${convId}`, {
-            method: 'POST',
-            headers: { Authorization: token ? `Bearer ${token}` : '' },
-            body: fd,
-          });
+          // Direct-to-backend upload (bypasses /api/upload Next.js proxy, which
+          // hits Vercel's 4.5 MB serverless body cap and 413s files long
+          // before they reach FastAPI's 10 GB limit).
+          let respData: { file_id?: string; id?: string } | null = null;
+          try {
+            respData = await uploadConversationFile(convId!, fileObj) as
+              { file_id?: string; id?: string };
+          } catch {
+            respData = null;
+          }
 
-          if (uploadResp.ok) {
-            const respData = await uploadResp.json().catch(() => ({}));
+          if (respData) {
             const backendFileId: string = respData.file_id || respData.id || '';
             if (backendFileId && convId) {
               const fileRef: ChatPreviewFile = {
@@ -2812,21 +2814,14 @@ export function ChatPage() {
                           continue;
                         }
 
-                        const formData = new FormData();
-                        formData.append('file', actualFile);
-
                         try {
-                          const resp = await fetchWithTimeout(
-                            `/api/upload?conversationId=${convId}`,
-                            {
-                              method: 'POST',
-                              headers: { Authorization: token ? `Bearer ${token}` : '' },
-                              body: formData,
-                            },
-                            30000
+                          // Direct-to-backend (bypasses /api/upload proxy).
+                          const respData = await uploadConversationFile(
+                            convId,
+                            actualFile,
+                            fileName,
+                            { bearerToken: token ?? undefined, timeoutMs: 30000 },
                           );
-                          if (!resp.ok) { const e = await resp.json().catch(() => ({ detail: `HTTP ${resp.status}` })); throw new Error(e.detail || e.error || `Upload failed: ${resp.status}`); }
-                          const respData = await resp.json();
                           uploaded.push(fileName);
                           const _fileRef: ChatPreviewFile = { url: file.url || undefined, fileId: respData.file_id || respData.id, filename: fileName, mediaType: file.mediaType, size: actualFile.size };
                           fileBlobCacheRef.current.set(fileName, _fileRef);

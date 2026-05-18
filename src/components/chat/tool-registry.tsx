@@ -305,6 +305,36 @@ function WorkspaceWriteFileAdapter(props: any) {
 }
 
 function WorkspaceReadFileAdapter(props: any) {
+  // A failed read (file not found, validation error, etc.) returns
+  // {success:false, error:"..."} — NOT a file payload. If we hand that
+  // straight to WorkspaceFileCard it renders "untitled · 0 B · 0 lines",
+  // which looks like a bug. Surface the actual error message instead.
+  const hasFile = !!props?.file?.filename || !!props?.genui_card?.data?.filename;
+  if (props?.success === false || !hasFile) {
+    const msg =
+      props?.error ||
+      props?.detail ||
+      (props?.tool ? `Could not read workspace file` : 'No file');
+    return (
+      <div
+        style={{
+          padding: '10px 14px',
+          background: 'rgba(239, 68, 68, 0.08)',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
+          borderRadius: 8,
+          color: 'rgba(255,255,255,0.78)',
+          fontSize: 13,
+          lineHeight: 1.5,
+          fontFamily: "'Inter', -apple-system, sans-serif",
+        }}
+      >
+        <div style={{ fontSize: 11, letterSpacing: '0.08em', color: 'rgba(239,68,68,0.85)', textTransform: 'uppercase', marginBottom: 4 }}>
+          Read · Workspace
+        </div>
+        {String(msg)}
+      </div>
+    );
+  }
   const file = props?.file ?? props?.genui_card?.data ?? props;
   return <WorkspaceFileCard file={file} mode="read" />;
 }
@@ -1421,17 +1451,25 @@ export function renderToolPart(
         if (part.state === 'output-error') {
           return <ToolError key={pIdx} toolName={displayName} errorText={part.errorText} output={part.output} />;
         }
-        // Show empty state instead of nothing
+        // No output is normal — a script that just `open(...).read()`s a
+        // file or assigns a few variables doesn't have to print anything.
+        // Render a small inert pill instead of a yellow warning banner that
+        // implies something went wrong.
         return (
-          <div key={pIdx} style={{ 
-            padding: '12px 16px', 
-            background: 'rgba(254, 192, 15, 0.1)', 
-            borderRadius: 8,
-            border: '1px solid rgba(254, 192, 15, 0.2)',
-            color: '#FEC00F',
-            fontSize: 13,
+          <div key={pIdx} style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 10px',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 999,
+            color: 'rgba(255,255,255,0.55)',
+            fontSize: 11,
+            letterSpacing: '0.04em',
+            fontFamily: "'Inter', -apple-system, sans-serif",
           }}>
-            {displayName} completed but returned no visible output
+            {displayName} ran (no output)
           </div>
         );
       }
