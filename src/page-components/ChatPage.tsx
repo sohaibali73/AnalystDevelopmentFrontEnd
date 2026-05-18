@@ -148,6 +148,7 @@ import { Image as AIImage } from '@/components/ai-elements/image';
 import { InlineReactPreview, stripReactCodeBlocks } from '@/components/InlineReactPreview';
 import PersistentGenerationCard from '@/components/generative-ui/PersistentGenerationCard';
 import { Database } from 'lucide-react';
+import WorkspaceShell from '@/components/chat/workspace/WorkspaceShell';
 
 const logo = '/potomac-icon.png';
 
@@ -3122,7 +3123,13 @@ export function ChatPage() {
         document.body,
       )}
 
-
+      {/* ── Workspace IDE (right dock, only renders when this conversation
+            has any workspace files). Listens to streamMessages for
+            workspace_* tool-result parts and refreshes optimistically. ── */}
+      <WorkspaceShell
+        conversationId={selectedConversation?.id ?? null}
+        streamMessages={streamMessages as unknown as Parameters<typeof WorkspaceShell>[0]['streamMessages']}
+      />
     </div>
     </>
   );
