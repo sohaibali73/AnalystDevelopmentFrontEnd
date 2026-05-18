@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Terminal, Database, DollarSign, Globe, Code2, Shield, Bug, BookOpen, Wand2, Zap, FileSearch, FileText } from 'lucide-react';
+import { Terminal, Database, DollarSign, Globe, Code2, Shield, Bug, BookOpen, Wand2, Zap, FileSearch, FileText, Save, FileCode2, Layers, Play } from 'lucide-react';
 
 const toolMeta: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   execute_python:       { icon: <Terminal size={13} />,   label: 'Executing Python',        color: '#4ade80' },
@@ -19,6 +19,10 @@ const toolMeta: Record<string, { icon: React.ReactNode; label: string; color: st
   debug_afl_code:       { icon: <Bug size={13} />,        label: 'Debugging AFL',            color: '#a78bfa' },
   explain_afl_code:     { icon: <BookOpen size={13} />,   label: 'Explaining AFL',           color: '#60a5fa' },
   sanity_check_afl:     { icon: <Shield size={13} />,     label: 'AFL sanity check',         color: '#4ade80' },
+  workspace_write_file: { icon: <Save size={13} />,       label: 'Saving to workspace',      color: '#FEC00F' },
+  workspace_read_file:  { icon: <FileCode2 size={13} />,  label: 'Reading workspace file',   color: '#FEC00F' },
+  workspace_list_files: { icon: <Layers size={13} />,     label: 'Listing workspace files',  color: '#FEC00F' },
+  workspace_execute_file: { icon: <Play size={13} />,     label: 'Running workspace file',   color: '#FEC00F' },
   get_live_scores:      { icon: <Zap size={13} />,        label: 'Fetching live scores',     color: '#fb923c' },
   get_search_trends:    { icon: <Globe size={13} />,      label: 'Loading trends',           color: '#818cf8' },
   create_linkedin_post: { icon: <Globe size={13} />,      label: 'Composing post',           color: '#38bdf8' },

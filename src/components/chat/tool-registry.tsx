@@ -73,6 +73,11 @@ import {
   AFLExplanationCard,
   AFLReferenceCard,
 } from '@/components/generative-ui';
+import {
+  WorkspaceFileCard,
+  WorkspaceListCard,
+  WorkspaceExecutionCard,
+} from '@/components/generative-ui/WorkspaceCards';
 
 /**
  * AFLGenerateAdapter
@@ -279,6 +284,55 @@ function AFLReferenceAdapter(props: any) {
         sections: props.sections,
         reference: props.reference,
         summary: props.summary,
+      }}
+    />
+  );
+}
+
+// ─── Workspace tool adapters ────────────────────────────────────────────────
+// Replace the generic "Completed" tool-result block for the four workspace
+// tools with dedicated flagship cards from WorkspaceCards.tsx. Each adapter
+// is tolerant of two payload shapes: the explicit `genui_card` envelope
+// (preferred when the backend sends it) and the legacy spread-props shape.
+//
+// "Open in IDE" buttons inside these cards talk to WorkspaceContext via
+// useWorkspaceOptional() — clicking from chat focuses the right-side panel
+// on the file without round-tripping through tool calls.
+
+function WorkspaceWriteFileAdapter(props: any) {
+  const file = props?.file ?? props?.genui_card?.data ?? props;
+  return <WorkspaceFileCard file={file} mode="write" />;
+}
+
+function WorkspaceReadFileAdapter(props: any) {
+  const file = props?.file ?? props?.genui_card?.data ?? props;
+  return <WorkspaceFileCard file={file} mode="read" />;
+}
+
+function WorkspaceListFilesAdapter(props: any) {
+  return (
+    <WorkspaceListCard
+      payload={{
+        file_count: props?.file_count ?? (Array.isArray(props?.files) ? props.files.length : 0),
+        files: Array.isArray(props?.files) ? props.files : [],
+      }}
+    />
+  );
+}
+
+function WorkspaceExecuteFileAdapter(props: any) {
+  return (
+    <WorkspaceExecutionCard
+      payload={{
+        filename: props?.filename,
+        language: props?.language,
+        success: props?.success,
+        output: props?.output,
+        error: props?.error,
+        exit_code: props?.exit_code,
+        execution_time_ms: props?.execution_time_ms,
+        timed_out: props?.timed_out,
+        artifacts: props?.artifacts,
       }}
     />
   );
@@ -534,6 +588,15 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   explain_afl_code:         { component: AFLExplainAdapter },
   sanity_check_afl:         { component: AFLSanityCheckAdapter },
   get_afl_syntax_reference: { component: AFLReferenceAdapter },
+
+  // ── Conversation IDE workspace ──────────────────────────────────────────
+  // Replaces the generic "Completed" tool-result block with dedicated cards.
+  // Cards talk to WorkspaceContext (via useWorkspaceOptional) so the
+  // "Open in IDE" button focuses the right-side panel on the file.
+  workspace_write_file:   { component: WorkspaceWriteFileAdapter,   displayName: 'Workspace · Write' },
+  workspace_read_file:    { component: WorkspaceReadFileAdapter,    displayName: 'Workspace · Read'  },
+  workspace_list_files:   { component: WorkspaceListFilesAdapter,   displayName: 'Workspace · Files' },
+  workspace_execute_file: { component: WorkspaceExecuteFileAdapter, displayName: 'Workspace · Run'   },
   generate_afl:             { component: AFLGenerateAdapter, displayName: 'AFL Generator' },
   afl_generate:             { component: AFLGenerateAdapter, displayName: 'AFL Generator' },
   afl_code:                 { component: AFLGenerateAdapter, displayName: 'AFL Code' },
