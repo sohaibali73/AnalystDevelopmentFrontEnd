@@ -66,6 +66,7 @@ interface NorgateResult {
   symbol: string;
   name?: string;
   database?: string;
+  asset_id?: string | number;
   match_type?: MatchType;
   currency?: string;
   exchange?: string;
@@ -77,13 +78,20 @@ interface NorgateResult {
 
 export interface NorgateLookupData {
   query?: string;
+  /** Modern field. Some backends emit `database_filter` instead — both supported. */
   database?: string;
+  database_filter?: string;
   total?: number;
+  /** Backend-native count field. */
+  result_count?: number;
   truncated?: boolean;
   limit?: number;
   results?: NorgateResult[];
   suggestions?: string[];
   summary?: string;
+  /** Backend often returns `prefix_hints` as a `{ "$": "…", "&": "…" }` map; we ignore it (legend is static) but accept it for type-safety. */
+  prefix_hints?: Record<string, string>;
+  available_databases?: string[];
 }
 
 // ─── Prefix conventions (single source of truth) ────────────────────────────
@@ -430,9 +438,11 @@ function ResultRow({ r, queryRaw }: { r: NorgateResult; queryRaw: string }) {
           </div>
         )}
         <div style={{ display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap' }}>
-          <MetaPill color={mm.color} title={`Matched as: ${mm.label}`}>
-            {mm.icon} {mm.label}
-          </MetaPill>
+          {r.match_type && (
+            <MetaPill color={mm.color} title={`Matched as: ${mm.label}`}>
+              {mm.icon} {mm.label}
+            </MetaPill>
+          )}
           {r.database && (
             <MetaPill color={spec.color} title="Norgate database">
               <Database size={10} /> {r.database}
@@ -443,9 +453,14 @@ function ResultRow({ r, queryRaw }: { r: NorgateResult; queryRaw: string }) {
               {r.currency}
             </MetaPill>
           )}
+          {r.asset_id != null && r.asset_id !== '' && (
+            <MetaPill color={SLATE} title="Norgate asset ID">
+              <Hash size={9} /> {String(r.asset_id)}
+            </MetaPill>
+          )}
           {typeof r.score === 'number' && (
             <MetaPill color={SLATE} title="Internal match score">
-              <Hash size={9} /> {r.score.toFixed(0)}
+              <Hash size={9} /> score {r.score.toFixed(0)}
             </MetaPill>
           )}
         </div>
@@ -532,29 +547,38 @@ export interface LookupNorgateTickerCardProps {
 export function LookupNorgateTickerCard({ data }: LookupNorgateTickerCardProps) {
   const d = data || {};
   const results = Array.isArray(d.results) ? d.results : [];
-  const total = typeof d.total === 'number' ? d.total : results.length;
+  const total =
+    typeof d.total === 'number'
+      ? d.total
+      : typeof d.result_count === 'number'
+      ? d.result_count
+      : results.length;
   const truncated = !!d.truncated;
   const limit = d.limit;
   const query = d.query || '';
-  const scope = d.database;
+  const scope = d.database || d.database_filter;
 
   const [legendOpen, setLegendOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string>('all');
 
-  // Match-type tallies
+  // Match-type tallies — backend may not emit `match_type`. Hide the strip
+  // entirely when no result carries one, instead of showing a row of zeros.
   const tallies = useMemo(() => {
     let exact = 0;
     let prefix = 0;
     let name = 0;
     let other = 0;
+    let known = 0;
     results.forEach((r) => {
       const m = String(r.match_type || '').toLowerCase();
+      if (!m) return;
+      known += 1;
       if (m === 'exact') exact += 1;
       else if (m === 'prefix') prefix += 1;
       else if (m === 'name_token' || m === 'name') name += 1;
       else other += 1;
     });
-    return { exact, prefix, name, other };
+    return { exact, prefix, name, other, known };
   }, [results]);
 
   // Group results by database
@@ -689,8 +713,8 @@ export function LookupNorgateTickerCard({ data }: LookupNorgateTickerCardProps) 
         </div>
       </div>
 
-      {/* ─── Match-type stat strip ──────────────────────────────────────── */}
-      {results.length > 0 && (
+      {/* ─── Match-type stat strip (only when backend provides match_type) ── */}
+      {results.length > 0 && tallies.known > 0 && (
         <div
           style={{
             display: 'flex',

@@ -72,6 +72,7 @@ import {
   AFLDebugDiffCard,
   AFLExplanationCard,
   AFLReferenceCard,
+  LookupNorgateTickerCard,
 } from '@/components/generative-ui';
 import {
   WorkspaceFileCard,
@@ -268,6 +269,39 @@ function AFLExplainAdapter(props: any) {
         explanation_raw: props.explanation_raw ?? props.explanation,
         explanation: props.explanation,
         summary: props.summary,
+      }}
+    />
+  );
+}
+
+/**
+ * Route lookup_norgate_ticker tool output to LookupNorgateTickerCard.
+ * Backend wraps the renderable summary in `panel_card` (envelope type
+ * `data-card_norgate_lookup`) and also exposes the same fields at the top
+ * level. Accept both shapes so the card renders whether the chat hook
+ * flattens or preserves the envelope.
+ */
+function NorgateLookupAdapter(props: any) {
+  const envelope = props?.panel_card ?? props?.genui_card;
+  if (envelope?.type === 'data-card_norgate_lookup' && envelope.data) {
+    return <LookupNorgateTickerCard data={envelope.data} />;
+  }
+  // Fall back to top-level fields (the backend mirrors them).
+  return (
+    <LookupNorgateTickerCard
+      data={{
+        query: props?.query,
+        database: props?.database,
+        database_filter: props?.database_filter,
+        total: props?.total,
+        result_count: props?.result_count,
+        truncated: props?.truncated,
+        limit: props?.limit,
+        results: Array.isArray(props?.results) ? props.results : [],
+        suggestions: props?.suggestions,
+        summary: props?.summary,
+        prefix_hints: props?.prefix_hints,
+        available_databases: props?.available_databases,
       }}
     />
   );
@@ -630,6 +664,7 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   explain_afl_code:         { component: AFLExplainAdapter },
   sanity_check_afl:         { component: AFLSanityCheckAdapter },
   get_afl_syntax_reference: { component: AFLReferenceAdapter },
+  lookup_norgate_ticker:    { component: NorgateLookupAdapter, displayName: 'Norgate Lookup' },
 
   // ── Conversation IDE workspace ──────────────────────────────────────────
   // Replaces the generic "Completed" tool-result block with dedicated cards.
