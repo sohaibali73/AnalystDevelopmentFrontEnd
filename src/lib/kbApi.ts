@@ -97,6 +97,40 @@ export const kbApi = {
     const res = await req<any>('/brain/upload', 'POST', fd, true);
     return { document_id: res.document_id ?? res.id, status: res.status ?? 'processing', ready: res.ready ?? false, filename: res.filename ?? file.name, message: res.message };
   },
+  // ─── Fast path: client parsed the bytes, server just inserts + indexes ────
+  async uploadPreparsedBatch(
+    documents: Array<{
+      filename: string;
+      file_type?: string;
+      file_size?: number;
+      extracted_text: string;
+      content_hash: string;
+      category?: string;
+      tags?: string[];
+      title?: string;
+    }>,
+  ): Promise<{
+    status: string;
+    summary: { total: number; successful: number; duplicates: number; failed: number };
+    results: Array<{
+      filename: string;
+      status: 'success' | 'duplicate' | 'error';
+      document_id?: string;
+      ready?: boolean;
+      chunks_created?: number;
+      embeddings_generated?: number;
+      text_length?: number;
+      error?: string;
+    }>;
+  }> {
+    return req('/brain/upload-preparsed', 'POST', { documents });
+  },
+  async checkHashes(hashes: string[]): Promise<{
+    existing: Record<string, { document_id: string; ready: boolean; filename?: string; title?: string }>;
+  }> {
+    if (!hashes.length) return { existing: {} };
+    return req('/brain/check-hashes', 'POST', { hashes });
+  },
   async uploadBatch(files: File[], opts: { category?: string } = {}): Promise<KBBatchUploadResult> {
     const fd = new FormData();
     files.forEach((f) => fd.append('files', f));

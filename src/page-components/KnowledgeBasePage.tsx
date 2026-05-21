@@ -61,6 +61,12 @@ import {
 
 import kbApi from '@/lib/kbApi';
 import stacksApi from '@/lib/stacksApi';
+import {
+  extractTextForKB,
+  isParseableForKB,
+  mimeFor,
+  sha256OfBlob,
+} from '@/lib/kbIngest';
 import type { KBDocument, KBStats } from '@/types/kb';
 import type {
   KnowledgeStack,
@@ -135,9 +141,27 @@ function getFileTone(filename: string): string {
 
 interface UploadItem {
   file: File;
-  status: 'pending' | 'uploading' | 'processing' | 'ready' | 'error';
+  /**
+   * Upload phases (no server-side parsing involved):
+   *   queued    → just picked, nothing done yet
+   *   hashing   → computing SHA-256 of bytes (local)
+   *   parsing   → extracting text via pdfjs / docx-preview / xlsx (local)
+   *   uploading → POSTing pre-parsed text to /brain/upload-preparsed
+   *   ready     → server indexed it; doc is searchable
+   *   duplicate → server already had this hash; no new row created
+   *   error     → terminal failure (parse or upload)
+   */
+  status:
+    | 'queued'
+    | 'hashing'
+    | 'parsing'
+    | 'uploading'
+    | 'ready'
+    | 'duplicate'
+    | 'error';
   documentId?: string;
   chunkCount?: number;
+  charCount?: number;
   error?: string;
 }
 
@@ -638,9 +662,10 @@ function AllDocumentsPane({ docs, stats, search, onSearch, onView, onChange, onE
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
-  const pollingRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
-
-  useEffect(() => () => { pollingRefs.current.forEach((id) => clearInterval(id)); }, []);
+  const [uploading, setUploading] = useState(false);
+  // Stop flag — when the user hits Cancel we set this and the in-flight
+  // pipeline drains without queueing more work.
+  const cancelRef = useRef(false);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return docs;
@@ -652,48 +677,152 @@ function AllDocumentsPane({ docs, stats, search, onSearch, onView, onChange, onE
     );
   }, [docs, search]);
 
-  const startPolling = useCallback((documentId: string, itemIndex: number) => {
-    if (pollingRefs.current.has(documentId)) return;
-    const intervalId = setInterval(async () => {
-      try {
-        const status = await kbApi.getStatus(documentId);
-        setUploads((prev) => prev.map((item, idx) => {
-          if (idx !== itemIndex) return item;
-          if (status.ready) {
-            clearInterval(pollingRefs.current.get(documentId)!);
-            pollingRefs.current.delete(documentId);
-            onChange();
-            return { ...item, status: 'ready', chunkCount: status.chunk_count };
-          }
-          if (status.status === 'error') {
-            clearInterval(pollingRefs.current.get(documentId)!);
-            pollingRefs.current.delete(documentId);
-            return { ...item, status: 'error', error: status.error ?? 'Processing failed' };
-          }
-          return { ...item, status: 'processing' };
-        }));
-      } catch {/* transient */}
-    }, 2000);
-    pollingRefs.current.set(documentId, intervalId);
-  }, [onChange]);
-
+  // ── Local-parse + batch-upload pipeline ─────────────────────────────────
+  // Mirrors the kb_uploader_gui.py flow:
+  //   1. hash + parse locally (concurrent pool of 4)
+  //   2. one /brain/check-hashes call to mark duplicates without uploading
+  //   3. batch POST extracted text to /brain/upload-preparsed (10 per batch)
+  // Server-side parsing is never invoked, so the "processing forever" failure
+  // mode is gone — when /upload-preparsed returns, the doc is already indexed.
   const handleFiles = useCallback(async (files: File[]) => {
     if (!files.length) return;
-    const newItems: UploadItem[] = files.map((f) => ({ file: f, status: 'pending' }));
-    setUploads((prev) => [...newItems, ...prev]);
+    cancelRef.current = false;
+    setUploading(true);
 
-    for (let i = 0; i < newItems.length; i++) {
-      const idx = i;
-      setUploads((prev) => prev.map((item, j) => j === idx ? { ...item, status: 'uploading' } : item));
+    // Snapshot where the new items will live so per-file state updates target
+    // the right rows even as more uploads come in later.
+    const newItems: UploadItem[] = files.map((f) => ({ file: f, status: 'queued' }));
+    let baseIndex = 0;
+    setUploads((prev) => { baseIndex = prev.length; return [...prev, ...newItems]; });
+
+    const patchItem = (offset: number, patch: Partial<UploadItem>) => {
+      setUploads((prev) => prev.map((item, j) =>
+        j === baseIndex + offset ? { ...item, ...patch } : item,
+      ));
+    };
+
+    // ── Phase 1: hash + parse locally with a concurrency pool ──────────────
+    interface Prepared {
+      offset: number;
+      file: File;
+      hash: string;
+      text: string;
+      charCount: number;
+    }
+    const prepared: Prepared[] = [];
+
+    const POOL_SIZE = 4;
+    let cursor = 0;
+    const workOne = async () => {
+      while (cursor < files.length) {
+        if (cancelRef.current) return;
+        const offset = cursor++;
+        const file = files[offset];
+        try {
+          patchItem(offset, { status: 'hashing' });
+          const hash = await sha256OfBlob(file);
+          if (cancelRef.current) return;
+          if (!isParseableForKB(file.name)) {
+            patchItem(offset, {
+              status: 'error',
+              error: `Unsupported file type (${file.name.split('.').pop() || 'no extension'})`,
+            });
+            continue;
+          }
+          patchItem(offset, { status: 'parsing' });
+          const { text, charCount } = await extractTextForKB(file, file.name);
+          if (!text) {
+            patchItem(offset, { status: 'error', error: 'No text could be extracted from this file.' });
+            continue;
+          }
+          prepared.push({ offset, file, hash, text, charCount });
+          patchItem(offset, { charCount });
+        } catch (err) {
+          patchItem(offset, {
+            status: 'error',
+            error: err instanceof Error ? err.message : 'Parse failed',
+          });
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(POOL_SIZE, files.length) }, workOne));
+
+    if (cancelRef.current) { setUploading(false); return; }
+
+    // ── Phase 2: dedup precheck (single round trip) ────────────────────────
+    let existing: Record<string, { document_id: string; ready: boolean; filename?: string; title?: string }> = {};
+    if (prepared.length) {
       try {
-        const result = await kbApi.upload(newItems[i].file);
-        setUploads((prev) => prev.map((item, j) => j === idx ? { ...item, status: 'processing', documentId: result.document_id } : item));
-        if (result.document_id) startPolling(result.document_id, idx);
+        const resp = await kbApi.checkHashes(prepared.map((p) => p.hash));
+        existing = resp.existing || {};
       } catch (err) {
-        setUploads((prev) => prev.map((item, j) => j === idx ? { ...item, status: 'error', error: err instanceof Error ? err.message : 'Upload failed' } : item));
+        // Non-fatal — the server still dedups on insert. Just log and continue.
+        console.warn('check-hashes precheck failed, server will still dedup:', err);
       }
     }
-  }, [startPolling]);
+
+    const toUpload: Prepared[] = [];
+    for (const p of prepared) {
+      const hit = existing[p.hash];
+      if (hit) {
+        patchItem(p.offset, { status: 'duplicate', documentId: hit.document_id });
+      } else {
+        toUpload.push(p);
+      }
+    }
+
+    // ── Phase 3: batch upload pre-parsed text ──────────────────────────────
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < toUpload.length; i += BATCH_SIZE) {
+      if (cancelRef.current) break;
+      const batch = toUpload.slice(i, i + BATCH_SIZE);
+      batch.forEach((p) => patchItem(p.offset, { status: 'uploading' }));
+
+      try {
+        const resp = await kbApi.uploadPreparsedBatch(
+          batch.map((p) => ({
+            filename: p.file.name,
+            file_type: mimeFor(p.file.name),
+            file_size: p.file.size,
+            extracted_text: p.text,
+            content_hash: p.hash,
+          })),
+        );
+
+        const byName = new Map<string, typeof resp.results[number]>();
+        for (const r of resp.results || []) byName.set(r.filename, r);
+        for (const p of batch) {
+          const r = byName.get(p.file.name);
+          if (!r) {
+            patchItem(p.offset, { status: 'error', error: 'No result returned for this file.' });
+            continue;
+          }
+          if (r.status === 'success') {
+            patchItem(p.offset, {
+              status: 'ready',
+              documentId: r.document_id,
+              chunkCount: r.chunks_created,
+            });
+          } else if (r.status === 'duplicate') {
+            patchItem(p.offset, { status: 'duplicate', documentId: r.document_id });
+          } else {
+            patchItem(p.offset, { status: 'error', error: r.error || 'Upload failed' });
+          }
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Upload failed';
+        for (const p of batch) patchItem(p.offset, { status: 'error', error: msg });
+      }
+    }
+
+    setUploading(false);
+    cancelRef.current = false;
+    onChange();
+  }, [onChange]);
+
+  const cancelUploads = useCallback(() => {
+    cancelRef.current = true;
+  }, []);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -800,7 +929,11 @@ function AllDocumentsPane({ docs, stats, search, onSearch, onView, onChange, onE
 
       {/* Upload progress (only when active) */}
       {uploads.length > 0 && (
-        <UploadList items={uploads} onClear={() => setUploads([])} />
+        <UploadList
+          items={uploads}
+          onClear={() => setUploads([])}
+          onCancel={uploading ? cancelUploads : undefined}
+        />
       )}
 
       {/* Doc grid */}
@@ -1193,31 +1326,109 @@ function StackDocRow({ doc, isLast, onView, onMove, onDelete }: { doc: StackDocu
   );
 }
 
-function UploadList({ items, onClear }: { items: UploadItem[]; onClear: () => void }) {
+function UploadList({
+  items,
+  onClear,
+  onCancel,
+}: {
+  items: UploadItem[];
+  onClear: () => void;
+  onCancel?: () => void;
+}) {
+  const ready     = items.filter((i) => i.status === 'ready').length;
+  const dupes     = items.filter((i) => i.status === 'duplicate').length;
+  const errors    = items.filter((i) => i.status === 'error').length;
+  const total     = items.length;
+  const settled   = ready + dupes + errors;
+  const inFlight  = total - settled;
+  const pct       = total ? Math.round((settled / total) * 100) : 0;
+
+  const statusLabel: Record<UploadItem['status'], string> = {
+    queued:    'queued',
+    hashing:   'hashing…',
+    parsing:   'parsing…',
+    uploading: 'uploading…',
+    ready:     'ready',
+    duplicate: 'duplicate',
+    error:     'error',
+  };
+  const statusColor: Record<UploadItem['status'], string> = {
+    queued:    'var(--text-muted)',
+    hashing:   'var(--accent)',
+    parsing:   'var(--accent)',
+    uploading: 'var(--accent)',
+    ready:     '#22c55e',
+    duplicate: '#f59e0b',
+    error:     '#ef4444',
+  };
+
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-          Uploads · {items.length}
-        </span>
-        <button onClick={onClear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: 0 }}>
-          <X size={13} />
-        </button>
+      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+            Uploads · {settled}/{total} ({pct}%)
+          </span>
+          {ready > 0 && (
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#22c55e' }}>
+              ✓ {ready} ready
+            </span>
+          )}
+          {dupes > 0 && (
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#f59e0b' }}>
+              ~ {dupes} duplicate
+            </span>
+          )}
+          {errors > 0 && (
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#ef4444' }}>
+              ✗ {errors} failed
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {onCancel && inFlight > 0 && (
+            <button
+              onClick={onCancel}
+              title="Stop after the current file"
+              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', cursor: 'pointer', fontSize: 11, fontFamily: "'DM Mono', monospace", padding: '2px 9px', borderRadius: 6 }}
+            >
+              Cancel
+            </button>
+          )}
+          <button onClick={onClear} title="Clear list" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: 0 }}>
+            <X size={13} />
+          </button>
+        </div>
       </div>
+      {/* Aggregate progress bar */}
+      {total > 0 && (
+        <div style={{ height: 3, background: 'var(--bg-raised)' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.3s ease' }} />
+        </div>
+      )}
       {items.map((item, idx) => (
-        <div key={`${item.file.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderTop: idx === 0 ? 'none' : '1px solid var(--border)' }}>
+        <div key={`${item.file.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderTop: '1px solid var(--border)' }}>
           {item.status === 'ready' ? (
             <CheckCircle2 size={13} color="#22c55e" />
+          ) : item.status === 'duplicate' ? (
+            <CheckCircle2 size={13} color="#f59e0b" />
           ) : item.status === 'error' ? (
             <AlertTriangle size={13} color="#ef4444" />
+          ) : item.status === 'queued' ? (
+            <span style={{ width: 13, height: 13, display: 'inline-block' }} />
           ) : (
             <Loader2 size={13} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />
           )}
           <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {item.file.name}
           </span>
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: item.status === 'error' ? '#ef4444' : 'var(--text-muted)' }}>
-            {item.status === 'error' ? (item.error || 'error') : item.status}
+          {item.chunkCount != null && item.status === 'ready' && (
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: 'var(--text-muted)' }}>
+              {item.chunkCount} chunks
+            </span>
+          )}
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: statusColor[item.status] }}>
+            {item.status === 'error' ? (item.error || 'error') : statusLabel[item.status]}
           </span>
         </div>
       ))}
