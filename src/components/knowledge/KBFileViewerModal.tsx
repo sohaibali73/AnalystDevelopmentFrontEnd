@@ -28,7 +28,9 @@ function formatSize(bytes: number | null | undefined): string {
 }
 
 const TEXT_EXTS = ['txt', 'md', 'json', 'xml', 'html', 'htm', 'csv'];
-const PARSEABLE_EXTS = ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'csv', 'txt', 'md', 'json', 'html', 'htm', 'xml'];
+const PARSEABLE_EXTS = ['docx', 'doc', 'xlsx', 'xls', 'csv', 'txt', 'md', 'json', 'html', 'htm', 'xml'];
+const PDF_EXTS = ['pdf'];
+const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp'];
 
 export interface KBFileViewerModalProps {
   doc: KBDocument;
@@ -41,9 +43,10 @@ export interface KBFileViewerModalProps {
 export default function KBFileViewerModal({ doc, onClose, isDark, colors, chunkPreview }: KBFileViewerModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [contentType, setContentType] = useState<'html' | 'text' | 'table' | 'json' | 'unsupported'>('text');
+  const [contentType, setContentType] = useState<'html' | 'text' | 'table' | 'json' | 'pdf' | 'image' | 'unsupported'>('text');
   const [content, setContent] = useState<string | null>(null);
   const [tables, setTables] = useState<{ headers: string[]; rows: string[][]; name?: string }[] | undefined>(undefined);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showRawFallback, setShowRawFallback] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -55,7 +58,21 @@ export default function KBFileViewerModal({ doc, onClose, isDark, colors, chunkP
 
   const loadContent = useCallback(async () => {
     setLoading(true); setError(null); setContent(null); setTables(undefined);
+    setBlobUrl(null); // existing URL gets revoked by the cleanup effect below
     try {
+      // Native-render path: render the ORIGINAL file (PDF or image) in the
+      // browser. The auth'd /download endpoint can't be loaded directly into
+      // an iframe (no way to pass Bearer headers), so fetch the blob and
+      // hand the iframe a blob: URL instead.
+      if (PDF_EXTS.includes(ext) || IMAGE_EXTS.includes(ext)) {
+        const blob = await kbApi.fetchBlob(doc.id);
+        if (blob.size > 0) {
+          const url = URL.createObjectURL(blob);
+          setBlobUrl(url);
+          setContentType(PDF_EXTS.includes(ext) ? 'pdf' : 'image');
+          setLoading(false); return;
+        }
+      }
       if (PARSEABLE_EXTS.includes(ext)) {
         const blob = await kbApi.fetchBlob(doc.id);
         if (blob.size > 0) {
@@ -80,6 +97,11 @@ export default function KBFileViewerModal({ doc, onClose, isDark, colors, chunkP
   }, [doc.id, doc.filename, ext]);
 
   useEffect(() => { loadContent(); }, [loadContent]);
+
+  // Revoke the blob URL on unmount so we don't leak memory across views.
+  useEffect(() => {
+    return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
+  }, [blobUrl]);
 
   useEffect(() => {
     if (!chunkPreview || !content || !contentRef.current) return;
@@ -134,6 +156,16 @@ export default function KBFileViewerModal({ doc, onClose, isDark, colors, chunkP
               <AlertCircle size={32} color="#ef4444" style={{ opacity: 0.7 }} />
               <p style={{ color: '#ef4444', fontSize: '13px', margin: 0 }}>{error}</p>
               <a href={downloadUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: '12px' }}>Open original file</a>
+            </div>
+          ) : contentType === 'pdf' && blobUrl ? (
+            <iframe
+              src={blobUrl}
+              title={doc.filename}
+              style={{ width: '100%', height: 'calc(90vh - 140px)', minHeight: '500px', border: '1px solid ' + colors.border, borderRadius: '10px', backgroundColor: isDark ? '#161616' : '#FAFAFA' }}
+            />
+          ) : contentType === 'image' && blobUrl ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px', padding: '12px', backgroundColor: isDark ? '#161616' : '#FAFAFA', border: '1px solid ' + colors.border, borderRadius: '10px' }}>
+              <img src={blobUrl} alt={doc.filename} style={{ maxWidth: '100%', maxHeight: 'calc(90vh - 200px)', objectFit: 'contain', borderRadius: '6px' }} />
             </div>
           ) : contentType === 'unsupported' || !content ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: '14px' }}>

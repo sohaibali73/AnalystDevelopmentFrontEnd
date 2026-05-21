@@ -2847,17 +2847,23 @@ export function ChatPage() {
                     }
                   }
 
-                  // Send KB document refs as metadata only (not visible in message text)
-                  // The KB docs are shown as badges before sending and sent as metadata to the backend
-                  const kbDocIds = attachedKbDocs.map((d) => d.id);
+                  // KB attachments: just hand Claude the filename and let it call
+                  // search_knowledge_base itself. No full-doc injection, no base64
+                  // PDFs — keeps context lean and search chunk-scoped.
                   const kbDocMetadata = attachedKbDocs.length > 0 ? attachedKbDocs.map((d) => ({
                     id: d.id,
                     filename: d.filename,
                     title: d.title,
                     category: d.category
                   })) : undefined;
-                  
+
                   if (attachedKbDocs.length > 0) {
+                    const attachmentNote = attachedKbDocs
+                      .map((d) => `[Attached document: ${d.title || d.filename}]`)
+                      .join('\n');
+                    messageText = messageText.trim()
+                      ? `${messageText}\n\n${attachmentNote}`
+                      : attachmentNote;
                     setAttachedKbDocs([]); // Clear after sending
                   }
                   if (selectedKbDocIds.size > 0) {
@@ -2910,7 +2916,7 @@ export function ChatPage() {
                     }
                   }
 
-                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined, kb_doc_ids: kbDocIds.length > 0 ? kbDocIds : undefined, kb_docs: kbDocMetadata, stack_id: attachedStack?.id, stack_mode: attachedStack?.mode, stack_sources: stackSources } });
+                  sendMessage({ text: messageText }, { body: { conversationId: convId, model: selectedModelRef.current, skill_slug: forcedSkillSlugRef.current ?? undefined, kb_docs: kbDocMetadata, stack_id: attachedStack?.id, stack_mode: attachedStack?.mode, stack_sources: stackSources } });
                 }}
               >
                 <AttachmentsDisplay 
