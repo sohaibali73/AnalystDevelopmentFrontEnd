@@ -216,7 +216,32 @@ function MetaPill({
   );
 }
 
-function PrefixLegend({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+// Pull the example tickers out of a backend prefix hint string like
+//   "indices (e.g. $SPX, $DJI)"          → ["$SPX", "$DJI"]
+//   "indices / cash commodities (e.g. #GSR Gold/Silver Ratio)" → ["#GSR"]
+//   "US equities, ETFs, forex pairs, etc. (plain symbols)"     → []
+// The backend's `(e.g. ...)` clause is the only authoritative source of live
+// example tickers — extracting them lets the legend reflect the real universe
+// rather than a hardcoded sample.
+function extractPrefixExamples(hint?: string): string[] {
+  if (!hint) return [];
+  const m = hint.match(/\(e\.g\.\s*([^)]+)\)/i);
+  if (!m) return [];
+  return m[1]
+    .split(',')
+    .map((s) => s.trim().split(/\s+/)[0])
+    .filter((s) => !!s && s.length <= 12);
+}
+
+function PrefixLegend({
+  open,
+  onToggle,
+  hints,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  hints?: Record<string, string>;
+}) {
   return (
     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
       <button
@@ -240,26 +265,32 @@ function PrefixLegend({ open, onToggle }: { open: boolean; onToggle: () => void 
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Info size={12} color={SLATE} />
         Norgate prefix conventions
+        {hints && Object.keys(hints).length > 0 && (
+          <span style={{ marginLeft: '6px', fontSize: '10px', color: SLATE, fontWeight: 600, letterSpacing: '0.04em' }}>
+            · live examples
+          </span>
+        )}
       </button>
       {open && (
         <div
           style={{
             padding: '0 16px 12px 16px',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
             gap: '6px',
           }}
         >
           {PREFIX_SPECS.map((spec) => {
             const Icon = spec.icon;
+            const examples = extractPrefixExamples(hints?.[spec.prefix]);
             return (
               <div
                 key={spec.label}
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   gap: '8px',
-                  padding: '6px 10px',
+                  padding: '7px 10px',
                   borderRadius: '7px',
                   background: `${spec.color}0E`,
                   border: `1px solid ${spec.color}28`,
@@ -278,19 +309,41 @@ function PrefixLegend({ open, onToggle }: { open: boolean; onToggle: () => void 
                     fontSize: '12px',
                     fontWeight: 700,
                     color: spec.color,
+                    flexShrink: 0,
+                    marginTop: '1px',
                   }}
                 >
-                  {spec.prefix || (
-                    <Icon size={11} color={spec.color} />
-                  )}
+                  {spec.prefix || <Icon size={11} color={spec.color} />}
                 </div>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)', fontWeight: 600, lineHeight: 1.2 }}>
                     {spec.label}
                   </div>
-                  <div style={{ fontSize: '10px', color: SLATE, lineHeight: 1.2, marginTop: '1px' }}>
+                  <div style={{ fontSize: '10px', color: SLATE, lineHeight: 1.2, marginTop: '2px' }}>
                     {spec.prefix ? `prefix “${spec.prefix}”` : 'no prefix'}
                   </div>
+                  {examples.length > 0 && (
+                    <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '5px' }}>
+                      {examples.map((ex) => (
+                        <span
+                          key={ex}
+                          style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: '10px',
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            background: `${spec.color}18`,
+                            color: spec.color,
+                            fontWeight: 600,
+                            lineHeight: 1.3,
+                            border: `1px solid ${spec.color}33`,
+                          }}
+                        >
+                          {ex}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -846,7 +899,11 @@ export function LookupNorgateTickerCard({ data }: LookupNorgateTickerCardProps) 
       </div>
 
       {/* ─── Prefix legend ──────────────────────────────────────────────── */}
-      <PrefixLegend open={legendOpen} onToggle={() => setLegendOpen((v) => !v)} />
+      <PrefixLegend
+        open={legendOpen}
+        onToggle={() => setLegendOpen((v) => !v)}
+        hints={d.prefix_hints}
+      />
 
       {/* ─── Footer hint ────────────────────────────────────────────────── */}
       <div

@@ -284,7 +284,17 @@ function AFLExplainAdapter(props: any) {
 function NorgateLookupAdapter(props: any) {
   const envelope = props?.panel_card ?? props?.genui_card;
   if (envelope?.type === 'data-card_norgate_lookup' && envelope.data) {
-    return <LookupNorgateTickerCard data={envelope.data} />;
+    // The envelope omits `prefix_hints` / `available_databases` — those live
+    // at the top level. Merge them in so the legend can show live examples.
+    return (
+      <LookupNorgateTickerCard
+        data={{
+          ...envelope.data,
+          prefix_hints: envelope.data.prefix_hints ?? props?.prefix_hints,
+          available_databases: envelope.data.available_databases ?? props?.available_databases,
+        }}
+      />
+    );
   }
   // Fall back to top-level fields (the backend mirrors them).
   return (
