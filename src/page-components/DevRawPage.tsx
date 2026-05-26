@@ -1,15 +1,23 @@
 'use client'
 
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useRouter } from 'next/navigation'
 import { getApiUrl } from '@/lib/env'
 import { storage } from '@/lib/storage'
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+// Types
+// ────────────────────────────────────────────────────────────────────────────────
 
 type Role = 'user' | 'assistant'
 
-interface Msg {
+interface Message {
   role: Role
   content: string
 }
@@ -19,7 +27,17 @@ interface UsageInfo {
   output_tokens: number
 }
 
-// ─── Constants ─────────────────────────────────────────────────────────────────
+interface ChatResponse {
+  content?: string
+  usage?: UsageInfo
+  stop_reason?: string
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Config
+// ────────────────────────────────────────────────────────────────────────────────
+
+const ENDPOINT = '/chat/dev/raw'
 
 const MODELS = [
   'claude-opus-4-7',
@@ -28,443 +46,502 @@ const MODELS = [
   'claude-opus-4-5',
   'claude-sonnet-4-5',
   'claude-haiku-4-5-20251001',
-]
+] as const
 
-const ENDPOINT = '/chat/dev/raw'
+const DEFAULT_MODEL = MODELS[0]
 
-// ─── Page ──────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+// Component
+// ────────────────────────────────────────────────────────────────────────────────
 
-export function DevRawPage() {
+export default function DevRawPage() {
   const router = useRouter()
+
   const [token, setToken] = useState<string | null>(null)
-  const [messages, setMessages] = useState<Msg[]>([])
+
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const [model, setModel] = useState(MODELS[0])
+
+  const [model, setModel] = useState(DEFAULT_MODEL)
   const [maxTokens, setMaxTokens] = useState(4096)
-  const [temperature, setTemperature] = useState<string>('')
-  const [topP, setTopP] = useState<string>('')
-  const [streaming, setStreaming] = useState(true)
+
+  const [temperature, setTemperature] = useState('')
+  const [topP, setTopP] = useState('')
+
+  const [stream, setStream] = useState(true)
+
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lastUsage, setLastUsage] = useState<UsageInfo | null>(null)
-  const [stopReason, setStopReason] = useState<string | null>(null)
-  const [streamMs, setStreamMs] = useState<number | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
 
-  // Auth gate — pull token from storage; bounce to /login if missing.
+  const [usage, setUsage] = useState<UsageInfo | null>(null)
+  const [stopReason, setStopReason] = useState<string | null>(null)
+  const [latencyMs, setLatencyMs] = useState<number | null>(null)
+
+  const abortRef = useRef<AbortController | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Auth
+  // ────────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
-    const t = storage.getItem('auth_token')
-    if (!t) {
+    const authToken = storage.getItem('auth_token')
+
+    if (!authToken) {
       router.replace('/login')
       return
     }
-    setToken(t)
+
+    setToken(authToken)
   }, [router])
 
-  // Auto-scroll to bottom as content streams in.
+  // ────────────────────────────────────────────────────────────────────────────
+  // Auto Scroll
+  // ────────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
-    if (scrollerRef.current) {
-      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight
-    }
+    const el = scrollRef.current
+
+    if (!el) return
+
+    el.scrollTop = el.scrollHeight
   }, [messages])
 
-  const send = useCallback(async () => {
-    if (!input.trim() || busy || !token) return
-    setError(null)
-    setLastUsage(null)
-    setStopReason(null)
-    setStreamMs(null)
+  // ────────────────────────────────────────────────────────────────────────────
+  // Helpers
+  // ────────────────────────────────────────────────────────────────────────────
 
-    const next: Msg[] = [...messages, { role: 'user', content: input }]
-    setMessages(next)
+  const appendMessage = useCallback((message: Message) => {
+    setMessages((prev) => [...prev, message])
+  }, [])
+
+  const updateLastAssistantMessage = useCallback((content: string) => {
+    setMessages((prev) => {
+      if (!prev.length) return prev
+
+      const next = [...prev]
+
+      next[next.length - 1] = {
+        role: 'assistant',
+        content,
+      }
+
+      return next
+    })
+  }, [])
+
+  const resetState = useCallback(() => {
+    setError(null)
+    setUsage(null)
+    setStopReason(null)
+    setLatencyMs(null)
+  }, [])
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Send
+  // ────────────────────────────────────────────────────────────────────────────
+
+  const send = useCallback(async () => {
+    if (!input.trim() || !token || busy) return
+
+    const userMessage: Message = {
+      role: 'user',
+      content: input.trim(),
+    }
+
+    const nextMessages = [...messages, userMessage]
+
+    appendMessage(userMessage)
+
     setInput('')
     setBusy(true)
 
-    const body: Record<string, unknown> = {
-      messages: next,
-      model,
-      max_tokens: maxTokens,
-      stream: streaming,
-    }
-    if (temperature.trim() !== '') body.temperature = Number(temperature)
-    if (topP.trim() !== '') body.top_p = Number(topP)
+    resetState()
 
-    const ctrl = new AbortController()
-    abortRef.current = ctrl
-    const t0 = performance.now()
+    const body: Record<string, unknown> = {
+      model,
+      messages: nextMessages,
+      max_tokens: maxTokens,
+      stream,
+    }
+
+    if (temperature.trim()) {
+      body.temperature = Number(temperature)
+    }
+
+    if (topP.trim()) {
+      body.top_p = Number(topP)
+    }
+
+    const controller = new AbortController()
+
+    abortRef.current = controller
+
+    const startedAt = performance.now()
 
     try {
-      const res = await fetch(`${getApiUrl()}${ENDPOINT}`, {
+      const response = await fetch(`${getApiUrl()}${ENDPOINT}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
-        signal: ctrl.signal,
+        signal: controller.signal,
       })
 
-      if (!res.ok) {
-        const txt = await res.text().catch(() => res.statusText)
-        throw new Error(`HTTP ${res.status}: ${txt.slice(0, 400)}`)
+      if (!response.ok) {
+        const text = await response
+          .text()
+          .catch(() => response.statusText)
+
+        throw new Error(`HTTP ${response.status}: ${text.slice(0, 400)}`)
       }
 
-      if (streaming && res.body) {
-        // Add an empty assistant message we will append to as bytes arrive.
-        setMessages((m) => [...m, { role: 'assistant', content: '' }])
-        const reader = res.body.getReader()
+      // ────────────────────────────────────────────────────────────────────────
+      // Streaming
+      // ────────────────────────────────────────────────────────────────────────
+
+      if (stream && response.body) {
+        appendMessage({
+          role: 'assistant',
+          content: '',
+        })
+
+        const reader = response.body.getReader()
         const decoder = new TextDecoder()
-        let buf = ''
+
+        let accumulated = ''
+
         while (true) {
-          const { value, done } = await reader.read()
+          const { done, value } = await reader.read()
+
           if (done) break
-          buf += decoder.decode(value, { stream: true })
-          setMessages((m) => {
-            const copy = [...m]
-            copy[copy.length - 1] = { role: 'assistant', content: buf }
-            return copy
+
+          accumulated += decoder.decode(value, {
+            stream: true,
           })
+
+          updateLastAssistantMessage(accumulated)
         }
       } else {
-        const json = await res.json()
-        setMessages((m) => [
-          ...m,
-          { role: 'assistant', content: json.content || '' },
-        ])
-        if (json.usage) setLastUsage(json.usage)
-        if (json.stop_reason) setStopReason(json.stop_reason)
+        // ──────────────────────────────────────────────────────────────────────
+        // JSON
+        // ──────────────────────────────────────────────────────────────────────
+
+        const json: ChatResponse = await response.json()
+
+        appendMessage({
+          role: 'assistant',
+          content: json.content || '',
+        })
+
+        if (json.usage) {
+          setUsage(json.usage)
+        }
+
+        if (json.stop_reason) {
+          setStopReason(json.stop_reason)
+        }
       }
-      setStreamMs(Math.round(performance.now() - t0))
-    } catch (e) {
-      if ((e as Error).name === 'AbortError') {
-        setError('aborted')
+
+      setLatencyMs(Math.round(performance.now() - startedAt))
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        setError('request aborted')
       } else {
-        setError((e as Error).message || String(e))
+        setError((err as Error).message)
       }
     } finally {
-      setBusy(false)
       abortRef.current = null
+      setBusy(false)
     }
-  }, [busy, input, maxTokens, messages, model, streaming, temperature, token, topP])
+  }, [
+    appendMessage,
+    busy,
+    input,
+    maxTokens,
+    messages,
+    model,
+    resetState,
+    stream,
+    temperature,
+    token,
+    topP,
+    updateLastAssistantMessage,
+  ])
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Actions
+  // ────────────────────────────────────────────────────────────────────────────
 
   const stop = useCallback(() => {
     abortRef.current?.abort()
   }, [])
 
-  const reset = useCallback(() => {
+  const clear = useCallback(() => {
     setMessages([])
-    setError(null)
-    setLastUsage(null)
-    setStopReason(null)
-    setStreamMs(null)
     setInput('')
+    resetState()
+  }, [resetState])
+
+  const pop = useCallback(() => {
+    setMessages((prev) => prev.slice(0, -1))
   }, [])
 
-  const popLast = useCallback(() => {
-    setMessages((m) => m.slice(0, -1))
-  }, [])
+  // ────────────────────────────────────────────────────────────────────────────
+  // Derived
+  // ────────────────────────────────────────────────────────────────────────────
 
-  // ─── Styles (inline, terminal aesthetic) ────────────────────────────────────
-  const styles = {
-    root: {
-      minHeight: '100vh',
-      background: '#0a0a0a',
-      color: '#e4e4e4',
-      fontFamily:
-        'ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
-      display: 'flex',
-      flexDirection: 'column' as const,
-    },
-    header: {
-      borderBottom: '1px solid #1f1f1f',
-      padding: '12px 20px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      background: '#0d0d0d',
-      flexWrap: 'wrap' as const,
-    },
-    title: {
-      fontSize: '12px',
-      letterSpacing: '2px',
-      color: '#ff6b6b',
-      fontWeight: 700,
-    },
-    badge: {
-      fontSize: '10px',
-      padding: '2px 8px',
-      border: '1px solid #ff6b6b',
-      color: '#ff6b6b',
-      borderRadius: '2px',
-      letterSpacing: '1px',
-    },
-    label: { fontSize: '10px', color: '#888', letterSpacing: '1px' },
-    input: {
-      background: '#0a0a0a',
-      border: '1px solid #2a2a2a',
-      color: '#e4e4e4',
-      padding: '4px 8px',
-      fontSize: '12px',
-      fontFamily: 'inherit',
-      outline: 'none',
-      borderRadius: '2px',
-    },
-    select: {
-      background: '#0a0a0a',
-      border: '1px solid #2a2a2a',
-      color: '#e4e4e4',
-      padding: '4px 8px',
-      fontSize: '12px',
-      fontFamily: 'inherit',
-      outline: 'none',
-      borderRadius: '2px',
-    },
-    btn: {
-      background: '#1a1a1a',
-      border: '1px solid #2a2a2a',
-      color: '#e4e4e4',
-      padding: '6px 14px',
-      fontSize: '11px',
-      letterSpacing: '1px',
-      fontFamily: 'inherit',
-      cursor: 'pointer',
-      borderRadius: '2px',
-    },
-    btnPrimary: {
-      background: '#ff6b6b',
-      border: '1px solid #ff6b6b',
-      color: '#0a0a0a',
-      padding: '6px 14px',
-      fontSize: '11px',
-      letterSpacing: '1px',
-      fontFamily: 'inherit',
-      cursor: 'pointer',
-      borderRadius: '2px',
-      fontWeight: 700,
-    },
-    scroller: {
-      flex: 1,
-      overflowY: 'auto' as const,
-      padding: '20px',
-    },
-    msg: (role: Role) => ({
-      whiteSpace: 'pre-wrap' as const,
-      wordBreak: 'break-word' as const,
-      marginBottom: '16px',
-      padding: '12px 14px',
-      borderRadius: '4px',
-      borderLeft: `2px solid ${role === 'user' ? '#5eead4' : '#ff6b6b'}`,
-      background: role === 'user' ? '#0f1a18' : '#1a0f0f',
-      fontSize: '13px',
-      lineHeight: 1.55,
-    }),
-    roleTag: (role: Role) => ({
-      fontSize: '10px',
-      letterSpacing: '2px',
-      color: role === 'user' ? '#5eead4' : '#ff6b6b',
-      marginBottom: '6px',
-      fontWeight: 700,
-    }),
-    composer: {
-      borderTop: '1px solid #1f1f1f',
-      padding: '12px 20px',
-      background: '#0d0d0d',
-      display: 'flex',
-      gap: '10px',
-      alignItems: 'flex-end',
-    },
-    textarea: {
-      flex: 1,
-      minHeight: '60px',
-      maxHeight: '240px',
-      background: '#0a0a0a',
-      border: '1px solid #2a2a2a',
-      color: '#e4e4e4',
-      padding: '8px 10px',
-      fontSize: '13px',
-      fontFamily: 'inherit',
-      outline: 'none',
-      borderRadius: '2px',
-      resize: 'vertical' as const,
-    },
-    statusBar: {
-      borderTop: '1px solid #1f1f1f',
-      padding: '6px 20px',
-      background: '#0a0a0a',
-      fontSize: '10px',
-      color: '#666',
-      letterSpacing: '1px',
-      display: 'flex',
-      gap: '20px',
-      flexWrap: 'wrap' as const,
-    },
-  }
+  const statusText = useMemo(() => {
+    if (busy) return 'streaming'
+    if (error) return 'error'
+    return 'idle'
+  }, [busy, error])
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Loading Gate
+  // ────────────────────────────────────────────────────────────────────────────
 
   if (!token) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: '#0a0a0a',
-          color: '#666',
-          display: 'grid',
-          placeItems: 'center',
-          fontFamily: 'ui-monospace, monospace',
-          fontSize: '12px',
-        }}
-      >
-        verifying auth…
+      <div className="flex min-h-screen items-center justify-center bg-black text-xs text-zinc-500">
+        verifying auth...
       </div>
     )
   }
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // Render
+  // ────────────────────────────────────────────────────────────────────────────
+
   return (
-    <div style={styles.root}>
-      <div style={styles.header}>
-        <div style={styles.title}>DEV/RAW</div>
-        <span style={styles.badge}>NO SYSTEM PROMPT</span>
+    <div className="flex h-screen flex-col bg-black text-zinc-100">
+      {/* Header */}
 
-        <span style={styles.label}>MODEL</span>
-        <select
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          style={styles.select}
-          disabled={busy}
-        >
-          {MODELS.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
+      <header className="flex flex-wrap items-center gap-4 border-b border-zinc-900 bg-zinc-950 px-5 py-3">
+        <div className="text-xs font-bold tracking-[0.3em] text-red-400">
+          DEV/RAW
+        </div>
 
-        <span style={styles.label}>MAX_TOK</span>
-        <input
-          type="number"
-          value={maxTokens}
-          onChange={(e) => setMaxTokens(Number(e.target.value) || 0)}
-          style={{ ...styles.input, width: 80 }}
-          disabled={busy}
-        />
+        <div className="rounded border border-red-500 px-2 py-1 text-[10px] tracking-[0.2em] text-red-400">
+          NO SYSTEM PROMPT
+        </div>
 
-        <span style={styles.label}>TEMP</span>
-        <input
-          type="text"
-          value={temperature}
-          placeholder="default"
-          onChange={(e) => setTemperature(e.target.value)}
-          style={{ ...styles.input, width: 70 }}
-          disabled={busy}
-        />
+        {/* Model */}
 
-        <span style={styles.label}>TOP_P</span>
-        <input
-          type="text"
-          value={topP}
-          placeholder="default"
-          onChange={(e) => setTopP(e.target.value)}
-          style={{ ...styles.input, width: 70 }}
-          disabled={busy}
-        />
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] tracking-[0.2em] text-zinc-500">
+            MODEL
+          </span>
 
-        <label
-          style={{
-            ...styles.label,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            cursor: 'pointer',
-          }}
-        >
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            disabled={busy}
+            className="rounded border border-zinc-800 bg-black px-2 py-1 text-xs outline-none"
+          >
+            {MODELS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Max Tokens */}
+
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] tracking-[0.2em] text-zinc-500">
+            MAX TOK
+          </span>
+
+          <input
+            type="number"
+            value={maxTokens}
+            onChange={(e) => setMaxTokens(Number(e.target.value) || 0)}
+            disabled={busy}
+            className="w-20 rounded border border-zinc-800 bg-black px-2 py-1 text-xs outline-none"
+          />
+        </div>
+
+        {/* Temp */}
+
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] tracking-[0.2em] text-zinc-500">
+            TEMP
+          </span>
+
+          <input
+            value={temperature}
+            onChange={(e) => setTemperature(e.target.value)}
+            placeholder="default"
+            disabled={busy}
+            className="w-16 rounded border border-zinc-800 bg-black px-2 py-1 text-xs outline-none"
+          />
+        </div>
+
+        {/* Top P */}
+
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] tracking-[0.2em] text-zinc-500">
+            TOP_P
+          </span>
+
+          <input
+            value={topP}
+            onChange={(e) => setTopP(e.target.value)}
+            placeholder="default"
+            disabled={busy}
+            className="w-16 rounded border border-zinc-800 bg-black px-2 py-1 text-xs outline-none"
+          />
+        </div>
+
+        {/* Stream */}
+
+        <label className="flex cursor-pointer items-center gap-2 text-[10px] tracking-[0.2em] text-zinc-500">
           <input
             type="checkbox"
-            checked={streaming}
-            onChange={(e) => setStreaming(e.target.checked)}
+            checked={stream}
+            onChange={(e) => setStream(e.target.checked)}
             disabled={busy}
           />
           STREAM
         </label>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button onClick={popLast} style={styles.btn} disabled={busy || messages.length === 0}>
+        {/* Actions */}
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={pop}
+            disabled={busy || messages.length === 0}
+            className="rounded border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-[11px] tracking-[0.2em] transition hover:border-zinc-700 disabled:opacity-40"
+          >
             POP
           </button>
-          <button onClick={reset} style={styles.btn} disabled={busy}>
+
+          <button
+            onClick={clear}
+            disabled={busy}
+            className="rounded border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-[11px] tracking-[0.2em] transition hover:border-zinc-700 disabled:opacity-40"
+          >
             CLEAR
           </button>
         </div>
-      </div>
+      </header>
 
-      <div ref={scrollerRef} style={styles.scroller}>
+      {/* Messages */}
+
+      <main
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-5 py-5"
+      >
         {messages.length === 0 && (
-          <div style={{ color: '#444', fontSize: 12, textAlign: 'center', marginTop: 60 }}>
-            POST {ENDPOINT} — raw Claude, no system prompt, no tools, not persisted.
-            <br />
-            type below to begin.
+          <div className="mt-24 text-center text-xs text-zinc-600">
+            <div>POST {ENDPOINT}</div>
+            <div className="mt-2">
+              raw claude • no system prompt • no tools • not persisted
+            </div>
           </div>
         )}
 
-        {messages.map((m, i) => (
-          <div key={i} style={styles.msg(m.role)}>
-            <div style={styles.roleTag(m.role)}>{m.role.toUpperCase()}</div>
-            {m.content || (busy && i === messages.length - 1 ? '▌' : '')}
-          </div>
-        ))}
+        <div className="space-y-4">
+          {messages.map((message, index) => {
+            const isUser = message.role === 'user'
 
-        {error && (
-          <div
-            style={{
-              ...styles.msg('assistant'),
-              borderLeft: '2px solid #fbbf24',
-              background: '#1a1408',
-              color: '#fbbf24',
+            return (
+              <div
+                key={index}
+                className={[
+                  'rounded-md border-l-2 p-4 text-sm leading-7 whitespace-pre-wrap break-words',
+                  isUser
+                    ? 'border-teal-300 bg-teal-950/20'
+                    : 'border-red-400 bg-red-950/20',
+                ].join(' ')}
+              >
+                <div
+                  className={[
+                    'mb-2 text-[10px] font-bold tracking-[0.25em]',
+                    isUser ? 'text-teal-300' : 'text-red-400',
+                  ].join(' ')}
+                >
+                  {message.role.toUpperCase()}
+                </div>
+
+                {message.content ||
+                  (busy && index === messages.length - 1 ? '▌' : '')}
+              </div>
+            )
+          })}
+
+          {error && (
+            <div className="rounded-md border-l-2 border-yellow-400 bg-yellow-950/20 p-4 text-sm text-yellow-300">
+              <div className="mb-2 text-[10px] font-bold tracking-[0.25em]">
+                ERROR
+              </div>
+
+              {error}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Composer */}
+
+      <footer className="border-t border-zinc-900 bg-zinc-950 p-4">
+        <div className="flex items-end gap-3">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={busy}
+            placeholder="user message... (Ctrl/Cmd + Enter to send)"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                send()
+              }
             }}
-          >
-            <div style={{ ...styles.roleTag('assistant'), color: '#fbbf24' }}>ERROR</div>
-            {error}
-          </div>
-        )}
-      </div>
+            className="min-h-[72px] flex-1 resize-y rounded border border-zinc-800 bg-black px-3 py-2 text-sm outline-none"
+          />
 
-      <div style={styles.composer}>
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault()
-              send()
-            }
-          }}
-          placeholder="user message…  (Ctrl/Cmd+Enter to send)"
-          style={styles.textarea}
-          disabled={busy}
-        />
-        {busy ? (
-          <button onClick={stop} style={styles.btn}>
-            STOP
-          </button>
-        ) : (
-          <button onClick={send} style={styles.btnPrimary} disabled={!input.trim()}>
-            SEND
-          </button>
-        )}
-      </div>
+          {busy ? (
+            <button
+              onClick={stop}
+              className="rounded border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-semibold tracking-[0.2em]"
+            >
+              STOP
+            </button>
+          ) : (
+            <button
+              onClick={send}
+              disabled={!input.trim()}
+              className="rounded bg-red-400 px-4 py-2 text-xs font-bold tracking-[0.2em] text-black disabled:opacity-40"
+            >
+              SEND
+            </button>
+          )}
+        </div>
+      </footer>
 
-      <div style={styles.statusBar}>
+      {/* Status */}
+
+      <div className="flex flex-wrap gap-5 border-t border-zinc-900 bg-black px-5 py-2 text-[10px] tracking-[0.15em] text-zinc-500">
+        <span>status: {statusText}</span>
+
         <span>turns: {messages.length}</span>
-        {streamMs !== null && <span>{streamMs}ms</span>}
-        {lastUsage && (
+
+        {latencyMs !== null && <span>{latencyMs}ms</span>}
+
+        {usage && (
           <span>
-            in: {lastUsage.input_tokens} · out: {lastUsage.output_tokens}
+            in: {usage.input_tokens} · out: {usage.output_tokens}
           </span>
         )}
+
         {stopReason && <span>stop: {stopReason}</span>}
-        <span style={{ marginLeft: 'auto' }}>endpoint: {ENDPOINT}</span>
+
+        <span className="ml-auto">endpoint: {ENDPOINT}</span>
       </div>
     </div>
   )
 }
-
-export default DevRawPage
