@@ -16,14 +16,22 @@ interface ModelInfo {
   label: string;
   fullName: string;
   description: string;
+  badge?: string;
 }
 
 const MODELS: ModelInfo[] = [
   {
+    id: 'claude-opus-4-8',
+    label: 'Opus 4.8',
+    fullName: 'Claude Opus 4.8',
+    description: 'Latest, most capable Opus — best for complex reasoning and agentic coding',
+    badge: 'New',
+  },
+  {
     id: 'claude-opus-4-7',
     label: 'Opus 4.7',
     fullName: 'Claude Opus 4.7',
-    description: 'Most capable — best for complex reasoning and agentic coding',
+    description: 'Previous flagship — complex reasoning and agentic coding',
   },
   {
     id: 'claude-sonnet-4-6',
@@ -269,6 +277,9 @@ export function ChatModelSelector({
                     {/* Model name */}
                     <div
                       style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
                         fontFamily: "'Syne', sans-serif",
                         fontSize: '13px',
                         fontWeight: 600,
@@ -277,7 +288,26 @@ export function ChatModelSelector({
                         marginBottom: '2px',
                       }}
                     >
-                      {model.fullName}
+                      <span>{model.fullName}</span>
+                      {model.badge && (
+                        <span
+                          style={{
+                            fontFamily: "'DM Mono', monospace",
+                            fontSize: '8px',
+                            fontWeight: 600,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase' as const,
+                            color: T.accent,
+                            background: T.accentBg,
+                            border: `1px solid ${T.accentBorder}`,
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {model.badge}
+                        </span>
+                      )}
                     </div>
 
                     {/* Description */}
