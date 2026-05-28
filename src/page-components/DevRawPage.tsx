@@ -63,7 +63,7 @@ export default function DevRawPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
 
-  const [model, setModel] = useState(DEFAULT_MODEL)
+  const [model, setModel] = useState<string>(DEFAULT_MODEL)
   const [maxTokens, setMaxTokens] = useState(4096)
 
   const [temperature, setTemperature] = useState('')
