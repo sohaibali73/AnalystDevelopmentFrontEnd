@@ -72,6 +72,10 @@ export async function parseBundle(file: File): Promise<ParsedBundlePreview> {
   }
 
   const allPaths = Object.keys(zip.files).filter((p) => !zip.files[p].dir);
+  // Mirror backend MAX_FILE_COUNT (500) so the preview flags it before upload.
+  if (allPaths.length > 500) {
+    errors.push('Bundle contains too many files (max 500).');
+  }
   const tops = new Set(allPaths.map((p) => p.split('/')[0]));
   const rootFiles = allPaths.filter((p) => !p.includes('/'));
   const stripPrefix =
@@ -111,7 +115,11 @@ export async function parseBundle(file: File): Promise<ParsedBundlePreview> {
   let body = '';
 
   if (skillMdRaw) {
-    const m = skillMdRaw.match(FRONTMATTER_RE);
+    // Strip a leading UTF-8 BOM before matching frontmatter — mirrors the
+    // backend's _parse_frontmatter (text.lstrip(U+FEFF)). Without this a
+    // BOM-prefixed SKILL.md would falsely preview as "no frontmatter".
+    const cleaned = skillMdRaw.replace(/^\uFEFF/, '');
+    const m = cleaned.match(FRONTMATTER_RE);
     if (m) {
       try {
         frontmatter = (yaml.load(m[1]) as ParsedFrontmatter) || {};
@@ -120,7 +128,7 @@ export async function parseBundle(file: File): Promise<ParsedBundlePreview> {
       }
       body = m[2];
     } else {
-      body = skillMdRaw;
+      body = cleaned;
       warnings.push('SKILL.md has no YAML frontmatter.');
     }
   } else if (skillJsonRaw) {
