@@ -166,9 +166,13 @@ export async function buildInlineBundle(opts: {
   tags?: string[];
 }): Promise<Blob> {
   const slug = (opts.slug || slugify(opts.name)).toLowerCase();
+  // Emit the human `name` and the kebab `slug` as SEPARATE fields. The backend
+  // loader reads the display name straight from `name`, so writing the slug
+  // there made uploaded skills show their slug as their name.
   const lines: (string | null)[] = [
     '---',
-    `name: ${slug}`,
+    `name: ${yamlDoubleQuote(opts.name)}`,
+    `slug: ${slug}`,
     'description: >',
     ...wrapBlock(opts.description, 2),
     `category: ${opts.category || 'general'}`,
@@ -185,6 +189,12 @@ export async function buildInlineBundle(opts: {
   const zip = new JSZip();
   zip.file('SKILL.md', frontmatter);
   return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+}
+
+/** Render a string as a YAML double-quoted scalar (handles names with colons,
+ *  quotes, etc.) so the synthesized frontmatter round-trips safely. */
+function yamlDoubleQuote(s: string): string {
+  return `"${(s || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
 export function slugify(name: string): string {
