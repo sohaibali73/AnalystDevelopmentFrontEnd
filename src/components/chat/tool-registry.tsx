@@ -558,6 +558,15 @@ const INVOKE_QUANT_SLUGS = new Set([
   'run_quant_analysis',
 ]);
 
+// CMT Strategist — mechanical/tactical trading strategy design (markdown output)
+const INVOKE_STRATEGY_SLUGS = new Set([
+  'cmt_strategist',
+  'cmt_strategy',
+  'design_strategy',
+  'strategy_design',
+  'strategy_architect',
+]);
+
 const INVOKE_BUBBLE_SLUGS = new Set([
   'us_market_bubble_detector',
   'run_bubble_detection',
@@ -750,6 +759,10 @@ const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
   backtest_expert:          { component: SkillResultCard,        displayName: 'Backtest Expert',         skillAnimation: true },
   run_backtest_analysis:    { component: SkillResultCard,        displayName: 'Backtest Analysis',       skillAnimation: true },
   backtesting_frameworks:   { component: SkillResultCard,        displayName: 'Backtesting Frameworks',  skillAnimation: true },
+
+  // CMT Strategist
+  cmt_strategist:           { component: SkillResultCard,        displayName: 'CMT Strategist',          skillAnimation: true },
+  design_strategy:          { component: SkillResultCard,        displayName: 'CMT Strategist',          skillAnimation: true },
 
   // AFL Developer
   amibroker_afl_developer:  { component: AFLGenerateCard,       displayName: 'AFL Developer',           skillAnimation: true },
@@ -1172,6 +1185,7 @@ function renderInvokeSkill(
   else if (INVOKE_ARTIFACTS_SLUGS.has(slug) || looksLikeReactArtifact) Component = ArtifactsBuilderCard;
   else if (INVOKE_BACKTEST_SLUGS.has(slug))           Component = SkillResultCard;
   else if (INVOKE_QUANT_SLUGS.has(slug))              Component = SkillResultCard;
+  else if (INVOKE_STRATEGY_SLUGS.has(slug))           Component = SkillResultCard;
   // Presentation output should go to DocumentGenerationCard for consistent download experience
   else if (looksLikePresentationOutput)               Component = DocumentGenerationCard;
 
