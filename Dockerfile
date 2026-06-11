@@ -2,7 +2,7 @@
 
 # ---------- deps ----------
 # Install production-ready node_modules using the lockfile.
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # --legacy-peer-deps: React 19 / Next 16 have peer-dep ranges that trip npm's
@@ -12,7 +12,7 @@ RUN npm install --no-audit --no-fund --legacy-peer-deps
 # ---------- build ----------
 # Build the Next.js standalone output. NEXT_PUBLIC_* values are inlined at
 # build time, so the API URL must be present as an ENV before `npm run build`.
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 
 # Public env vars baked into the client bundle at build time.
@@ -28,7 +28,7 @@ RUN npm run build
 
 # ---------- runner ----------
 # Minimal runtime image containing only the standalone server + static assets.
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
