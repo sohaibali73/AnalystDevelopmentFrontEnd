@@ -21,11 +21,17 @@ interface ModelInfo {
 
 const MODELS: ModelInfo[] = [
   {
+    id: 'claude-fable-5',
+    label: 'Fable 5',
+    fullName: 'Claude Fable 5',
+    description: 'Most capable model — 1M context, best for demanding reasoning & long-horizon agentic work',
+    badge: 'New',
+  },
+  {
     id: 'claude-opus-4-8',
     label: 'Opus 4.8',
     fullName: 'Claude Opus 4.8',
     description: 'Latest, most capable Opus — best for complex reasoning and agentic coding',
-    badge: 'New',
   },
   {
     id: 'claude-opus-4-7',

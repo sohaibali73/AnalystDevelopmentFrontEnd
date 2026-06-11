@@ -65,6 +65,7 @@ import PersistentGenerationCard from '@/components/generative-ui/PersistentGener
 import DocumentGenerationCard from '@/components/generative-ui/DocumentGenerationCard';
 import AFLGenerationCard from '@/components/generative-ui/AFLGenerationCard';
 import AFLStrategyCard from '@/components/generative-ui/AFLStrategyCard';
+import OptumaScriptCard from '@/components/generative-ui/OptumaScriptCard';
 import AFLGeneratingCard from '@/components/generative-ui/AFLGeneratingCard';
 import {
   AFLValidationCard,
@@ -615,6 +616,23 @@ const INVOKE_DCF_SLUGS = new Set([
   'dcf_model',
   'run_dcf_model',
   'create_dcf_model',
+]);
+
+// Optuma scripting skill — script/indicator/scan generation
+const INVOKE_OPTUMA_SLUGS = new Set([
+  'optuma-scripting',
+  'optuma_scripting',
+  'optuma',
+  'optuma_script',
+  'optuma-script',
+  'optuma_developer',
+  'optuma-developer',
+  'optuma_formula',
+  'optuma_scan',
+  'optuma_indicator',
+  'write_optuma',
+  'create_optuma',
+  'generate_optuma',
 ]);
 
 // Sandbox execution skills - these render with SandboxArtifactRenderer
@@ -1183,6 +1201,7 @@ function renderInvokeSkill(
   else if (INVOKE_DOC_INTERPRETER_SLUGS.has(slug))    Component = DocInterpreterCard;
   else if (INVOKE_DCF_SLUGS.has(slug) || looksLikeDCFOutput)    Component = DCFModelCard;
   else if (INVOKE_ARTIFACTS_SLUGS.has(slug) || looksLikeReactArtifact) Component = ArtifactsBuilderCard;
+  else if (INVOKE_OPTUMA_SLUGS.has(slug))             Component = OptumaScriptCard;
   else if (INVOKE_BACKTEST_SLUGS.has(slug))           Component = SkillResultCard;
   else if (INVOKE_QUANT_SLUGS.has(slug))              Component = SkillResultCard;
   else if (INVOKE_STRATEGY_SLUGS.has(slug))           Component = SkillResultCard;
@@ -1203,6 +1222,22 @@ function renderInvokeSkill(
             key={pIdx}
             toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
             toolName={slug || 'invoke_skill'}
+            input={part.input}
+            output={part.output}
+            externalOutput={externalOutput}
+            state={part.state as any}
+            errorText={part.errorText}
+            conversationId={conversationId || undefined}
+          />
+        );
+      }
+      // Optuma script card — needs toolCallId/input/output structure (same as AFLGenerationCard)
+      if (Component === OptumaScriptCard) {
+        return (
+          <OptumaScriptCard
+            key={pIdx}
+            toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+            toolName={slug || 'optuma-scripting'}
             input={part.input}
             output={part.output}
             externalOutput={externalOutput}
@@ -1246,6 +1281,21 @@ function renderInvokeSkill(
             output={part.output}
             externalOutput={externalOutput}
             state={'output-available' as any}
+            errorText={part.errorText}
+            conversationId={conversationId || undefined}
+          />
+        );
+      }
+      if (INVOKE_OPTUMA_SLUGS.has(slug)) {
+        return (
+          <OptumaScriptCard
+            key={pIdx}
+            toolCallId={part.toolCallId || `${messageId}_${pIdx}`}
+            toolName={slug || 'optuma-scripting'}
+            input={part.input}
+            output={part.output}
+            externalOutput={externalOutput}
+            state={'output-error' as any}
             errorText={part.errorText}
             conversationId={conversationId || undefined}
           />

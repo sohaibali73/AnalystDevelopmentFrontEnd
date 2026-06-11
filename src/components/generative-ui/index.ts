@@ -141,6 +141,9 @@ export { XlsxTransformCard } from './XlsxTransformCard';
 // AFL Generation Card with code preview and download — renders generate_afl_code results
 export { default as AFLGenerationCard } from './AFLGenerationCard';
 
+// Optuma Script Card — renders optuma-scripting skill results (scripts, scans, indicators)
+export { default as OptumaScriptCard } from './OptumaScriptCard';
+
 // NEW: AFL Strategy Card — rich GenUI envelope renderer for `afl_strategy` cards
 // emitted by the unified `generate_afl_code` pipeline (validation panel,
 // quality score, issue navigation, debug / validate / explain actions).

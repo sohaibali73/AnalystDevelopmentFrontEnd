@@ -40,6 +40,7 @@ interface ChatResponse {
 const ENDPOINT = '/chat/dev/raw'
 
 const MODELS = [
+  'claude-fable-5',
   'claude-opus-4-8',
   'claude-opus-4-7',
   'claude-opus-4-6',
