@@ -1046,7 +1046,7 @@ export function ChatPage() {
   const pendingStackMetaRef = useRef<StackMessageMeta | null>(null);
   const [backendAvailable, setBackendAvailable] = useState(true);
   const [skillStatus, setSkillStatus] = useState<{ label: string; slug: string } | null>(null);
-  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-6');
+  const [selectedModel, setSelectedModel] = useState('claude-opus-4-8');
   const [forcedSkillSlug, setForcedSkillSlug] = useState<string | null>(null);
   const [forcedSkillName, setForcedSkillName] = useState<string | null>(null);
 

@@ -53,8 +53,8 @@ export function StudioChatPane({ project, onChatFinished }: Props) {
   const [autoApply, setAutoApply] = useState<boolean>(!!project.humanize_settings?.auto_apply);
   const [humanizing, setHumanizing] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'claude-sonnet-4-6';
-    return window.localStorage.getItem(STUDIO_MODEL_STORAGE_KEY) || 'claude-sonnet-4-6';
+    if (typeof window === 'undefined') return 'claude-opus-4-8';
+    return window.localStorage.getItem(STUDIO_MODEL_STORAGE_KEY) || 'claude-opus-4-8';
   });
   const selectedModelRef = useRef(selectedModel);
   useEffect(() => {
