@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Build a self-contained standalone server (.next/standalone) for a slim
+  // production container image (Azure Container Apps / Node).
+  output: 'standalone',
+
   // Transpile packages that ship ESM-only builds
   transpilePackages: ['pptx-preview'],
 
