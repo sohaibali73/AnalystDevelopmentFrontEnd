@@ -74,22 +74,12 @@ export async function POST(req: NextRequest) {
   if (!messageText) messageText = lastUserMessage.content || lastUserMessage.text || '';
   if (!messageText.trim()) return jsonError(400, 'Empty message content');
 
-  // Formatting / behavior guard rail. Appended per-request because the backend
-  // does NOT bake this into its system prompt. Without it, the agent has been
-  // observed invoking multiple overlapping tools (e.g., both generate_pptx and
-  // generate_pptx_freestyle for one PPTX request). Keeping this stable per
-  // request also keeps the user-turn text consistent with prior conversations.
-  //
-  // NOTE: this DOES bust Anthropic prompt caching at the user-turn level. If
-  // the backend later moves this into the (cacheable) system prompt, delete
-  // this block.
-  const FORMATTING_GUARDRAIL =
-    '\n\n[FORMATTING: Do not use any emojis whatsoever in your response. ' +
-    'Use clear, professional formatting with proper markdown headings, ' +
-    'bullet points, and structured sections. Keep responses concise and ' +
-    'data-driven. When a single tool can satisfy the request, call only ' +
-    'that one tool — do not chain multiple overlapping tools for one task.]';
-  const finalContent = messageText + FORMATTING_GUARDRAIL;
+  // No [FORMATTING: ...] append. The backend owns output formatting and the
+  // single-tool rule in its (cacheable) system prompt — see get_chat_prompt()
+  // in core/prompts/base.py. Re-adding a guard rail here contradicts that
+  // prompt from the user turn, which makes the model re-litigate formatting
+  // every turn, and it busts Anthropic prompt caching at the user-turn level.
+  const finalContent = messageText;
 
   // ── Build the tiny backend envelope ───────────────────────────────────
   const authToken = req.headers.get('authorization') || '';
